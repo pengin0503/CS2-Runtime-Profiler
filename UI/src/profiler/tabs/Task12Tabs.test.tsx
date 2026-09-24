@@ -12,7 +12,7 @@ const snapshot: any = {
   systems: [], mods: [],
   pathfinding: { metrics: [
     { id: "pendingPathfindActions", value: 42, confidence: "Indirect", availability: "Available", reason: null },
-    { id: "requestsPerSecond", value: null, confidence: "Unavailable", availability: "Unavailable", reason: "No verified request counter" }
+    { id: "requestsPerSecond", value: null, confidence: "Unavailable", availability: "Unavailable", reason: "No verified runtime request counter is available for this game build." }
   ] },
   domainMetrics: [],
   timeline: [
@@ -25,7 +25,7 @@ const snapshot: any = {
       id: "capture-1", triggerKind: "Automatic", triggeredAtSeconds: 10,
       durationSeconds: 12, discoveredMarkers: 200, capturedMarkers: 180,
       batched: true, coverageRatio: 0.9, warningCount: 1, profilerOverheadShare: 0.045,
-      warnings: ["sampling stride increased"],
+      warnings: ["Profiler overhead remains high; sampling stride increased to 4."],
       correlatedChanges: [
         { metric: "actualSpeed", before: 4, after: 2, delta: -2, relativeDelta: -0.5, confidence: "Full" }
       ]
@@ -40,11 +40,12 @@ const snapshot: any = {
 };
 
 describe("Task 12 profiler tabs", () => {
-  it("pathfinding preserves unavailable reasons instead of rendering zero", () => {
+  it("pathfinding localizes known unavailable reasons instead of exposing English runtime prose", () => {
     const html = renderToStaticMarkup(<PathfindingTab metrics={snapshot.pathfinding.metrics} />);
     expect(html).toContain("pendingPathfindActions");
     expect(html).toContain("42.00");
-    expect(html).toContain("No verified request counter");
+    expect(html).toContain("このゲーム環境では検証済みの要求カウンターを取得できません。");
+    expect(html).not.toContain("No verified runtime request counter");
   });
 
   it("timeline renders a lightweight SVG and exposes available series toggles", () => {
@@ -60,7 +61,7 @@ describe("Task 12 profiler tabs", () => {
     expect(html).toContain('cy="232"');
   });
 
-  it("captures use Japanese evidence wording and show trigger duration coverage mode overhead and changes", () => {
+  it("captures localize known profiler warnings", () => {
     const html = renderToStaticMarkup(<CapturesTab captures={snapshot.captures} />);
     expect(html).toContain("自動（低効率）");
     expect(html).toContain("12.0 秒");
@@ -68,7 +69,8 @@ describe("Task 12 profiler tabs", () => {
     expect(html).toContain("分割計測");
     expect(html).toContain("4.5%");
     expect(html).toContain("相関変化が大きい項目");
-    expect(html).not.toContain(">Causes<");
+    expect(html).toContain("プロファイラー負荷が高い状態が続いているため、サンプリング間引きを 4 に増やしました。");
+    expect(html).not.toContain("Profiler overhead remains high");
   });
 
   it("diagnostics surfaces coverage sampling and self-overhead state", () => {

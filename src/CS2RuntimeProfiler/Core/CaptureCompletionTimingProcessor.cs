@@ -6,12 +6,13 @@ namespace CS2RuntimeProfiler.Core
 {
     /// <summary>
     /// Applies system-timing projection to newly completed captures exactly once.
-    /// Runtime callers can invoke this after each capture-controller update without reprocessing history.
+    /// Runtime callers can invoke this after each capture-controller update without reprocessing retained history.
     /// </summary>
     public sealed class CaptureCompletionTimingProcessor
     {
         private readonly IReadOnlyList<SystemDescriptor> _systems;
         private readonly IReadOnlyList<RecorderDescriptor> _recorders;
+        private readonly HashSet<CaptureSession> _processed = new HashSet<CaptureSession>();
 
         public CaptureCompletionTimingProcessor(
             IEnumerable<SystemDescriptor> systems,
@@ -22,19 +23,23 @@ namespace CS2RuntimeProfiler.Core
         }
 
         public int ProcessedCount { get; private set; }
+        public CaptureSession LastProcessedCapture { get; private set; }
 
         public void ProcessNew(IReadOnlyList<CaptureSession> completedCaptures)
         {
             if (completedCaptures == null)
                 return;
 
-            while (ProcessedCount < completedCaptures.Count)
+            var retained = new HashSet<CaptureSession>(completedCaptures.Where(capture => capture != null));
+            _processed.RemoveWhere(capture => !retained.Contains(capture));
+
+            foreach (var capture in completedCaptures)
             {
-                var capture = completedCaptures[ProcessedCount];
-                ProcessedCount++;
-                if (capture == null)
+                if (capture == null || !_processed.Add(capture))
                     continue;
 
+                ProcessedCount++;
+                LastProcessedCapture = capture;
                 CaptureSystemTimingFinalizer.Apply(capture, _systems, _recorders);
             }
         }

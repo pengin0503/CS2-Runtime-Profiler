@@ -2,11 +2,12 @@ name: UI Tests
 
 on:
   push:
-    branches: [feature/runtime-profiler-v1]
+    branches: [main]
     paths:
       - "UI/**"
       - ".github/workflows/ui-tests.yml"
   pull_request:
+    branches: [main]
     paths:
       - "UI/**"
       - ".github/workflows/ui-tests.yml"

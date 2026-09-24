@@ -1,5 +1,5 @@
 import React from "react";
-import { confidenceLabel } from "../text";
+import { confidenceLabel, metricReasonLabel } from "../text";
 import styles from "../profiler.module.scss";
 
 interface MetricBadgeProps {
@@ -21,7 +21,7 @@ export function MetricBadge({ confidence, availability, reason }: MetricBadgePro
         : styles.badgeIndirect;
 
   const tooltip = unavailable
-    ? reason || "現在のゲーム環境ではこのメトリクスを取得できません。"
+    ? metricReasonLabel(reason) || "現在のゲーム環境ではこのメトリクスを取得できません。"
     : rawLabel === "Full"
       ? "ランタイムが公開しているメトリクスから直接取得した値です。"
       : rawLabel === "Managed"

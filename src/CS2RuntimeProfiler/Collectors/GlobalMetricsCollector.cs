@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using CS2RuntimeProfiler.Core;
 using CS2RuntimeProfiler.Profiling;
@@ -9,10 +10,12 @@ namespace CS2RuntimeProfiler.Collectors
     public partial class GlobalMetricsCollector : GameSystemBase, IMetricCollector
     {
         private const double SamplePeriodSeconds = 0.5;
+        private const int HistoryCapacity = 60;
         private readonly Stopwatch _clock = Stopwatch.StartNew();
         private SimulationSystem _simulationSystem;
         private RecorderManager _recorderManager;
         private ProfilerOverheadTracker _overhead;
+        private GlobalSnapshotHistory _history;
         private double _nextSampleAt;
 
         public string Name => "Global";
@@ -26,12 +29,9 @@ namespace CS2RuntimeProfiler.Collectors
             _simulationSystem = World.GetOrCreateSystemManaged<SimulationSystem>();
             _recorderManager = new RecorderManager(new UnityRecorderBackend());
             _overhead = new ProfilerOverheadTracker();
+            _history = new GlobalSnapshotHistory(HistoryCapacity);
             _recorderManager.DiscoverAvailableMarkers();
-
-            ActivatePreferred(8, "Main Thread");
-            ActivatePreferred(8, "Render Thread");
-            ActivatePreferred(8, "GPU Frame Time", "GPU Time");
-            ActivatePreferred(8, "Total Used Memory", "System Used Memory");
+            RestoreNormalRecorders();
         }
 
         protected override void OnUpdate()
@@ -54,6 +54,26 @@ namespace CS2RuntimeProfiler.Collectors
                 _simulationSystem.selectedSpeed,
                 _simulationSystem.smoothSpeed,
                 _recorderManager.SampleActive());
+            _history?.Add(Latest);
+        }
+
+        public IReadOnlyList<GlobalMetricsSnapshot> GetRecentHistory(double windowSeconds = 5d)
+        {
+            if (_history == null || Latest == null)
+                return System.Array.Empty<GlobalMetricsSnapshot>();
+            return _history.Recent(Latest.TimestampSeconds, windowSeconds);
+        }
+
+        public void RestoreNormalRecorders()
+        {
+            if (_recorderManager == null)
+                return;
+
+            _recorderManager.DeactivateAll();
+            ActivatePreferred(8, "Main Thread");
+            ActivatePreferred(8, "Render Thread");
+            ActivatePreferred(8, "GPU Frame Time", "GPU Time");
+            ActivatePreferred(8, "Total Used Memory", "System Used Memory");
         }
 
         protected override void OnDestroy()

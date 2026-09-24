@@ -15,6 +15,7 @@ namespace CS2RuntimeProfiler.Profiling
         private readonly HashSet<string> _capturedMarkerIds = new HashSet<string>(StringComparer.Ordinal);
         private readonly double _overheadCeiling;
         private readonly int _configuredMaxConcurrent;
+        private readonly int _maxCompletedSessions;
         private int _maxConcurrent;
         private int _currentBatchIndex = -1;
         private int _sampleStride = 1;
@@ -28,13 +29,15 @@ namespace CS2RuntimeProfiler.Profiling
             RecorderManager recorders,
             DeepCaptureStateMachine stateMachine,
             int maxConcurrent = 150,
-            double overheadCeiling = 0.08)
+            double overheadCeiling = 0.08,
+            int maxCompletedSessions = 20)
         {
             _recorders = recorders ?? throw new ArgumentNullException(nameof(recorders));
             _stateMachine = stateMachine ?? throw new ArgumentNullException(nameof(stateMachine));
             _configuredMaxConcurrent = Math.Max(1, maxConcurrent);
             _maxConcurrent = _configuredMaxConcurrent;
             _overheadCeiling = Math.Max(0.001, overheadCeiling);
+            _maxCompletedSessions = Math.Max(1, maxCompletedSessions);
             _lastState = _stateMachine.State;
         }
 
@@ -189,6 +192,8 @@ namespace CS2RuntimeProfiler.Profiling
         {
             CurrentSession.SetMarkerCoverage(_plan?.DiscoveredCount ?? 0, _capturedMarkerIds.Count, _plan?.IsBatched ?? false);
             _completed.Add(CurrentSession);
+            if (_completed.Count > _maxCompletedSessions)
+                _completed.RemoveAt(0);
             CurrentSession = null;
             _consecutiveOverheadBreaches = 0;
         }

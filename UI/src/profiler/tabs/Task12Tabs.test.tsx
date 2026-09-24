@@ -54,6 +54,12 @@ describe("Task 12 profiler tabs", () => {
     expect(html).toContain("Main Thread");
   });
 
+  it("timeline point hit targets follow the same normalized Y coordinates as their line", () => {
+    const html = renderToStaticMarkup(<TimelineTab points={snapshot.timeline.slice(0, 2)} />);
+    expect(html).toContain('cy="28"');
+    expect(html).toContain('cy="232"');
+  });
+
   it("captures use evidence wording and show trigger duration coverage mode overhead and changes", () => {
     const html = renderToStaticMarkup(<CapturesTab captures={snapshot.captures} />);
     expect(html).toContain("Automatic");

@@ -1,21 +1,8 @@
-.hud {
+.hudAnchor {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 7rem;
-  min-height: 34rem;
-  padding: 6rem 10rem;
-  border: 1rem solid rgba(255,255,255,.18);
-  border-radius: 7rem;
-  background: rgba(24,30,38,.92);
-  color: #f4f7fb;
-  font-size: 12rem;
-  cursor: pointer;
-  box-shadow: 0 2rem 8rem rgba(0,0,0,.35);
 }
-.hud:hover { background: rgba(35,43,53,.96); }
-.hudCapture { border-color: rgba(255,184,77,.8); }
-.hudTitle { font-weight: 700; letter-spacing: .2rem; }
-.hudState { opacity: .78; font-size: 10rem; }
 
 .panel {
   position: absolute;
@@ -38,11 +25,11 @@
 .panelHeader > div { display: flex; flex-direction: column; gap: 2rem; }
 .panelHeader strong { font-size: 16rem; }
 .panelHeader small { opacity: .65; }
-.closeButton { width: 30rem; height: 30rem; border: 0; border-radius: 6rem; background: rgba(255,255,255,.08); color: inherit; cursor: pointer; font-size: 20rem; }
+.closeButton { width: 30rem; min-width: 30rem; height: 30rem; padding: 0 !important; border: 0 !important; border-radius: 6rem !important; background: rgba(255,255,255,.08) !important; color: inherit !important; cursor: pointer; font-size: 20rem; }
 .tabs { display: flex; gap: 5rem; padding: 8rem 12rem; border-bottom: 1rem solid rgba(255,255,255,.08); overflow-x: auto; }
-.tabs button, .actionRow button, .table th button { border: 0; border-radius: 5rem; background: rgba(255,255,255,.07); color: inherit; padding: 6rem 10rem; cursor: pointer; white-space: nowrap; }
-.tabs button:hover, .actionRow button:hover { background: rgba(255,255,255,.13); }
-.tabs .activeTab { background: rgba(86,166,255,.28); }
+.tabButton, .actionRow button, .table th button { border: 0 !important; border-radius: 5rem !important; background: rgba(255,255,255,.07) !important; color: inherit !important; padding: 6rem 10rem !important; cursor: pointer; white-space: nowrap; }
+.tabButton:hover, .actionRow button:hover { background: rgba(255,255,255,.13) !important; }
+.activeTab { background: rgba(86,166,255,.34) !important; box-shadow: inset 0 0 0 1rem rgba(104,185,255,.45); }
 .panelBody { overflow: auto; padding: 12rem; }
 .tabBody { display: flex; flex-direction: column; gap: 14rem; }
 .tabBody section { display: flex; flex-direction: column; gap: 5rem; }
@@ -72,12 +59,12 @@
 .table th, .table td { padding: 6rem; border-bottom: 1rem solid rgba(255,255,255,.07); text-align: right; white-space: nowrap; }
 .table th:first-child, .table td:first-child, .table th:nth-child(2), .table td:nth-child(2) { text-align: left; }
 .table tr:hover td { background: rgba(255,255,255,.025); }
-.table th button { font-size: inherit; padding: 3rem 5rem; }
+.table th button { font-size: inherit; padding: 3rem 5rem !important; }
 .table details summary { cursor: pointer; }
 .details { margin-top: 5rem; padding: 6rem; background: rgba(255,255,255,.04); border-radius: 4rem; white-space: normal; line-height: 1.4; }
 .modGrid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7rem; }
-.modCard { display: flex; flex-direction: column; align-items: stretch; gap: 5rem; padding: 10rem; border: 1rem solid rgba(255,255,255,.08); border-radius: 7rem; background: rgba(255,255,255,.045); color: inherit; text-align: left; cursor: pointer; }
-.modCard:hover { background: rgba(255,255,255,.075); }
+.modCard { display: flex !important; flex-direction: column; align-items: stretch !important; gap: 5rem; padding: 10rem !important; border: 1rem solid rgba(255,255,255,.08) !important; border-radius: 7rem !important; background: rgba(255,255,255,.045) !important; color: inherit !important; text-align: left !important; cursor: pointer; }
+.modCard:hover { background: rgba(255,255,255,.075) !important; }
 .modCard > span { display: flex; justify-content: space-between; gap: 10rem; opacity: .82; }
 
 .seriesControls { display: flex; flex-wrap: wrap; gap: 5rem; }
@@ -93,8 +80,8 @@
 
 .captureList { display: flex; flex-direction: column; gap: 8rem; }
 .captureCard { border: 1rem solid rgba(255,255,255,.08); border-radius: 7rem; overflow: hidden; background: rgba(255,255,255,.035); }
-.captureHeader { width: 100%; display: grid; grid-template-columns: minmax(180rem,1.5fr) repeat(4,minmax(90rem,1fr)); align-items: center; gap: 7rem; padding: 9rem; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
-.captureHeader:hover { background: rgba(255,255,255,.04); }
+.captureHeader { width: 100%; display: grid !important; grid-template-columns: minmax(180rem,1.5fr) repeat(4,minmax(90rem,1fr)); align-items: center !important; gap: 7rem; padding: 9rem !important; border: 0 !important; color: inherit !important; background: transparent !important; text-align: left !important; cursor: pointer; }
+.captureHeader:hover { background: rgba(255,255,255,.04) !important; }
 .captureHeader > span:first-child { display: flex; flex-direction: column; }
 .captureHeader small { opacity: .5; font-size: 9rem; }
 .captureBody { display: flex; flex-direction: column; gap: 7rem; padding: 10rem; border-top: 1rem solid rgba(255,255,255,.07); }

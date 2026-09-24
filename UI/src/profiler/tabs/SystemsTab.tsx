@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Button } from "cs2/ui";
 import type { SystemUiRow } from "../bindings";
 import { formatInteger, formatMilliseconds } from "../format";
 import { MetricBadge } from "../components/MetricBadge";
@@ -32,21 +33,21 @@ export function SystemsTab({ systems, onSelect }: SystemsTabProps) {
     return Number(bv) - Number(av);
   }), [systems, sortKey]);
 
-  if (!rows.length) return <p className={styles.empty}>Per-system timing is unavailable until a timing-capable capture is produced.</p>;
+  if (!rows.length) return <p className={styles.empty}>システム別の実行時間は、対応する詳細キャプチャが作成されるまで利用できません。</p>;
 
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
         <thead><tr>
-          <th><button onClick={() => setSortKey("name")}>System</button></th>
-          <th>Owner</th>
-          <th><button onClick={() => setSortKey("current")}>Current</button></th>
-          <th><button onClick={() => setSortKey("mean")}>Mean</button></th>
-          <th><button onClick={() => setSortKey("p95")}>P95</button></th>
-          <th><button onClick={() => setSortKey("p99")}>P99</button></th>
-          <th><button onClick={() => setSortKey("max")}>Max</button></th>
-          <th><button onClick={() => setSortKey("calls")}>Calls</button></th>
-          <th>Evidence</th>
+          <th><Button as="button" variant="flat" onSelect={() => setSortKey("name")}>システム</Button></th>
+          <th>所有元</th>
+          <th><Button as="button" variant="flat" onSelect={() => setSortKey("current")}>現在</Button></th>
+          <th><Button as="button" variant="flat" onSelect={() => setSortKey("mean")}>平均</Button></th>
+          <th><Button as="button" variant="flat" onSelect={() => setSortKey("p95")}>P95</Button></th>
+          <th><Button as="button" variant="flat" onSelect={() => setSortKey("p99")}>P99</Button></th>
+          <th><Button as="button" variant="flat" onSelect={() => setSortKey("max")}>最大</Button></th>
+          <th><Button as="button" variant="flat" onSelect={() => setSortKey("calls")}>呼出回数</Button></th>
+          <th>根拠</th>
         </tr></thead>
         <tbody>{rows.map(row => (
           <tr key={row.id} onClick={() => onSelect?.(row.id)}>
@@ -54,9 +55,9 @@ export function SystemsTab({ systems, onSelect }: SystemsTabProps) {
               <details>
                 <summary>{row.id}</summary>
                 <div className={styles.details}>
-                  <div>Source: managed system timing boundary</div>
-                  <div>Patch owners: {row.patchOwners.length ? row.patchOwners.join(", ") : "none discovered"}</div>
-                  <div>Marker/cadence detail: not exposed by the current snapshot.</div>
+                  <div>測定元: 管理システムの実行境界</div>
+                  <div>パッチ所有者: {row.patchOwners.length ? row.patchOwners.join(", ") : "検出なし"}</div>
+                  <div>マーカーや更新間隔の詳細は現在のスナップショットでは公開されていません。</div>
                 </div>
               </details>
             </td>

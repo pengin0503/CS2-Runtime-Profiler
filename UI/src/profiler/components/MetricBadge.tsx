@@ -1,4 +1,5 @@
 import React from "react";
+import { confidenceLabel } from "../text";
 import styles from "../profiler.module.scss";
 
 interface MetricBadgeProps {
@@ -9,22 +10,23 @@ interface MetricBadgeProps {
 
 export function MetricBadge({ confidence, availability, reason }: MetricBadgeProps) {
   const unavailable = availability !== "Available" || confidence === "Unavailable";
-  const label = unavailable ? "Unavailable" : confidence || "Unavailable";
+  const rawLabel = unavailable ? "Unavailable" : confidence || "Unavailable";
+  const label = confidenceLabel(rawLabel);
   const className = unavailable
     ? styles.badgeUnavailable
-    : label === "Full"
+    : rawLabel === "Full"
       ? styles.badgeFull
-      : label === "Managed"
+      : rawLabel === "Managed"
         ? styles.badgeManaged
         : styles.badgeIndirect;
 
   const tooltip = unavailable
-    ? reason || "This metric is not available on the current runtime."
-    : label === "Full"
-      ? "Direct profiler evidence from the exposed runtime metric."
-      : label === "Managed"
-        ? "Measured at a managed-code boundary; worker/job cost may remain unattributed."
-        : "Indirect evidence derived from a supported runtime counter.";
+    ? reason || "現在のゲーム環境ではこのメトリクスを取得できません。"
+    : rawLabel === "Full"
+      ? "ランタイムが公開しているメトリクスから直接取得した値です。"
+      : rawLabel === "Managed"
+        ? "管理コード境界で測定した値です。ワーカーやジョブの負荷は未帰属の場合があります。"
+        : "対応するランタイムカウンターから得た間接的な補助指標です。";
 
   return <span className={`${styles.badge} ${className}`} title={tooltip}>{label}</span>;
 }

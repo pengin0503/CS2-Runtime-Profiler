@@ -4,14 +4,14 @@ import { describe, expect, it } from "vitest";
 import { MetricBadge } from "./MetricBadge";
 
 describe("MetricBadge", () => {
-  it("shows confidence and preserves unavailable reason", () => {
+  it("shows Japanese unavailable text and preserves the technical reason", () => {
     const html = renderToStaticMarkup(<MetricBadge confidence="Unavailable" availability="Unavailable" reason="member missing" />);
-    expect(html).toContain("Unavailable");
+    expect(html).toContain("利用不可");
     expect(html).toContain("member missing");
   });
 
-  it("shows managed and indirect evidence labels verbatim", () => {
-    expect(renderToStaticMarkup(<MetricBadge confidence="Managed" availability="Available" />)).toContain("Managed");
-    expect(renderToStaticMarkup(<MetricBadge confidence="Indirect" availability="Available" />)).toContain("Indirect");
+  it("localizes managed and indirect evidence labels", () => {
+    expect(renderToStaticMarkup(<MetricBadge confidence="Managed" availability="Available" />)).toContain("管理コード");
+    expect(renderToStaticMarkup(<MetricBadge confidence="Indirect" availability="Available" />)).toContain("間接");
   });
 });

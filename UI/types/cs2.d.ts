@@ -18,3 +18,26 @@ declare module "cs2/modding" {
   }
   export type ModRegistrar = (moduleRegistry: ModuleRegistry) => void;
 }
+
+declare module "cs2/ui" {
+  import type { ButtonHTMLAttributes, PropsWithChildren, ReactElement, ReactNode } from "react";
+
+  export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onSelect"> {
+    variant?: "flat" | "primary" | "round" | "menu" | "icon" | "floating" | "default";
+    selected?: boolean;
+    src?: string;
+    tooltipLabel?: ReactNode;
+    onSelect?: () => void;
+    as?: "button" | "div";
+  }
+
+  export const Button: (props: PropsWithChildren<ButtonProps>) => JSX.Element;
+
+  export interface TooltipProps {
+    tooltip: ReactNode;
+    disabled?: boolean;
+    children: ReactElement;
+  }
+
+  export const Tooltip: (props: TooltipProps) => JSX.Element;
+}

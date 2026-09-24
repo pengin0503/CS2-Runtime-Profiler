@@ -73,11 +73,11 @@ namespace CS2RuntimeProfiler.Profiling
             if (before == CaptureState.DeepCapture && after != CaptureState.DeepCapture)
                 _recorders.DeactivateAll();
 
-            if (before == CaptureState.PostBuffer && after == CaptureState.Cooldown && CurrentSession != null)
-                FinalizeCapture();
-
             if (after == CaptureState.PostBuffer && CurrentSession != null && global != null)
                 CurrentSession.AddGlobalSample(global);
+
+            if (CurrentSession != null && after != CaptureState.DeepCapture && after != CaptureState.PostBuffer)
+                FinalizeCapture();
 
             _lastState = after;
         }

@@ -1,12 +1,12 @@
 import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
-import webpack, { type Stats } from "webpack";
+import webpack, { type Configuration, type Stats } from "webpack";
 import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
 
-function compile(config: Parameters<typeof webpack>[0]): Promise<Stats> {
+function compile(config: Configuration): Promise<Stats> {
   return new Promise((resolve, reject) => {
     webpack(config, (error, stats) => {
       if (error) {
@@ -32,7 +32,7 @@ describe("CSS Modules build", () => {
     try {
       const configPath = require.resolve("../../webpack.config.js");
       delete require.cache[configPath];
-      const config = require(configPath) as Parameters<typeof webpack>[0];
+      const config = require(configPath) as Configuration;
       const stats = await compile(config);
       const result = stats.toJson({ all: false, errors: true, warnings: true });
 

@@ -59,6 +59,13 @@ public class UiSnapshotBuilderTests
     }
 
     [Test]
+    public void Global_recorder_metrics_expose_unit_metadata_for_ui_formatting()
+    {
+        Assert.That(typeof(GlobalMetricsSnapshot).GetProperty("RecorderUnits"), Is.Not.Null);
+        Assert.That(typeof(UiMetricRow).GetProperty("UnitType"), Is.Not.Null);
+    }
+
+    [Test]
     public void Missing_input_snapshots_produce_empty_unavailable_ui_not_exceptions()
     {
         var snapshot = UiSnapshotBuilder.Build(new UiSnapshotInput());

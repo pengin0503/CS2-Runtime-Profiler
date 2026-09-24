@@ -16,6 +16,7 @@ namespace CS2RuntimeProfiler.Profiling
         private GlobalMetricsCollector _global;
         private DeepCaptureController _controller;
         private ProfilerOverheadTracker _overhead;
+        private CaptureCompletionTimingProcessor _completionTiming;
         private double _lastObservedTimestamp = double.NegativeInfinity;
         private double _lastOverheadShare;
 
@@ -37,6 +38,19 @@ namespace CS2RuntimeProfiler.Profiling
                 maxConcurrent: 150,
                 overheadCeiling: 0.08);
             _controller.Initialize();
+
+            try
+            {
+                var systems = new ProfilerCatalog().Discover();
+                _completionTiming = new CaptureCompletionTimingProcessor(systems, _global.Recorders.Descriptors);
+            }
+            catch (Exception ex)
+            {
+                // Discovery is lifecycle-gated and fail-open. An unavailable catalog must not prevent
+                // global monitoring/capture from running; per-system timing simply remains unavailable.
+                Mod.Log.Error(ex, "System catalog discovery failed; per-system timing will be unavailable");
+                _completionTiming = null;
+            }
         }
 
         protected override void OnUpdate()
@@ -51,7 +65,10 @@ namespace CS2RuntimeProfiler.Profiling
             var before = _controller.State;
             var prebuffer = _global.GetRecentHistory(PrebufferSeconds);
             _overhead.Measure(latest.TimestampSeconds, () =>
-                _controller.Observe(latest.TimestampSeconds, latest, prebuffer));
+            {
+                _controller.Observe(latest.TimestampSeconds, latest, prebuffer);
+                ProjectCompletedCaptureTiming();
+            });
 
             _lastOverheadShare = Math.Max(
                 0d,
@@ -70,6 +87,29 @@ namespace CS2RuntimeProfiler.Profiling
             var latest = _global?.Latest;
             var now = latest?.TimestampSeconds ?? Math.Max(0d, _lastObservedTimestamp);
             _controller?.RequestManualCapture(now, _global?.GetRecentHistory(PrebufferSeconds));
+        }
+
+        private void ProjectCompletedCaptureTiming()
+        {
+            if (_completionTiming == null || _controller == null)
+                return;
+
+            try
+            {
+                _completionTiming.ProcessNew(_controller.CompletedSessions);
+            }
+            catch (Exception ex)
+            {
+                var failedIndex = _completionTiming.ProcessedCount - 1;
+                if (failedIndex >= 0 && failedIndex < _controller.CompletedSessions.Count)
+                {
+                    _controller.CompletedSessions[failedIndex]?.AddWarning(
+                        "System timing projection failed for this capture; per-system timing is unavailable.");
+                }
+
+                // Keep capture/global monitoring alive even if one timing projection fails.
+                Mod.Log.Error(ex, "System timing projection failed for a completed capture");
+            }
         }
     }
 }

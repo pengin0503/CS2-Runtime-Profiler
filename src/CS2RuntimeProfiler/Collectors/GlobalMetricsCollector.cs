@@ -13,6 +13,7 @@ namespace CS2RuntimeProfiler.Collectors
         public const double SamplingPeriodSeconds = 0.5;
         private const int HistoryCapacity = 60;
         private readonly Stopwatch _clock = Stopwatch.StartNew();
+        private readonly MonitoringLifecycleGate _monitoringGate = new MonitoringLifecycleGate(initiallyEnabled: true);
         private SimulationSystem _simulationSystem;
         private RecorderManager _recorderManager;
         private ProfilerOverheadTracker _overhead;
@@ -39,8 +40,17 @@ namespace CS2RuntimeProfiler.Collectors
 
         protected override void OnUpdate()
         {
-            if (Mod.Settings != null && !Mod.Settings.EnableMonitoring)
+            var monitoringEnabled = Mod.Settings == null || Mod.Settings.EnableMonitoring;
+            var transition = _monitoringGate.Observe(monitoringEnabled);
+
+            if (transition == MonitoringTransition.Disabled)
+                _recorderManager?.DeactivateAll();
+
+            if (!monitoringEnabled)
                 return;
+
+            if (transition == MonitoringTransition.Enabled)
+                RestoreNormalRecorders();
 
             var now = _clock.Elapsed.TotalSeconds;
             if (now < _nextSampleAt)

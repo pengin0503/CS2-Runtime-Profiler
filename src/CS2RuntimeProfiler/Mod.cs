@@ -22,6 +22,7 @@ namespace CS2RuntimeProfiler
             AssetDatabase.global.LoadSettings(Id, Settings, new Setting(this));
 
             updateSystem.UpdateAt<GlobalMetricsCollector>(SystemUpdatePhase.UIUpdate);
+            updateSystem.UpdateAt<DomainMetricsSystem>(SystemUpdatePhase.UIUpdate);
         }
 
         public void OnDispose()

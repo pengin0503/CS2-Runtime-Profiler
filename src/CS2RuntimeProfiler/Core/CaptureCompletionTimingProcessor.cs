@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,7 +24,7 @@ namespace CS2RuntimeProfiler.Core
         }
 
         public int ProcessedCount { get; private set; }
-        public CaptureSession LastProcessedCapture { get; private set; }
+        public CaptureSession? LastProcessedCapture { get; private set; }
 
         public void ProcessNew(IReadOnlyList<CaptureSession> completedCaptures)
         {

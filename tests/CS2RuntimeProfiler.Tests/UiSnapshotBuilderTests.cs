@@ -1,0 +1,72 @@
+using System.Collections.Generic;
+using CS2RuntimeProfiler.Core;
+using CS2RuntimeProfiler.UI;
+using NUnit.Framework;
+
+namespace CS2RuntimeProfiler.Tests;
+
+public class UiSnapshotBuilderTests
+{
+    [Test]
+    public void Builder_projects_already_collected_metrics_without_inventing_values()
+    {
+        var global = new GlobalMetricsSnapshot(
+            12.5,
+            selectedSpeed: 4,
+            actualSpeed: 2.8,
+            new Dictionary<string, RecorderReading>
+            {
+                ["main"] = new RecorderReading(9.2, 1)
+            });
+
+        var pathfinding = new NamedMetricSnapshot(12.5, new[]
+        {
+            NamedMetricValue.Available("pendingPathfindActions", 42, MetricConfidence.Indirect),
+            NamedMetricValue.Unavailable("requestsPerSecond", "No verified runtime request counter is available.")
+        });
+
+        var domains = new NamedMetricSnapshot(12.5, new[]
+        {
+            NamedMetricValue.Available("citizens", 40000, MetricConfidence.Indirect)
+        });
+
+        var systems = new SystemTimingSnapshot();
+        systems.AddSystem("Example.Mod.System", 1.4, MetricConfidence.Managed, "Example.Mod", new[] { "patch.owner" });
+        systems.SetUnattributedJobsMilliseconds(3.1);
+
+        var input = new UiSnapshotInput(
+            global,
+            CaptureState.DeepCapture,
+            pathfinding,
+            domains,
+            systems,
+            captures: new List<CaptureSession>(),
+            profilerOverheadShare: 0.025,
+            diagnostics: new[] { "runtime build unverified" });
+
+        var snapshot = UiSnapshotBuilder.Build(input);
+
+        Assert.That(snapshot.Global.SelectedSpeed, Is.EqualTo(4));
+        Assert.That(snapshot.Global.ActualSpeed, Is.EqualTo(2.8));
+        Assert.That(snapshot.Global.Efficiency, Is.EqualTo(0.7).Within(0.0001));
+        Assert.That(snapshot.Capture.State, Is.EqualTo("DeepCapture"));
+        Assert.That(snapshot.Systems.Single().OwnerAssembly, Is.EqualTo("Example.Mod"));
+        Assert.That(snapshot.Systems.Single().Confidence, Is.EqualTo("Managed"));
+        Assert.That(snapshot.Diagnostics.UnattributedJobsMilliseconds, Is.EqualTo(3.1));
+        Assert.That(snapshot.Pathfinding.Metrics.Single(x => x.Id == "requestsPerSecond").Value, Is.Null);
+        Assert.That(snapshot.Pathfinding.Metrics.Single(x => x.Id == "requestsPerSecond").Reason, Does.Contain("verified"));
+        Assert.That(snapshot.DomainMetrics.Single(x => x.Id == "citizens").Value, Is.EqualTo(40000));
+    }
+
+    [Test]
+    public void Missing_input_snapshots_produce_empty_unavailable_ui_not_exceptions()
+    {
+        var snapshot = UiSnapshotBuilder.Build(new UiSnapshotInput());
+
+        Assert.That(snapshot.Global.Available, Is.False);
+        Assert.That(snapshot.Systems, Is.Empty);
+        Assert.That(snapshot.Pathfinding.Metrics, Is.Empty);
+        Assert.That(snapshot.DomainMetrics, Is.Empty);
+        Assert.That(snapshot.Captures, Is.Empty);
+    }
+}

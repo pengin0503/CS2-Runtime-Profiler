@@ -69,7 +69,7 @@ UI tests/build:
 ```powershell
 cd UI
 npm ci
-npm test -- --run
+npm test
 npm run build
 ```
 

@@ -24,7 +24,7 @@ Record concrete measurements and evidence in this table when the scenarios are e
 
 | # | Scenario | Status | Selected speed | Actual speed | FPS | Profiler overhead | Capture coverage | Errors / warnings | Pass criteria / notes |
 | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Profiler disabled baseline | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | Run the same save/camera position for at least 60 s with monitoring disabled. Establish the comparison baseline; verify the profiler does not perform active sampling/capture work. |
+| 1 | Profiler disabled baseline | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | Run the same save/camera position for at least 60 s with the profiler genuinely inactive. Establish the comparison baseline and verify the chosen disable method stops sampling/capture work. |
 | 2 | Stable Normal Monitoring on a new/vanilla city | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | Global/domain metrics remain stable and truthful; no unexplained errors; measure profiler overhead rather than assuming it. |
 | 3 | Normal Monitoring on the representative ~40k modded city | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | Same-save comparison against disabled baseline; observe stability and overhead under the intended real workload. |
 | 4 | Manual Deep Capture | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | Manual request starts a bounded capture, records the intended Deep window and post-buffer, attempts safe marker categories, reports coverage/batching, and does not force Job completion or mutate gameplay state. |
@@ -38,7 +38,7 @@ Record concrete measurements and evidence in this table when the scenarios are e
 ## Measurement protocol
 
 1. Use the same save, camera position and simulation state where practical.
-2. Run a disabled-profiler baseline for at least 60 seconds, then repeat with Normal Monitoring.
+2. Establish a genuinely inactive baseline for at least 60 seconds, then repeat with Normal Monitoring. Do not assume that toggling `EnableMonitoring` alone proves zero recorder overhead: the current `GlobalMetricsCollector` initializes its Normal recorder set in `OnCreate`, while the setting short-circuits update-time sampling. If the baseline must represent zero profiler activity, disable/unload the mod or independently verify recorder deactivation first.
 3. Record selected speed, actual speed, FPS, profiler self-overhead, capture coverage, errors and warnings.
 4. Exercise both manual and automatic capture paths.
 5. For the representative slowdown case, preserve the pre/deep/post timeline and describe only observed correlations unless an independent causal test supports a stronger statement.

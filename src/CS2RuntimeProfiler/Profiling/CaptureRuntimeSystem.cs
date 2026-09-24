@@ -23,6 +23,8 @@ namespace CS2RuntimeProfiler.Profiling
         public CaptureSession CurrentSession => _controller?.CurrentSession;
         public IReadOnlyList<CaptureSession> CompletedSessions => _controller?.CompletedSessions ?? Array.Empty<CaptureSession>();
         public double LastOverheadShare => _lastOverheadShare;
+        public int CurrentBatchSize => _controller?.CurrentBatchSize ?? 0;
+        public int SamplingStride => _controller?.SamplingStride ?? 1;
 
         protected override void OnCreate()
         {
@@ -54,6 +56,7 @@ namespace CS2RuntimeProfiler.Profiling
             _lastOverheadShare = Math.Max(
                 0d,
                 _overhead.LastMilliseconds / (GlobalMetricsCollector.SamplingPeriodSeconds * 1000d));
+            _controller.CurrentSession?.ObserveProfilerOverheadShare(_lastOverheadShare);
             _controller.ReportProfilerOverheadShare(_lastOverheadShare);
 
             if (before == CaptureState.DeepCapture && _controller.State != CaptureState.DeepCapture)

@@ -92,8 +92,10 @@ namespace CS2RuntimeProfiler.UI
             try
             {
                 RefreshSnapshot();
-                var version = typeof(Mod).Assembly.GetName().Version?.ToString();
-                var report = ProfilerReportBuilder.Build(_snapshot, profilerVersion: version);
+                var report = ProfilerReportBuilder.Build(
+                    _snapshot,
+                    gameVersion: _snapshot.Diagnostics?.GameVersion,
+                    profilerVersion: _snapshot.Diagnostics?.ProfilerVersion);
                 var result = _exporter.Export(report);
                 var message = result.Success
                     ? $"ok:{Path.GetFileName(result.Path)}"
@@ -122,8 +124,16 @@ namespace CS2RuntimeProfiler.UI
             var diagnostics = new List<string>();
             if (timing == null)
                 diagnostics.Add("Per-system timing is unavailable until a timing-capable capture is produced.");
+            diagnostics.Add("Timeline series are emitted only for histories retained by current collectors; unavailable series are not synthesized.");
 
-            _snapshot = UiSnapshotBuilder.Build(new UiSnapshotInput(
+            var latestCapture = captures.LastOrDefault();
+            var patchMapState = timing == null
+                ? "Unavailable: no system timing snapshot."
+                : timing.Systems.Any(system => system.PatchOwners != null && system.PatchOwners.Count > 0)
+                    ? "Patch metadata observed in current system timing snapshot."
+                    : "No patch owners observed in current system timing snapshot.";
+
+            var input = new UiSnapshotInput(
                 _global?.Latest,
                 _capture?.State ?? CaptureState.Monitoring,
                 _domains?.Pathfinding?.Latest,
@@ -131,7 +141,30 @@ namespace CS2RuntimeProfiler.UI
                 timing,
                 captures,
                 _capture?.LastOverheadShare ?? 0d,
-                diagnostics));
+                diagnostics)
+            {
+                GameVersion = GetGameVersion(),
+                ProfilerVersion = typeof(Mod).Assembly.GetName().Version?.ToString() ?? string.Empty,
+                DiscoveredMarkerCount = _global?.Recorders?.Descriptors?.Count ?? 0,
+                CapturedMarkerCount = latestCapture?.MarkerCoverage.Captured ?? 0,
+                MarkerBatchSize = _capture?.CurrentBatchSize ?? 0,
+                SamplingStride = _capture?.SamplingStride ?? 1,
+                PatchMapState = patchMapState
+            };
+
+            _snapshot = UiSnapshotBuilder.Build(input);
+        }
+
+        private static string GetGameVersion()
+        {
+            try
+            {
+                return Game.Version.current.fullVersion ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         private void WriteSnapshot(IJsonWriter writer)
@@ -277,11 +310,34 @@ namespace CS2RuntimeProfiler.UI
                 writer.PropertyName("id"); writer.Write(item.Id ?? string.Empty);
                 writer.PropertyName("triggerKind"); writer.Write(item.TriggerKind ?? string.Empty);
                 writer.PropertyName("triggeredAtSeconds"); writer.Write(item.TriggeredAtSeconds);
+                writer.PropertyName("durationSeconds"); writer.Write(item.DurationSeconds);
                 writer.PropertyName("discoveredMarkers"); writer.Write(item.DiscoveredMarkers);
                 writer.PropertyName("capturedMarkers"); writer.Write(item.CapturedMarkers);
                 writer.PropertyName("batched"); writer.Write(item.Batched);
                 writer.PropertyName("coverageRatio"); writer.Write(item.CoverageRatio);
                 writer.PropertyName("warningCount"); writer.Write(item.WarningCount);
+                writer.PropertyName("profilerOverheadShare"); writer.Write(item.ProfilerOverheadShare);
+                writer.PropertyName("warnings"); WriteStrings(writer, item.Warnings);
+                writer.PropertyName("correlatedChanges"); WriteCorrelatedChanges(writer, item.CorrelatedChanges);
+                writer.TypeEnd();
+            }
+            writer.ArrayEnd();
+        }
+
+        private static void WriteCorrelatedChanges(IJsonWriter writer, IReadOnlyList<CorrelatedChangeUi> changes)
+        {
+            changes = changes ?? Array.Empty<CorrelatedChangeUi>();
+            writer.ArrayBegin((uint)changes.Count);
+            foreach (var change in changes)
+            {
+                var item = change ?? new CorrelatedChangeUi();
+                writer.TypeBegin("CS2RuntimeProfiler.CorrelatedChangeUi");
+                writer.PropertyName("metric"); writer.Write(item.Metric ?? string.Empty);
+                writer.PropertyName("before"); writer.Write(item.Before);
+                writer.PropertyName("after"); writer.Write(item.After);
+                writer.PropertyName("delta"); writer.Write(item.Delta);
+                writer.PropertyName("relativeDelta"); WriteNullable(writer, item.RelativeDelta);
+                writer.PropertyName("confidence"); writer.Write(item.Confidence ?? string.Empty);
                 writer.TypeEnd();
             }
             writer.ArrayEnd();
@@ -294,6 +350,14 @@ namespace CS2RuntimeProfiler.UI
             writer.PropertyName("profilerOverheadShare"); writer.Write(diagnostics.ProfilerOverheadShare);
             writer.PropertyName("unattributedJobsMilliseconds"); writer.Write(diagnostics.UnattributedJobsMilliseconds);
             writer.PropertyName("messages"); WriteStrings(writer, diagnostics.Messages);
+            writer.PropertyName("gameVersion"); writer.Write(diagnostics.GameVersion ?? string.Empty);
+            writer.PropertyName("profilerVersion"); writer.Write(diagnostics.ProfilerVersion ?? string.Empty);
+            writer.PropertyName("discoveredMarkerCount"); writer.Write(diagnostics.DiscoveredMarkerCount);
+            writer.PropertyName("capturedMarkerCount"); writer.Write(diagnostics.CapturedMarkerCount);
+            writer.PropertyName("systemCount"); writer.Write(diagnostics.SystemCount);
+            writer.PropertyName("markerBatchSize"); writer.Write(diagnostics.MarkerBatchSize);
+            writer.PropertyName("samplingStride"); writer.Write(diagnostics.SamplingStride);
+            writer.PropertyName("patchMapState"); writer.Write(diagnostics.PatchMapState ?? string.Empty);
             writer.TypeEnd();
         }
 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using CS2RuntimeProfiler.Core;
 using CS2RuntimeProfiler.Profiling;
 using Game;
@@ -16,6 +17,7 @@ namespace CS2RuntimeProfiler.Collectors
         private RecorderManager _recorderManager;
         private ProfilerOverheadTracker _overhead;
         private GlobalSnapshotHistory _history;
+        private IReadOnlyDictionary<string, string> _recorderUnits = new Dictionary<string, string>();
         private double _nextSampleAt;
 
         public string Name => "Global";
@@ -31,6 +33,7 @@ namespace CS2RuntimeProfiler.Collectors
             _overhead = new ProfilerOverheadTracker();
             _history = new GlobalSnapshotHistory(HistoryCapacity);
             _recorderManager.DiscoverAvailableMarkers();
+            _recorderUnits = _recorderManager.Descriptors.ToDictionary(descriptor => descriptor.Id, descriptor => descriptor.UnitType);
             RestoreNormalRecorders();
         }
 
@@ -53,7 +56,8 @@ namespace CS2RuntimeProfiler.Collectors
                 timestampSeconds,
                 _simulationSystem.selectedSpeed,
                 _simulationSystem.smoothSpeed,
-                _recorderManager.SampleActive());
+                _recorderManager.SampleActive(),
+                _recorderUnits);
             _history?.Add(Latest);
         }
 

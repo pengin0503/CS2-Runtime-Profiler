@@ -8,13 +8,15 @@ namespace CS2RuntimeProfiler.Core
             double timestampSeconds,
             double selectedSpeed,
             double actualSpeed,
-            IReadOnlyDictionary<string, RecorderReading> recorderReadings)
+            IReadOnlyDictionary<string, RecorderReading> recorderReadings,
+            IReadOnlyDictionary<string, string> recorderUnits = null)
         {
             TimestampSeconds = timestampSeconds;
             SelectedSpeed = selectedSpeed;
             ActualSpeed = actualSpeed;
             Efficiency = SimulationEfficiency.Calculate(selectedSpeed, actualSpeed);
             RecorderReadings = recorderReadings ?? new Dictionary<string, RecorderReading>();
+            RecorderUnits = recorderUnits ?? new Dictionary<string, string>();
         }
 
         public double TimestampSeconds { get; }
@@ -22,5 +24,6 @@ namespace CS2RuntimeProfiler.Core
         public double ActualSpeed { get; }
         public double Efficiency { get; }
         public IReadOnlyDictionary<string, RecorderReading> RecorderReadings { get; }
+        public IReadOnlyDictionary<string, string> RecorderUnits { get; }
     }
 }

@@ -123,15 +123,15 @@ namespace CS2RuntimeProfiler.UI
 
             var diagnostics = new List<string>();
             if (timing == null)
-                diagnostics.Add("Per-system timing is unavailable until a timing-capable capture is produced.");
-            diagnostics.Add("Timeline series are emitted only for histories retained by current collectors; unavailable series are not synthesized.");
+                diagnostics.Add("システム別の実行時間は、対応する詳細キャプチャが作成されるまで利用できません。");
+            diagnostics.Add("タイムラインは現在のコレクターが実際に保持した履歴だけを表示します。利用できない系列を推測で生成することはありません。");
 
             var latestCapture = captures.LastOrDefault();
             var patchMapState = timing == null
-                ? "Unavailable: no system timing snapshot."
+                ? "利用不可: システム時間スナップショットがありません。"
                 : timing.Systems.Any(system => system.PatchOwners != null && system.PatchOwners.Count > 0)
-                    ? "Patch metadata observed in current system timing snapshot."
-                    : "No patch owners observed in current system timing snapshot.";
+                    ? "現在のシステム時間スナップショットでパッチ情報を検出しました。"
+                    : "現在のシステム時間スナップショットではパッチ所有者を検出していません。";
 
             var input = new UiSnapshotInput(
                 _global?.Latest,
@@ -274,6 +274,7 @@ namespace CS2RuntimeProfiler.UI
                 writer.TypeBegin("CS2RuntimeProfiler.UiMetricRow");
                 writer.PropertyName("id"); writer.Write(item.Id ?? string.Empty);
                 writer.PropertyName("value"); WriteNullable(writer, item.Value);
+                writer.PropertyName("unitType"); writer.Write(item.UnitType ?? string.Empty);
                 writer.PropertyName("confidence"); writer.Write(item.Confidence ?? string.Empty);
                 writer.PropertyName("availability"); writer.Write(item.Availability ?? string.Empty);
                 writer.PropertyName("reason"); if (item.Reason == null) writer.WriteNull(); else writer.Write(item.Reason);

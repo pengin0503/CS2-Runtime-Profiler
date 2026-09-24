@@ -3,7 +3,7 @@ import { Button } from "cs2/ui";
 import type { CaptureSummaryUi, CorrelatedChangeUi } from "../bindings";
 import { formatNumber, formatPercent, shortMetricName } from "../format";
 import { MetricBadge } from "../components/MetricBadge";
-import { triggerKindLabel } from "../text";
+import { captureWarningLabel, triggerKindLabel } from "../text";
 import styles from "../profiler.module.scss";
 
 function metricLabel(metric: string) {
@@ -54,7 +54,7 @@ export function CapturesTab({ captures, onSelect }: { captures: CaptureSummaryUi
                 {!!capture.warnings?.length && (
                   <div className={styles.warningBox}>
                     <strong>キャプチャ警告</strong>
-                    {capture.warnings.map(warning => <span key={warning}>{warning}</span>)}
+                    {capture.warnings.map(warning => <span key={warning}>{captureWarningLabel(warning)}</span>)}
                   </div>
                 )}
               </div>

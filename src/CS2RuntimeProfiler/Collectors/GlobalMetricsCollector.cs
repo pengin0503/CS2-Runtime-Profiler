@@ -9,7 +9,7 @@ namespace CS2RuntimeProfiler.Collectors
 {
     public partial class GlobalMetricsCollector : GameSystemBase, IMetricCollector
     {
-        private const double SamplePeriodSeconds = 0.5;
+        public const double SamplingPeriodSeconds = 0.5;
         private const int HistoryCapacity = 60;
         private readonly Stopwatch _clock = Stopwatch.StartNew();
         private SimulationSystem _simulationSystem;
@@ -43,7 +43,7 @@ namespace CS2RuntimeProfiler.Collectors
             if (now < _nextSampleAt)
                 return;
 
-            _nextSampleAt = now + SamplePeriodSeconds;
+            _nextSampleAt = now + SamplingPeriodSeconds;
             _overhead.Measure(now, () => Sample(now));
         }
 

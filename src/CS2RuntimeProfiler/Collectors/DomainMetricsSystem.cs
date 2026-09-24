@@ -85,7 +85,7 @@ namespace CS2RuntimeProfiler.Collectors
             return GetEntityQuery(new EntityQueryDesc
             {
                 All = new[] { ComponentType.ReadOnly<T>() },
-                None = new[] { ComponentType.ReadOnly<Deleted>(), ComponentType.ReadOnly<Temp>() }
+                None = new[] { ComponentType.ReadOnly<Deleted>(), ComponentType.ReadOnly<Game.Tools.Temp>() }
             });
         }
     }

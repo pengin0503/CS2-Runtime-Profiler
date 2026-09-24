@@ -24,7 +24,7 @@ namespace CS2RuntimeProfiler.Collectors
         private PathfindingCollector _pathfinding;
         private double _nextUpdateAt;
 
-        public EntityMetricsCollector Entities => _entities;
+        public new EntityMetricsCollector Entities => _entities;
         public PathfindingCollector Pathfinding => _pathfinding;
 
         protected override void OnCreate()

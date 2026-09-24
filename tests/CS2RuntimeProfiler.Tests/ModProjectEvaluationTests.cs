@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using System.Xml.Linq;
 using NUnit.Framework;
 
 namespace CS2RuntimeProfiler.Tests;
@@ -6,94 +6,49 @@ namespace CS2RuntimeProfiler.Tests;
 public class ModProjectEvaluationTests
 {
     [Test]
-    public void Mod_project_reads_CSII_paths_from_process_environment()
+    public void Mod_project_delegates_runtime_paths_to_the_CS2_toolchain()
     {
-        var repositoryRoot = FindRepositoryRoot();
-        var projectPath = Path.Combine(repositoryRoot, "src", "CS2RuntimeProfiler", "CS2RuntimeProfiler.csproj");
-        var temporaryDirectory = Directory.CreateTempSubdirectory("cs2-runtime-profiler-msbuild-");
+        var projectPath = FindModProjectPath();
+        var projectText = File.ReadAllText(projectPath);
 
-        try
+        Assert.Multiple(() =>
         {
-            File.WriteAllText(Path.Combine(temporaryDirectory.FullName, "Mod.props"), "<Project />");
-            File.WriteAllText(Path.Combine(temporaryDirectory.FullName, "Mod.targets"), "<Project />");
-
-            var managedPath = Path.Combine(temporaryDirectory.FullName, "Managed");
-            Directory.CreateDirectory(managedPath);
-
-            var startInfo = CreateMsBuildStartInfo(projectPath, "CustomManagedPath", temporaryDirectory.FullName, managedPath);
-
-            using var process = Process.Start(startInfo)!;
-            var standardOutput = process.StandardOutput.ReadToEnd();
-            var standardError = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-
-            Assert.That(
-                process.ExitCode,
-                Is.EqualTo(0),
-                $"MSBuild project evaluation failed.{Environment.NewLine}{standardOutput}{Environment.NewLine}{standardError}");
-            Assert.That(standardOutput, Does.Contain(managedPath));
-        }
-        finally
-        {
-            temporaryDirectory.Delete(recursive: true);
-        }
+            Assert.That(projectText, Does.Contain("<Import Project=\"$(CSII_TOOLPATH)\\Mod.props\" />"));
+            Assert.That(projectText, Does.Contain("<Import Project=\"$(CSII_TOOLPATH)\\Mod.targets\" />"));
+            Assert.That(projectText, Does.Not.Contain("CSII_MANAGED_PATH"));
+            Assert.That(projectText, Does.Not.Contain("<CustomManagedPath"));
+            Assert.That(projectText, Does.Not.Contain("<MSCORLIBPath"));
+        });
     }
 
     [Test]
-    public void Mod_project_uses_game_mscorlib_from_managed_path()
+    public void Mod_project_updates_framework_serialization_reference_instead_of_adding_one()
     {
-        var repositoryRoot = FindRepositoryRoot();
-        var projectPath = Path.Combine(repositoryRoot, "src", "CS2RuntimeProfiler", "CS2RuntimeProfiler.csproj");
-        var temporaryDirectory = Directory.CreateTempSubdirectory("cs2-runtime-profiler-mscorlib-");
+        var document = XDocument.Load(FindModProjectPath());
+        var references = document
+            .Descendants("Reference")
+            .ToArray();
 
-        try
+        Assert.Multiple(() =>
         {
-            File.WriteAllText(Path.Combine(temporaryDirectory.FullName, "Mod.props"), "<Project />");
-            File.WriteAllText(Path.Combine(temporaryDirectory.FullName, "Mod.targets"), "<Project />");
-
-            var managedPath = Path.Combine(temporaryDirectory.FullName, "Managed");
-            Directory.CreateDirectory(managedPath);
-            var mscorlibPath = Path.Combine(managedPath, "mscorlib.dll");
-            File.WriteAllBytes(mscorlibPath, Array.Empty<byte>());
-
-            var startInfo = CreateMsBuildStartInfo(projectPath, "MSCORLIBPath", temporaryDirectory.FullName, managedPath);
-
-            using var process = Process.Start(startInfo)!;
-            var standardOutput = process.StandardOutput.ReadToEnd();
-            var standardError = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-
             Assert.That(
-                process.ExitCode,
-                Is.EqualTo(0),
-                $"MSBuild project evaluation failed.{Environment.NewLine}{standardOutput}{Environment.NewLine}{standardError}");
-            Assert.That(standardOutput, Does.Contain(mscorlibPath));
-        }
-        finally
-        {
-            temporaryDirectory.Delete(recursive: true);
-        }
+                references.Any(reference => (string?)reference.Attribute("Include") == "System.Runtime.Serialization"),
+                Is.False,
+                "Adding a new System.Runtime.Serialization reference can resolve a second framework profile through the CS2 Managed search path.");
+            Assert.That(
+                references.Any(reference => (string?)reference.Attribute("Update") == "System.Runtime.Serialization"),
+                Is.True,
+                "The existing framework reference should only have Private metadata updated.");
+        });
     }
 
-    private static ProcessStartInfo CreateMsBuildStartInfo(
-        string projectPath,
-        string propertyName,
-        string toolPath,
-        string managedPath)
+    private static string FindModProjectPath()
     {
-        var startInfo = new ProcessStartInfo("dotnet")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        startInfo.ArgumentList.Add("msbuild");
-        startInfo.ArgumentList.Add(projectPath);
-        startInfo.ArgumentList.Add("-nologo");
-        startInfo.ArgumentList.Add($"-getProperty:{propertyName}");
-        startInfo.Environment["CSII_MANAGED_PATH"] = managedPath;
-        startInfo.Environment["CSII_TOOLPATH"] = toolPath;
-        return startInfo;
+        return Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CS2RuntimeProfiler",
+            "CS2RuntimeProfiler.csproj");
     }
 
     private static string FindRepositoryRoot()

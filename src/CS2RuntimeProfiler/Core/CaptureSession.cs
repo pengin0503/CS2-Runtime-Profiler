@@ -1,0 +1,80 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace CS2RuntimeProfiler.Core
+{
+    public readonly struct MarkerCoverageInfo
+    {
+        public MarkerCoverageInfo(int discovered, int captured, bool isBatched)
+        {
+            Discovered = Math.Max(0, discovered);
+            Captured = Math.Max(0, Math.Min(captured, Discovered));
+            IsBatched = isBatched;
+        }
+
+        public int Discovered { get; }
+        public int Captured { get; }
+        public bool IsBatched { get; }
+        public double Ratio => Discovered == 0 ? 1d : (double)Captured / Discovered;
+    }
+
+    public sealed class CaptureSession
+    {
+        private readonly int _maxSamplesPerSeries;
+        private readonly Dictionary<string, RollingMetricSeries> _markerSamples = new Dictionary<string, RollingMetricSeries>(StringComparer.Ordinal);
+        private readonly List<string> _warnings = new List<string>();
+        private readonly List<GlobalMetricsSnapshot> _globalSamples = new List<GlobalMetricsSnapshot>();
+
+        public CaptureSession(string id, CaptureTrigger trigger, int maxSamplesPerSeries)
+        {
+            if (maxSamplesPerSeries < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxSamplesPerSeries));
+
+            Id = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString("N") : id;
+            Trigger = trigger ?? throw new ArgumentNullException(nameof(trigger));
+            _maxSamplesPerSeries = maxSamplesPerSeries;
+            MarkerCoverage = new MarkerCoverageInfo(0, 0, false);
+        }
+
+        public string Id { get; }
+        public CaptureTrigger Trigger { get; }
+        public MarkerCoverageInfo MarkerCoverage { get; private set; }
+        public IReadOnlyList<string> Warnings => _warnings;
+        public IReadOnlyList<GlobalMetricsSnapshot> GlobalSamples => _globalSamples;
+        public IReadOnlyDictionary<string, IReadOnlyList<MetricSample>> MarkerSamples =>
+            _markerSamples.ToDictionary(pair => pair.Key, pair => pair.Value.Snapshot(), StringComparer.Ordinal);
+
+        public void SetMarkerCoverage(int discovered, int captured, bool isBatched)
+        {
+            MarkerCoverage = new MarkerCoverageInfo(discovered, captured, isBatched);
+        }
+
+        public void AddWarning(string warning)
+        {
+            if (!string.IsNullOrWhiteSpace(warning) && !_warnings.Contains(warning))
+                _warnings.Add(warning);
+        }
+
+        public void AddGlobalSample(GlobalMetricsSnapshot sample)
+        {
+            if (sample == null)
+                return;
+            _globalSamples.Add(sample);
+            if (_globalSamples.Count > _maxSamplesPerSeries)
+                _globalSamples.RemoveAt(0);
+        }
+
+        public void AddMarkerSample(string markerId, MetricSample sample)
+        {
+            if (string.IsNullOrWhiteSpace(markerId))
+                return;
+            if (!_markerSamples.TryGetValue(markerId, out var series))
+            {
+                series = new RollingMetricSeries(_maxSamplesPerSeries);
+                _markerSamples[markerId] = series;
+            }
+            series.Add(sample);
+        }
+    }
+}

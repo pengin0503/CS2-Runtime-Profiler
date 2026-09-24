@@ -24,6 +24,13 @@ export interface CaptureUiState {
   completedCount: number;
 }
 
+export interface UiHudSnapshot {
+  selectedSpeed: number | null;
+  actualSpeed: number | null;
+  state: string;
+  isDeepCapture: boolean;
+}
+
 export interface SystemUiRow {
   id: string;
   ownerAssembly: string;
@@ -101,6 +108,13 @@ export interface UiSnapshot {
   diagnostics: DiagnosticsUi;
 }
 
+export const EMPTY_HUD_SNAPSHOT: UiHudSnapshot = {
+  selectedSpeed: null,
+  actualSpeed: null,
+  state: "Monitoring",
+  isDeepCapture: false
+};
+
 export const EMPTY_SNAPSHOT: UiSnapshot = {
   global: {
     available: false,
@@ -135,6 +149,7 @@ export const EMPTY_SNAPSHOT: UiSnapshot = {
 const GROUP = "CS2RuntimeProfiler";
 
 const snapshotBinding = bindValue<UiSnapshot>(GROUP, "snapshot", EMPTY_SNAPSHOT);
+const hudSnapshotBinding = bindValue<UiHudSnapshot>(GROUP, "hudSnapshot", EMPTY_HUD_SNAPSHOT);
 const panelVisibleBinding = bindValue<boolean>(GROUP, "panelVisible", false);
 const selectedCaptureBinding = bindValue<string>(GROUP, "selectedCaptureId", "");
 const selectedSystemBinding = bindValue<string>(GROUP, "selectedSystemId", "");
@@ -142,6 +157,7 @@ const selectedModBinding = bindValue<string>(GROUP, "selectedModId", "");
 const exportResultBinding = bindValue<string>(GROUP, "exportResult", "");
 
 export const useProfilerSnapshot = () => useValue(snapshotBinding);
+export const useProfilerHudSnapshot = () => useValue(hudSnapshotBinding);
 export const usePanelVisible = () => useValue(panelVisibleBinding);
 export const useSelectedCaptureId = () => useValue(selectedCaptureBinding);
 export const useSelectedSystemId = () => useValue(selectedSystemBinding);

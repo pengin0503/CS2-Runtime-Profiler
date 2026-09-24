@@ -42,6 +42,23 @@ public class ModProjectEvaluationTests
         });
     }
 
+    [Test]
+    public void Production_history_avoids_framework_profile_conflicting_Queue_type()
+    {
+        var historyPath = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CS2RuntimeProfiler",
+            "Core",
+            "GlobalSnapshotHistory.cs");
+        var source = File.ReadAllText(historyPath);
+
+        Assert.That(
+            source,
+            Does.Not.Contain("Queue<"),
+            "System.Collections.Generic.Queue<T> resolves from both System and mscorlib in the current CS2 build profile. Use the fixed-capacity ring buffer instead.");
+    }
+
     private static string FindModProjectPath()
     {
         return Path.Combine(

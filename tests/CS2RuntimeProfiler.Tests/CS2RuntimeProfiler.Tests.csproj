@@ -15,5 +15,6 @@
     <Compile Include="../../src/CS2RuntimeProfiler/Attribution/AssemblyAttributor.cs" Link="Attribution/AssemblyAttributor.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Profiling/IRecorderBackend.cs" Link="Profiling/IRecorderBackend.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Profiling/RecorderManager.cs" Link="Profiling/RecorderManager.cs" />
+    <Compile Include="../../src/CS2RuntimeProfiler/Collectors/ReflectionMetricAccessor.cs" Link="Collectors/ReflectionMetricAccessor.cs" />
   </ItemGroup>
 </Project>

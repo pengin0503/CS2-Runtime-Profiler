@@ -8,18 +8,24 @@ function displayMetric(metric: string): string {
   return shortMetricName(withoutPrefix);
 }
 
-function polyline(points: TimelinePoint[], minTime: number, maxTime: number): string {
-  if (!points.length) return "";
+interface GeometryPoint {
+  point: TimelinePoint;
+  x: number;
+  y: number;
+}
+
+function geometry(points: TimelinePoint[], minTime: number, maxTime: number): GeometryPoint[] {
+  if (!points.length) return [];
   const values = points.map(point => point.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const timeSpan = Math.max(0.0001, maxTime - minTime);
   const valueSpan = Math.max(0.0001, max - min);
-  return points.map(point => {
-    const x = 28 + ((point.timestampSeconds - minTime) / timeSpan) * 944;
-    const y = max === min ? 130 : 232 - ((point.value - min) / valueSpan) * 204;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
+  return points.map(point => ({
+    point,
+    x: 28 + ((point.timestampSeconds - minTime) / timeSpan) * 944,
+    y: max === min ? 130 : 232 - ((point.value - min) / valueSpan) * 204
+  }));
 }
 
 export function TimelineTab({ points }: { points: TimelinePoint[] }) {
@@ -62,18 +68,15 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
           <line x1="28" y1="28" x2="28" y2="232" className={styles.chartAxis} />
           {visible.map(metric => {
             const metricPoints = points.filter(point => point.metric === metric).sort((a, b) => a.timestampSeconds - b.timestampSeconds);
+            const coords = geometry(metricPoints, minTime, maxTime);
             return (
               <g key={metric} data-series={metric}>
-                <polyline points={polyline(metricPoints, minTime, maxTime)} fill="none" className={styles.chartLine} />
-                {metricPoints.map((point, index) => {
-                  const coords = polyline([point], point.timestampSeconds, point.timestampSeconds).split(",");
-                  const x = 28 + ((point.timestampSeconds - minTime) / Math.max(0.0001, maxTime - minTime)) * 944;
-                  return (
-                    <circle key={`${point.timestampSeconds}-${index}`} cx={x} cy={coords[1] ?? 130} r="5" className={styles.chartPoint} onClick={() => setSelectedTime(point.timestampSeconds)}>
-                      <title>{`${displayMetric(metric)} @ ${point.timestampSeconds.toFixed(2)}s = ${formatNumber(point.value, 2)} (${point.confidence})`}</title>
-                    </circle>
-                  );
-                })}
+                <polyline points={coords.map(item => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(" ")} fill="none" className={styles.chartLine} />
+                {coords.map(({ point, x, y }, index) => (
+                  <circle key={`${point.timestampSeconds}-${index}`} cx={x} cy={y} r="5" className={styles.chartPoint} onClick={() => setSelectedTime(point.timestampSeconds)}>
+                    <title>{`${displayMetric(metric)} @ ${point.timestampSeconds.toFixed(2)}s = ${formatNumber(point.value, 2)} (${point.confidence})`}</title>
+                  </circle>
+                ))}
               </g>
             );
           })}

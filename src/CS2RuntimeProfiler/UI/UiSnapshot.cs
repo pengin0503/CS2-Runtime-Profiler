@@ -65,16 +65,30 @@ namespace CS2RuntimeProfiler.UI
         public string Confidence { get; set; } = MetricConfidence.Unavailable.ToString();
     }
 
+    public sealed class CorrelatedChangeUi
+    {
+        public string Metric { get; set; } = string.Empty;
+        public double Before { get; set; }
+        public double After { get; set; }
+        public double Delta { get; set; }
+        public double? RelativeDelta { get; set; }
+        public string Confidence { get; set; } = MetricConfidence.Unavailable.ToString();
+    }
+
     public sealed class CaptureSummaryUi
     {
         public string Id { get; set; } = string.Empty;
         public string TriggerKind { get; set; } = string.Empty;
         public double TriggeredAtSeconds { get; set; }
+        public double DurationSeconds { get; set; }
         public int DiscoveredMarkers { get; set; }
         public int CapturedMarkers { get; set; }
         public bool Batched { get; set; }
         public double CoverageRatio { get; set; }
         public int WarningCount { get; set; }
+        public double ProfilerOverheadShare { get; set; }
+        public IReadOnlyList<string> Warnings { get; set; } = Array.Empty<string>();
+        public IReadOnlyList<CorrelatedChangeUi> CorrelatedChanges { get; set; } = Array.Empty<CorrelatedChangeUi>();
     }
 
     public sealed class DiagnosticsUi
@@ -82,6 +96,14 @@ namespace CS2RuntimeProfiler.UI
         public double ProfilerOverheadShare { get; set; }
         public double UnattributedJobsMilliseconds { get; set; }
         public IReadOnlyList<string> Messages { get; set; } = Array.Empty<string>();
+        public string GameVersion { get; set; } = string.Empty;
+        public string ProfilerVersion { get; set; } = string.Empty;
+        public int DiscoveredMarkerCount { get; set; }
+        public int CapturedMarkerCount { get; set; }
+        public int SystemCount { get; set; }
+        public int MarkerBatchSize { get; set; }
+        public int SamplingStride { get; set; } = 1;
+        public string PatchMapState { get; set; } = string.Empty;
     }
 
     public sealed class UiSnapshot
@@ -129,5 +151,12 @@ namespace CS2RuntimeProfiler.UI
         public IReadOnlyList<CaptureSession> Captures { get; set; } = Array.Empty<CaptureSession>();
         public double ProfilerOverheadShare { get; set; }
         public IReadOnlyList<string> Diagnostics { get; set; } = Array.Empty<string>();
+        public string GameVersion { get; set; } = string.Empty;
+        public string ProfilerVersion { get; set; } = string.Empty;
+        public int DiscoveredMarkerCount { get; set; }
+        public int CapturedMarkerCount { get; set; }
+        public int MarkerBatchSize { get; set; }
+        public int SamplingStride { get; set; } = 1;
+        public string PatchMapState { get; set; } = string.Empty;
     }
 }

@@ -41,6 +41,7 @@ namespace CS2RuntimeProfiler.Core
         public CaptureTrigger Trigger { get; }
         public MarkerCoverageInfo MarkerCoverage { get; private set; }
         public SystemTimingSnapshot SystemTiming { get; private set; }
+        public double MaxProfilerOverheadShare { get; private set; }
         public IReadOnlyList<string> Warnings => _warnings;
         public IReadOnlyList<GlobalMetricsSnapshot> GlobalSamples => _globalSamples;
         public IReadOnlyDictionary<string, IReadOnlyList<MetricSample>> MarkerSamples =>
@@ -54,6 +55,13 @@ namespace CS2RuntimeProfiler.Core
         public void SetSystemTiming(SystemTimingSnapshot snapshot)
         {
             SystemTiming = snapshot;
+        }
+
+        public void ObserveProfilerOverheadShare(double share)
+        {
+            if (double.IsNaN(share) || double.IsInfinity(share) || share < 0d)
+                return;
+            MaxProfilerOverheadShare = Math.Max(MaxProfilerOverheadShare, share);
         }
 
         public void AddWarning(string warning)

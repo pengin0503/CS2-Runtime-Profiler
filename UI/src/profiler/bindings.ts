@@ -1,0 +1,122 @@
+import { bindValue, trigger, useValue } from "cs2/api";
+
+export interface UiMetricRow {
+  id: string;
+  value: number | null;
+  confidence: string;
+  availability: string;
+  reason: string | null;
+}
+
+export interface GlobalUiMetrics {
+  available: boolean;
+  timestampSeconds: number;
+  selectedSpeed: number | null;
+  actualSpeed: number | null;
+  efficiency: number | null;
+  recorderMetrics: UiMetricRow[];
+}
+
+export interface CaptureUiState {
+  state: string;
+  isDeepCapture: boolean;
+  completedCount: number;
+}
+
+export interface SystemUiRow {
+  id: string;
+  ownerAssembly: string;
+  currentMilliseconds: number;
+  meanMilliseconds: number | null;
+  p95Milliseconds: number | null;
+  p99Milliseconds: number | null;
+  maxMilliseconds: number | null;
+  calls: number | null;
+  confidence: string;
+  patchOwners: string[];
+}
+
+export interface ModUiRow {
+  assemblyName: string;
+  directSystemMilliseconds: number;
+  directSystemCount: number;
+  patchedVanillaSystemCount: number;
+}
+
+export interface TimelinePoint {
+  timestampSeconds: number;
+  metric: string;
+  value: number;
+  confidence: string;
+}
+
+export interface CaptureSummaryUi {
+  id: string;
+  triggerKind: string;
+  triggeredAtSeconds: number;
+  discoveredMarkers: number;
+  capturedMarkers: number;
+  batched: boolean;
+  coverageRatio: number;
+  warningCount: number;
+}
+
+export interface DiagnosticsUi {
+  profilerOverheadShare: number;
+  unattributedJobsMilliseconds: number;
+  messages: string[];
+}
+
+export interface UiSnapshot {
+  global: GlobalUiMetrics;
+  capture: CaptureUiState;
+  systems: SystemUiRow[];
+  mods: ModUiRow[];
+  pathfinding: { metrics: UiMetricRow[] };
+  domainMetrics: UiMetricRow[];
+  timeline: TimelinePoint[];
+  captures: CaptureSummaryUi[];
+  diagnostics: DiagnosticsUi;
+}
+
+export const EMPTY_SNAPSHOT: UiSnapshot = {
+  global: {
+    available: false,
+    timestampSeconds: 0,
+    selectedSpeed: null,
+    actualSpeed: null,
+    efficiency: null,
+    recorderMetrics: []
+  },
+  capture: { state: "Monitoring", isDeepCapture: false, completedCount: 0 },
+  systems: [],
+  mods: [],
+  pathfinding: { metrics: [] },
+  domainMetrics: [],
+  timeline: [],
+  captures: [],
+  diagnostics: { profilerOverheadShare: 0, unattributedJobsMilliseconds: 0, messages: [] }
+};
+
+const GROUP = "CS2RuntimeProfiler";
+
+const snapshotBinding = bindValue<UiSnapshot>(GROUP, "snapshot", EMPTY_SNAPSHOT);
+const panelVisibleBinding = bindValue<boolean>(GROUP, "panelVisible", false);
+const selectedCaptureBinding = bindValue<string>(GROUP, "selectedCaptureId", "");
+const selectedSystemBinding = bindValue<string>(GROUP, "selectedSystemId", "");
+const selectedModBinding = bindValue<string>(GROUP, "selectedModId", "");
+const exportResultBinding = bindValue<string>(GROUP, "exportResult", "");
+
+export const useProfilerSnapshot = () => useValue(snapshotBinding);
+export const usePanelVisible = () => useValue(panelVisibleBinding);
+export const useSelectedCaptureId = () => useValue(selectedCaptureBinding);
+export const useSelectedSystemId = () => useValue(selectedSystemBinding);
+export const useSelectedModId = () => useValue(selectedModBinding);
+export const useExportResult = () => useValue(exportResultBinding);
+
+export const togglePanel = () => trigger(GROUP, "togglePanel");
+export const requestManualCapture = () => trigger(GROUP, "manualCapture");
+export const selectCapture = (id: string) => trigger(GROUP, "selectCapture", id);
+export const selectSystem = (id: string) => trigger(GROUP, "selectSystem", id);
+export const selectMod = (id: string) => trigger(GROUP, "selectMod", id);
+export const exportReport = () => trigger(GROUP, "exportReport");

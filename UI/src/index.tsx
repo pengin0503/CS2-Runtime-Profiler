@@ -4,6 +4,8 @@ import { ProfilerRoot } from "./profiler/ProfilerRoot";
 import { ProfilerHud } from "./profiler/components/ProfilerHud";
 import { togglePanel, usePanelVisible, useProfilerSnapshot } from "./profiler/bindings";
 
+export const hasCSS = true;
+
 function ProfilerHudEntry() {
   const snapshot = useProfilerSnapshot();
   const panelVisible = usePanelVisible();

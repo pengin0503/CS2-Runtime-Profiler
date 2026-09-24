@@ -1,5 +1,6 @@
 using Colossal.IO.AssetDatabase;
 using Colossal.Logging;
+using CS2RuntimeProfiler.Collectors;
 using Game;
 using Game.Modding;
 using Game.SceneFlow;
@@ -20,7 +21,7 @@ namespace CS2RuntimeProfiler
             Settings.RegisterInOptionsUI();
             AssetDatabase.global.LoadSettings(Id, Settings, new Setting(this));
 
-            // Profiling systems are intentionally added by later implementation tasks.
+            updateSystem.UpdateAt<GlobalMetricsCollector>(SystemUpdatePhase.UIUpdate);
         }
 
         public void OnDispose()

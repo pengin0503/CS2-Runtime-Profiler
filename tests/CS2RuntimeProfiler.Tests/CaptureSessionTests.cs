@@ -29,4 +29,20 @@ public class CaptureSessionTests
 
         Assert.That(session.MarkerSamples["m1"].Select(x => x.Value), Is.EqualTo(new[] { 2d, 3d }));
     }
+
+    [Test]
+    public void Marker_samples_can_be_read_without_materializing_the_entire_dictionary()
+    {
+        var session = new CaptureSession("capture-1", new CaptureTrigger(CaptureTriggerKind.Manual, 1, null), maxSamplesPerSeries: 3);
+        session.AddMarkerSample("m1", new MetricSample(1, 10, MetricConfidence.Full));
+        session.AddMarkerSample("m2", new MetricSample(1, 20, MetricConfidence.Full));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(session.TryGetMarkerSamples("m1", out var samples), Is.True);
+            Assert.That(samples.Select(x => x.Value), Is.EqualTo(new[] { 10d }));
+            Assert.That(session.TryGetMarkerSamples("missing", out var missing), Is.False);
+            Assert.That(missing, Is.Empty);
+        });
+    }
 }

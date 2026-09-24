@@ -1,4 +1,3 @@
-using System;
 using CS2RuntimeProfiler.Core;
 using NUnit.Framework;
 
@@ -8,11 +7,11 @@ public class UpdateMethodResolverTests
 {
     private sealed class OverloadedUpdateSystem
     {
-        protected void OnUpdate()
+        private void OnUpdate()
         {
         }
 
-        protected void OnUpdate(int phase)
+        private void OnUpdate(int phase)
         {
             _ = phase;
         }

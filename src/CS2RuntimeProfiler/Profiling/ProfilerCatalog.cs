@@ -37,8 +37,9 @@ namespace CS2RuntimeProfiler.Profiling
             var sourceKind = AssemblyAttributor.ClassifyName(assemblyName);
             var modName = sourceKind == SystemSourceKind.Mod ? _modAttributor.Resolve(assemblyName) : null;
 
-            // Patches are method-specific; their discovery is populated when an update method is inspectable.
-            var patchOwners = type.GetMethod("OnUpdate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public) is { } onUpdate
+            // Patches are method-specific; their discovery is populated when the parameterless ECS update method is inspectable.
+            var onUpdate = UpdateMethodResolver.Resolve(type);
+            var patchOwners = onUpdate != null
                 ? _patchInspector.GetPatchOwners(onUpdate)
                 : Array.Empty<PatchOwnerInfo>();
 

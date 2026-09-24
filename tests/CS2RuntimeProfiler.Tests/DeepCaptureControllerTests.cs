@@ -89,13 +89,44 @@ public class DeepCaptureControllerTests
         });
     }
 
-    private static DeepCaptureController CreateController(int maxConcurrent)
+    [Test]
+    public void Completed_capture_history_keeps_only_the_newest_sessions()
+    {
+        using var controller = CreateController(maxConcurrent: 2, maxCompletedSessions: 2);
+
+        controller.RequestManualCapture(0);
+        var first = controller.CurrentSession;
+        controller.Observe(3, global: null);
+
+        controller.RequestManualCapture(4);
+        var second = controller.CurrentSession;
+        controller.Observe(7, global: null);
+
+        controller.RequestManualCapture(8);
+        var third = controller.CurrentSession;
+        controller.Observe(11, global: null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.CompletedSessions.Count, Is.EqualTo(2));
+            Assert.That(controller.CompletedSessions, Does.Not.Contain(first));
+            Assert.That(controller.CompletedSessions[0], Is.SameAs(second));
+            Assert.That(controller.CompletedSessions[1], Is.SameAs(third));
+        });
+    }
+
+    private static DeepCaptureController CreateController(int maxConcurrent, int maxCompletedSessions = 20)
     {
         var descriptors = Enumerable.Range(0, maxConcurrent)
             .Select(index => new RecorderDescriptor($"marker-{index}", "CPU", $"Marker {index}", "TimeNanoseconds", "Int64"))
             .ToArray();
         var manager = new RecorderManager(new FakeBackend(descriptors));
-        var controller = new DeepCaptureController(manager, CreateStateMachine(), maxConcurrent: maxConcurrent, overheadCeiling: 0.08);
+        var controller = new DeepCaptureController(
+            manager,
+            CreateStateMachine(),
+            maxConcurrent: maxConcurrent,
+            overheadCeiling: 0.08,
+            maxCompletedSessions: maxCompletedSessions);
         controller.Initialize();
         return controller;
     }

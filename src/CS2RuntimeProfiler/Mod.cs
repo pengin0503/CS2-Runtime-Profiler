@@ -1,6 +1,8 @@
 using Colossal.IO.AssetDatabase;
 using Colossal.Logging;
 using CS2RuntimeProfiler.Collectors;
+using CS2RuntimeProfiler.Profiling;
+using CS2RuntimeProfiler.UI;
 using Game;
 using Game.Modding;
 using Game.SceneFlow;
@@ -23,6 +25,8 @@ namespace CS2RuntimeProfiler
 
             updateSystem.UpdateAt<GlobalMetricsCollector>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<DomainMetricsSystem>(SystemUpdatePhase.UIUpdate);
+            updateSystem.UpdateAt<CaptureRuntimeSystem>(SystemUpdatePhase.UIUpdate);
+            updateSystem.UpdateAt<ProfilerUISystem>(SystemUpdatePhase.UIUpdate);
         }
 
         public void OnDispose()

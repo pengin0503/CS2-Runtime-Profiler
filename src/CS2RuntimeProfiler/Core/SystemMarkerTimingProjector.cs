@@ -27,8 +27,7 @@ namespace CS2RuntimeProfiler.Core
                 .ToArray();
             var recorderList = (recorders ?? Array.Empty<RecorderDescriptor>())
                 .Where(recorder => recorder != null
-                    && string.Equals(recorder.UnitType, "TimeNanoseconds", StringComparison.Ordinal)
-                    && capture.MarkerSamples.ContainsKey(recorder.Id))
+                    && string.Equals(recorder.UnitType, "TimeNanoseconds", StringComparison.Ordinal))
                 .ToArray();
 
             foreach (var system in systemList)
@@ -42,7 +41,7 @@ namespace CS2RuntimeProfiler.Core
                     continue;
 
                 var recorder = candidates[0];
-                if (!capture.MarkerSamples.TryGetValue(recorder.Id, out var samples) || samples == null || samples.Count == 0)
+                if (!capture.TryGetMarkerSamples(recorder.Id, out var samples) || samples.Count == 0)
                     continue;
 
                 var milliseconds = samples

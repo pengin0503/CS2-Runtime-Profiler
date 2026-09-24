@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - fix/msbuild-environment-lookup
   workflow_dispatch:
 
 jobs:

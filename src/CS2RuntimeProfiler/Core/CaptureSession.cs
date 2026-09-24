@@ -40,6 +40,7 @@ namespace CS2RuntimeProfiler.Core
         public string Id { get; }
         public CaptureTrigger Trigger { get; }
         public MarkerCoverageInfo MarkerCoverage { get; private set; }
+        public SystemTimingSnapshot SystemTiming { get; private set; }
         public IReadOnlyList<string> Warnings => _warnings;
         public IReadOnlyList<GlobalMetricsSnapshot> GlobalSamples => _globalSamples;
         public IReadOnlyDictionary<string, IReadOnlyList<MetricSample>> MarkerSamples =>
@@ -48,6 +49,11 @@ namespace CS2RuntimeProfiler.Core
         public void SetMarkerCoverage(int discovered, int captured, bool isBatched)
         {
             MarkerCoverage = new MarkerCoverageInfo(discovered, captured, isBatched);
+        }
+
+        public void SetSystemTiming(SystemTimingSnapshot snapshot)
+        {
+            SystemTiming = snapshot;
         }
 
         public void AddWarning(string warning)

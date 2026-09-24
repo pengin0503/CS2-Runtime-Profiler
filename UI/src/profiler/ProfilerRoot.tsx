@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Button } from "cs2/ui";
 import {
   exportReport,
   requestManualCapture,
@@ -17,6 +18,7 @@ import { PathfindingTab } from "./tabs/PathfindingTab";
 import { TimelineTab } from "./tabs/TimelineTab";
 import { CapturesTab } from "./tabs/CapturesTab";
 import { DiagnosticsTab } from "./tabs/DiagnosticsTab";
+import { captureStateLabel } from "./text";
 import styles from "./profiler.module.scss";
 
 type ProfilerTab = "overview" | "systems" | "mods" | "pathfinding" | "timeline" | "captures" | "diagnostics";
@@ -30,27 +32,38 @@ export function ProfilerRoot() {
   if (!visible) return null;
 
   const tabs: Array<[ProfilerTab, string]> = [
-    ["overview", "Overview"],
-    ["systems", "Systems"],
-    ["mods", "Mods"],
-    ["pathfinding", "Pathfinding"],
-    ["timeline", "Timeline"],
-    ["captures", "Captures"],
-    ["diagnostics", "Diagnostics"]
+    ["overview", "概要"],
+    ["systems", "システム"],
+    ["mods", "MOD"],
+    ["pathfinding", "経路探索"],
+    ["timeline", "タイムライン"],
+    ["captures", "キャプチャ"],
+    ["diagnostics", "診断"]
   ];
 
   return (
-    <div className={styles.panel} role="dialog" aria-label="CS2 Runtime Profiler">
+    <div className={styles.panel} role="dialog" aria-label="CS2 ランタイムプロファイラー">
       <header className={styles.panelHeader}>
         <div>
-          <strong>CS2 Runtime Profiler</strong>
-          <small>{snapshot.capture.isDeepCapture ? "Deep Capture active" : "Low-overhead monitoring"}</small>
+          <strong>CS2 ランタイムプロファイラー</strong>
+          <small>{snapshot.capture.isDeepCapture ? "詳細キャプチャ実行中" : `低負荷監視・${captureStateLabel(snapshot.capture.state)}`}</small>
         </div>
-        <button type="button" className={styles.closeButton} onClick={togglePanel} aria-label="Close profiler">×</button>
+        <Button as="button" variant="flat" className={styles.closeButton} onSelect={togglePanel} aria-label="プロファイラーを閉じる">×</Button>
       </header>
 
-      <nav className={styles.tabs} aria-label="Profiler views">
-        {tabs.map(([id, label]) => <button key={id} className={tab === id ? styles.activeTab : ""} onClick={() => setTab(id)}>{label}</button>)}
+      <nav className={styles.tabs} aria-label="プロファイラー表示切替">
+        {tabs.map(([id, label]) => (
+          <Button
+            as="button"
+            variant="flat"
+            key={id}
+            selected={tab === id}
+            className={`${styles.tabButton} ${tab === id ? styles.activeTab : ""}`}
+            onSelect={() => setTab(id)}
+          >
+            {label}
+          </Button>
+        ))}
       </nav>
 
       <main className={styles.panelBody}>

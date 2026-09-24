@@ -26,8 +26,19 @@ export function formatInteger(value: number | null | undefined): string {
   return Math.round(value).toLocaleString();
 }
 
-export function formatMetricValue(metric: Pick<UiMetricRow, "value" | "availability">): string {
+export function formatBytes(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  const absolute = Math.abs(value);
+  if (absolute >= 1024 ** 3) return `${(value / (1024 ** 3)).toFixed(2)} GiB`;
+  if (absolute >= 1024 ** 2) return `${(value / (1024 ** 2)).toFixed(2)} MiB`;
+  if (absolute >= 1024) return `${(value / 1024).toFixed(2)} KiB`;
+  return `${Math.round(value)} B`;
+}
+
+export function formatMetricValue(metric: Pick<UiMetricRow, "value" | "availability"> & { unitType?: string }): string {
   if (metric.availability !== "Available" || metric.value == null || !Number.isFinite(metric.value)) return "—";
+  if (metric.unitType === "TimeNanoseconds") return formatMilliseconds(metric.value / 1_000_000);
+  if (metric.unitType === "Bytes") return formatBytes(metric.value);
   return formatNumber(metric.value, 2);
 }
 

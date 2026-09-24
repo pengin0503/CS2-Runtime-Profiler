@@ -60,14 +60,14 @@ describe("Task 12 profiler tabs", () => {
     expect(html).toContain('cy="232"');
   });
 
-  it("captures use evidence wording and show trigger duration coverage mode overhead and changes", () => {
+  it("captures use Japanese evidence wording and show trigger duration coverage mode overhead and changes", () => {
     const html = renderToStaticMarkup(<CapturesTab captures={snapshot.captures} />);
-    expect(html).toContain("Automatic");
-    expect(html).toContain("12.0 s");
+    expect(html).toContain("自動（低効率）");
+    expect(html).toContain("12.0 秒");
     expect(html).toContain("90.0%");
-    expect(html).toContain("Batched");
+    expect(html).toContain("分割計測");
     expect(html).toContain("4.5%");
-    expect(html).toContain("Strongest correlated changes");
+    expect(html).toContain("相関変化が大きい項目");
     expect(html).not.toContain(">Causes<");
   });
 

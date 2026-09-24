@@ -6,12 +6,12 @@ import styles from "../profiler.module.scss";
 
 export function PathfindingTab({ metrics }: { metrics: UiMetricRow[] }) {
   if (!metrics?.length) {
-    return <p className={styles.empty}>No verified pathfinding counters are exposed by the current runtime.</p>;
+    return <p className={styles.empty}>現在のランタイムから検証済みの経路探索カウンターを取得できません。</p>;
   }
 
   return (
     <div className={styles.tabBody}>
-      <p className={styles.explainer}>These counters are supporting evidence. Queue growth or throughput changes are not automatically classified as a cause.</p>
+      <p className={styles.explainer}>これらは補助的な指標です。キューの増加や処理量の変化だけで原因と断定しません。</p>
       <div className={styles.metricList}>
         {metrics.map(metric => (
           <div className={styles.metricRow} key={metric.id}>

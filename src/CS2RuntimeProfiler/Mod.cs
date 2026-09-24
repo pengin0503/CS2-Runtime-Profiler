@@ -1,6 +1,7 @@
 using Colossal.IO.AssetDatabase;
 using Colossal.Logging;
 using CS2RuntimeProfiler.Collectors;
+using CS2RuntimeProfiler.Localization;
 using CS2RuntimeProfiler.Profiling;
 using CS2RuntimeProfiler.UI;
 using Game;
@@ -20,8 +21,18 @@ namespace CS2RuntimeProfiler
             Log.Info(nameof(OnLoad));
 
             Settings = new Setting(this);
-            Settings.RegisterInOptionsUI();
+
+            var localizationManager = GameManager.instance?.localizationManager;
+            if (localizationManager != null)
+            {
+                localizationManager.AddSource("ja-JP", new LocaleJA(Settings));
+                // Keep the options readable even when the game falls back to its base locale.
+                // This mod intentionally presents its user-facing interface in Japanese.
+                localizationManager.AddSource("en-US", new LocaleJA(Settings));
+            }
+
             AssetDatabase.global.LoadSettings(Id, Settings, new Setting(this));
+            Settings.RegisterInOptionsUI();
 
             updateSystem.UpdateAt<GlobalMetricsCollector>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<DomainMetricsSystem>(SystemUpdatePhase.UIUpdate);

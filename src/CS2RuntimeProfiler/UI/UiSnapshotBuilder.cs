@@ -69,6 +69,7 @@ namespace CS2RuntimeProfiler.UI
                     {
                         Id = pair.Key,
                         Value = pair.Value.Value,
+                        UnitType = global.RecorderUnits.TryGetValue(pair.Key, out var unitType) ? unitType : string.Empty,
                         Availability = MetricAvailability.Available.ToString(),
                         Confidence = MetricConfidence.Full.ToString()
                     })

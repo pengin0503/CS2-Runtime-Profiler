@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import type { TimelinePoint } from "../bindings";
 import { formatNumber, shortMetricName } from "../format";
+import { confidenceLabel } from "../text";
 import styles from "../profiler.module.scss";
 
 function displayMetric(metric: string): string {
@@ -44,7 +45,7 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
   });
 
   if (!points?.length) {
-    return <p className={styles.empty}>No retained timeline history is available yet. Series are never synthesized from point-in-time counters.</p>;
+    return <p className={styles.empty}>保持されているタイムライン履歴はまだありません。単一時点のカウンターから履歴を捏造することはありません。</p>;
   }
 
   const selected = selectedTime == null
@@ -63,7 +64,7 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
       </div>
 
       <div className={styles.chartWrap}>
-        <svg className={styles.timelineChart} viewBox="0 0 1000 260" role="img" aria-label="Profiler timeline">
+        <svg className={styles.timelineChart} viewBox="0 0 1000 260" role="img" aria-label="プロファイラーのタイムライン">
           <line x1="28" y1="232" x2="972" y2="232" className={styles.chartAxis} />
           <line x1="28" y1="28" x2="28" y2="232" className={styles.chartAxis} />
           {visible.map(metric => {
@@ -74,7 +75,7 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
                 <polyline points={coords.map(item => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(" ")} fill="none" className={styles.chartLine} />
                 {coords.map(({ point, x, y }, index) => (
                   <circle key={`${point.timestampSeconds}-${index}`} cx={x} cy={y} r="5" className={styles.chartPoint} onClick={() => setSelectedTime(point.timestampSeconds)}>
-                    <title>{`${displayMetric(metric)} @ ${point.timestampSeconds.toFixed(2)}s = ${formatNumber(point.value, 2)} (${point.confidence})`}</title>
+                    <title>{`${displayMetric(metric)} / ${point.timestampSeconds.toFixed(2)}秒 = ${formatNumber(point.value, 2)}（${confidenceLabel(point.confidence)}）`}</title>
                   </circle>
                 ))}
               </g>
@@ -82,11 +83,11 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
           })}
         </svg>
       </div>
-      <p className={styles.chartNote}>Each series is normalized to its own observed range for shape comparison; raw values remain available on point hover/click.</p>
+      <p className={styles.chartNote}>形状比較のため各系列は観測範囲ごとに正規化しています。生の値はポイントのホバー／選択で確認できます。</p>
       {selectedTime != null && (
         <div className={styles.selectedPoint}>
-          <strong>t = {selectedTime.toFixed(2)} s</strong>
-          {selected.map(point => <span key={`${point.metric}-${point.value}`}>{displayMetric(point.metric)}: {formatNumber(point.value, 2)} ({point.confidence})</span>)}
+          <strong>時刻 = {selectedTime.toFixed(2)} 秒</strong>
+          {selected.map(point => <span key={`${point.metric}-${point.value}`}>{displayMetric(point.metric)}: {formatNumber(point.value, 2)}（{confidenceLabel(point.confidence)}）</span>)}
         </div>
       )}
     </div>

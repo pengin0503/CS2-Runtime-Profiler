@@ -6,6 +6,7 @@ export interface UiMetricRow {
   confidence: string;
   availability: string;
   reason: string | null;
+  unitType?: string;
 }
 
 export interface GlobalUiMetrics {

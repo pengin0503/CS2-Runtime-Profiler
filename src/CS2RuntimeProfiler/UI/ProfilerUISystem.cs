@@ -25,6 +25,7 @@ namespace CS2RuntimeProfiler.UI
         private ReportExporter _exporter;
         private UiSnapshot _snapshot = new UiSnapshot();
         private RawValueBinding _snapshotBinding;
+        private RawValueBinding _hudSnapshotBinding;
         private ValueBinding<bool> _panelVisibleBinding;
         private ValueBinding<string> _selectedCaptureBinding;
         private ValueBinding<string> _selectedSystemBinding;
@@ -45,6 +46,7 @@ namespace CS2RuntimeProfiler.UI
             _exporter = new ReportExporter();
 
             AddBinding(_snapshotBinding = new RawValueBinding(Group, "snapshot", WriteSnapshot));
+            AddBinding(_hudSnapshotBinding = new RawValueBinding(Group, "hudSnapshot", WriteHudSnapshot));
             AddBinding(_panelVisibleBinding = new ValueBinding<bool>(Group, "panelVisible", false));
             AddBinding(_selectedCaptureBinding = new ValueBinding<string>(Group, "selectedCaptureId", string.Empty));
             AddBinding(_selectedSystemBinding = new ValueBinding<string>(Group, "selectedSystemId", string.Empty));
@@ -70,6 +72,11 @@ namespace CS2RuntimeProfiler.UI
                 return;
 
             _nextRefreshAt = now + UiRefreshPeriodSeconds;
+            _hudSnapshotBinding.Update();
+
+            if (!_panelVisible)
+                return;
+
             RefreshSnapshot();
             _snapshotBinding.Update();
         }
@@ -78,13 +85,25 @@ namespace CS2RuntimeProfiler.UI
         {
             _panelVisible = !_panelVisible;
             _panelVisibleBinding.Update(_panelVisible);
+            _hudSnapshotBinding.Update();
+
+            if (_panelVisible)
+            {
+                RefreshSnapshot();
+                _snapshotBinding.Update();
+            }
         }
 
         private void ManualCapture()
         {
             _capture?.RequestManualCapture();
-            RefreshSnapshot();
-            _snapshotBinding.Update();
+            _hudSnapshotBinding.Update();
+
+            if (_panelVisible)
+            {
+                RefreshSnapshot();
+                _snapshotBinding.Update();
+            }
         }
 
         private void ExportReport()
@@ -153,6 +172,21 @@ namespace CS2RuntimeProfiler.UI
             };
 
             _snapshot = UiSnapshotBuilder.Build(input);
+        }
+
+        private void WriteHudSnapshot(IJsonWriter writer)
+        {
+            var latest = _global?.Latest;
+            var state = _capture?.State ?? CaptureState.Monitoring;
+
+            writer.TypeBegin("CS2RuntimeProfiler.UiHudSnapshot");
+            writer.PropertyName("selectedSpeed");
+            if (latest == null) writer.WriteNull(); else writer.Write(latest.SelectedSpeed);
+            writer.PropertyName("actualSpeed");
+            if (latest == null) writer.WriteNull(); else writer.Write(latest.ActualSpeed);
+            writer.PropertyName("state"); writer.Write(state.ToString());
+            writer.PropertyName("isDeepCapture"); writer.Write(state == CaptureState.DeepCapture);
+            writer.TypeEnd();
         }
 
         private static string GetGameVersion()

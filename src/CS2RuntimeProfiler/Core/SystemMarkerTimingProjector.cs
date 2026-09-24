@@ -1,0 +1,77 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace CS2RuntimeProfiler.Core
+{
+    /// <summary>
+    /// Projects captured Unity Entities profiler markers into per-system timing.
+    /// Only uniquely matched full system type names with TimeNanoseconds units are accepted.
+    /// Short-name guessing and unknown units are intentionally rejected.
+    /// </summary>
+    public static class SystemMarkerTimingProjector
+    {
+        private const double NanosecondsPerMillisecond = 1_000_000d;
+
+        public static SystemTimingSnapshot Project(
+            IEnumerable<SystemDescriptor> systems,
+            IEnumerable<RecorderDescriptor> recorders,
+            CaptureSession capture)
+        {
+            var result = new SystemTimingSnapshot();
+            if (capture == null)
+                return result;
+
+            var systemList = (systems ?? Array.Empty<SystemDescriptor>())
+                .Where(system => system != null && !string.IsNullOrWhiteSpace(system.FullTypeName))
+                .ToArray();
+            var recorderList = (recorders ?? Array.Empty<RecorderDescriptor>())
+                .Where(recorder => recorder != null
+                    && string.Equals(recorder.UnitType, "TimeNanoseconds", StringComparison.Ordinal)
+                    && capture.MarkerSamples.ContainsKey(recorder.Id))
+                .ToArray();
+
+            foreach (var system in systemList)
+            {
+                var candidates = recorderList
+                    .Where(recorder => MatchesFullSystemName(recorder.Name, system.FullTypeName))
+                    .ToArray();
+
+                // Ambiguous matches are left unattributed rather than guessed.
+                if (candidates.Length != 1)
+                    continue;
+
+                var recorder = candidates[0];
+                if (!capture.MarkerSamples.TryGetValue(recorder.Id, out var samples) || samples == null || samples.Count == 0)
+                    continue;
+
+                var milliseconds = samples
+                    .Where(sample => sample.Value >= 0d && !double.IsNaN(sample.Value) && !double.IsInfinity(sample.Value))
+                    .Select(sample => sample.Value / NanosecondsPerMillisecond)
+                    .ToArray();
+                if (milliseconds.Length == 0)
+                    continue;
+
+                var aggregate = SystemMetricAggregate.FromSamples(system.FullTypeName, milliseconds, MetricConfidence.Full);
+                result.AddSystemAggregate(
+                    aggregate,
+                    system.AssemblyName,
+                    system.PatchOwners.Select(owner => owner.OwnerId));
+            }
+
+            return result;
+        }
+
+        private static bool MatchesFullSystemName(string markerName, string fullTypeName)
+        {
+            if (string.IsNullOrWhiteSpace(markerName) || string.IsNullOrWhiteSpace(fullTypeName))
+                return false;
+
+            if (string.Equals(markerName, fullTypeName, StringComparison.Ordinal))
+                return true;
+
+            // Unity Entities creates the system marker as "<World name> <full system name>".
+            return markerName.EndsWith(" " + fullTypeName, StringComparison.Ordinal);
+        }
+    }
+}

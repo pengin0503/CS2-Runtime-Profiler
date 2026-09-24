@@ -105,6 +105,11 @@ namespace CS2RuntimeProfiler.UI
                     Id = system.SystemId,
                     OwnerAssembly = system.OwnerAssembly,
                     CurrentMilliseconds = system.Milliseconds,
+                    MeanMilliseconds = system.MeanMilliseconds,
+                    P95Milliseconds = system.P95Milliseconds,
+                    P99Milliseconds = system.P99Milliseconds,
+                    MaxMilliseconds = system.MaxMilliseconds,
+                    Calls = system.Calls,
                     Confidence = system.Confidence.ToString(),
                     PatchOwners = system.PatchOwners.ToArray()
                 })

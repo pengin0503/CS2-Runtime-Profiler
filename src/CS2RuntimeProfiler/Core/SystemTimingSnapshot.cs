@@ -6,13 +6,32 @@ namespace CS2RuntimeProfiler.Core
 {
     public sealed class SystemTimingEntry
     {
-        public SystemTimingEntry(string systemId, double milliseconds, MetricConfidence confidence, string ownerAssembly, IEnumerable<string> patchOwners)
+        public SystemTimingEntry(
+            string systemId,
+            double milliseconds,
+            MetricConfidence confidence,
+            string ownerAssembly,
+            IEnumerable<string> patchOwners,
+            double? meanMilliseconds = null,
+            double? medianMilliseconds = null,
+            double? p95Milliseconds = null,
+            double? p99Milliseconds = null,
+            double? maxMilliseconds = null,
+            double? totalMilliseconds = null,
+            int? calls = null)
         {
             SystemId = systemId ?? string.Empty;
             Milliseconds = Math.Max(0d, milliseconds);
             Confidence = confidence;
             OwnerAssembly = ownerAssembly ?? string.Empty;
             PatchOwners = (patchOwners ?? Array.Empty<string>()).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.Ordinal).ToArray();
+            MeanMilliseconds = Normalize(meanMilliseconds);
+            MedianMilliseconds = Normalize(medianMilliseconds);
+            P95Milliseconds = Normalize(p95Milliseconds);
+            P99Milliseconds = Normalize(p99Milliseconds);
+            MaxMilliseconds = Normalize(maxMilliseconds);
+            TotalMilliseconds = Normalize(totalMilliseconds);
+            Calls = calls.HasValue ? Math.Max(0, calls.Value) : (int?)null;
         }
 
         public string SystemId { get; }
@@ -20,6 +39,20 @@ namespace CS2RuntimeProfiler.Core
         public MetricConfidence Confidence { get; }
         public string OwnerAssembly { get; }
         public IReadOnlyList<string> PatchOwners { get; }
+        public double? MeanMilliseconds { get; }
+        public double? MedianMilliseconds { get; }
+        public double? P95Milliseconds { get; }
+        public double? P99Milliseconds { get; }
+        public double? MaxMilliseconds { get; }
+        public double? TotalMilliseconds { get; }
+        public int? Calls { get; }
+
+        private static double? Normalize(double? value)
+        {
+            if (!value.HasValue || double.IsNaN(value.Value) || double.IsInfinity(value.Value))
+                return null;
+            return Math.Max(0d, value.Value);
+        }
     }
 
     public sealed class SystemTimingSnapshot
@@ -32,6 +65,26 @@ namespace CS2RuntimeProfiler.Core
         public void AddSystem(string systemId, double milliseconds, MetricConfidence confidence, string ownerAssembly = "", IEnumerable<string> patchOwners = null)
         {
             _systems.Add(new SystemTimingEntry(systemId, milliseconds, confidence, ownerAssembly, patchOwners));
+        }
+
+        public void AddSystemAggregate(SystemMetricAggregate aggregate, string ownerAssembly = "", IEnumerable<string> patchOwners = null)
+        {
+            if (aggregate == null)
+                return;
+
+            _systems.Add(new SystemTimingEntry(
+                aggregate.SystemId,
+                aggregate.CurrentMilliseconds,
+                aggregate.Confidence,
+                ownerAssembly,
+                patchOwners,
+                aggregate.MeanMilliseconds,
+                aggregate.MedianMilliseconds,
+                aggregate.P95Milliseconds,
+                aggregate.P99Milliseconds,
+                aggregate.MaxMilliseconds,
+                aggregate.TotalMilliseconds,
+                aggregate.Calls));
         }
 
         public void SetUnattributedJobsMilliseconds(double milliseconds)

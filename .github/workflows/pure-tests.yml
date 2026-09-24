@@ -3,7 +3,7 @@ name: Pure Core Tests
 on:
   push:
     branches:
-      - feature/runtime-profiler-v1
+      - main
   workflow_dispatch:
 
 jobs:

@@ -29,7 +29,7 @@ namespace CS2RuntimeProfiler.UI
                 Mods = BuildMods(systems),
                 Pathfinding = new PathfindingUiMetrics { Metrics = BuildMetrics(input.Pathfinding) },
                 DomainMetrics = BuildMetrics(input.Domains),
-                Timeline = BuildTimeline(input.Captures),
+                Timeline = BuildTimeline(input.Captures ?? Array.Empty<CaptureSession>()),
                 Captures = captures,
                 Diagnostics = new DiagnosticsUi
                 {
@@ -148,7 +148,7 @@ namespace CS2RuntimeProfiler.UI
             {
                 Id = capture.Id,
                 TriggerKind = capture.Trigger.Kind.ToString(),
-                TriggeredAtSeconds = capture.Trigger.TriggeredAtSeconds,
+                TriggeredAtSeconds = capture.Trigger.TimestampSeconds,
                 DiscoveredMarkers = capture.MarkerCoverage.Discovered,
                 CapturedMarkers = capture.MarkerCoverage.Captured,
                 Batched = capture.MarkerCoverage.IsBatched,

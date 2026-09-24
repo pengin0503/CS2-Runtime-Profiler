@@ -7,15 +7,19 @@ namespace CS2RuntimeProfiler.Profiling
 {
     public sealed class DeepCaptureController : IDisposable
     {
+        private const int ConsecutiveOverheadBreachesBeforeDegrade = 3;
+
         private readonly RecorderManager _recorders;
         private readonly DeepCaptureStateMachine _stateMachine;
         private readonly List<CaptureSession> _completed = new List<CaptureSession>();
         private readonly HashSet<string> _capturedMarkerIds = new HashSet<string>(StringComparer.Ordinal);
         private readonly double _overheadCeiling;
+        private readonly int _configuredMaxConcurrent;
         private int _maxConcurrent;
         private int _currentBatchIndex = -1;
         private int _sampleStride = 1;
         private int _sampleCounter;
+        private int _consecutiveOverheadBreaches;
         private double _batchStartedAt;
         private CaptureState _lastState;
         private MarkerBatchPlan _plan;
@@ -28,7 +32,8 @@ namespace CS2RuntimeProfiler.Profiling
         {
             _recorders = recorders ?? throw new ArgumentNullException(nameof(recorders));
             _stateMachine = stateMachine ?? throw new ArgumentNullException(nameof(stateMachine));
-            _maxConcurrent = Math.Max(1, maxConcurrent);
+            _configuredMaxConcurrent = Math.Max(1, maxConcurrent);
+            _maxConcurrent = _configuredMaxConcurrent;
             _overheadCeiling = Math.Max(0.001, overheadCeiling);
             _lastState = _stateMachine.State;
         }
@@ -84,19 +89,33 @@ namespace CS2RuntimeProfiler.Profiling
 
         public void ReportProfilerOverheadShare(double share)
         {
-            if (share <= _overheadCeiling)
+            if (CurrentSession == null)
+            {
+                _consecutiveOverheadBreaches = 0;
+                return;
+            }
+
+            if (double.IsNaN(share) || share < 0d || share <= _overheadCeiling)
+            {
+                _consecutiveOverheadBreaches = 0;
+                return;
+            }
+
+            _consecutiveOverheadBreaches++;
+            if (_consecutiveOverheadBreaches < ConsecutiveOverheadBreachesBeforeDegrade)
                 return;
 
+            _consecutiveOverheadBreaches = 0;
             if (_maxConcurrent > 1)
             {
                 _maxConcurrent = Math.Max(1, _maxConcurrent / 2);
                 _plan = MarkerBatchPlanner.Create(_recorders.Descriptors.Select(d => d.Id), _maxConcurrent);
-                CurrentSession?.AddWarning($"Profiler overhead exceeded {_overheadCeiling:P0}; marker batching reduced to {_maxConcurrent} concurrent recorders.");
+                CurrentSession.AddWarning($"Profiler overhead exceeded {_overheadCeiling:P0} repeatedly; marker batching reduced to {_maxConcurrent} concurrent recorders.");
             }
             else
             {
                 _sampleStride = Math.Min(16, _sampleStride * 2);
-                CurrentSession?.AddWarning($"Profiler overhead remains high; sampling stride increased to {_sampleStride}.");
+                CurrentSession.AddWarning($"Profiler overhead remains high; sampling stride increased to {_sampleStride}.");
             }
         }
 
@@ -106,6 +125,11 @@ namespace CS2RuntimeProfiler.Profiling
         {
             if (_plan == null)
                 Initialize();
+
+            _maxConcurrent = _configuredMaxConcurrent;
+            _sampleStride = 1;
+            _consecutiveOverheadBreaches = 0;
+            _plan = MarkerBatchPlanner.Create(_recorders.Descriptors.Select(d => d.Id), _maxConcurrent);
 
             CurrentSession = new CaptureSession(
                 $"capture-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}",
@@ -166,6 +190,7 @@ namespace CS2RuntimeProfiler.Profiling
             CurrentSession.SetMarkerCoverage(_plan?.DiscoveredCount ?? 0, _capturedMarkerIds.Count, _plan?.IsBatched ?? false);
             _completed.Add(CurrentSession);
             CurrentSession = null;
+            _consecutiveOverheadBreaches = 0;
         }
     }
 }

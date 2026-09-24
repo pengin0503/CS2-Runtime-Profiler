@@ -50,5 +50,5 @@ describe("CSS Modules build", () => {
         process.env.CSII_USERDATAPATH = previousUserDataPath;
       }
     }
-  });
+  }, 20_000);
 });

@@ -50,21 +50,42 @@ export interface TimelinePoint {
   confidence: string;
 }
 
+export interface CorrelatedChangeUi {
+  metric: string;
+  before: number;
+  after: number;
+  delta: number;
+  relativeDelta: number | null;
+  confidence: string;
+}
+
 export interface CaptureSummaryUi {
   id: string;
   triggerKind: string;
   triggeredAtSeconds: number;
+  durationSeconds: number;
   discoveredMarkers: number;
   capturedMarkers: number;
   batched: boolean;
   coverageRatio: number;
   warningCount: number;
+  profilerOverheadShare: number;
+  warnings: string[];
+  correlatedChanges: CorrelatedChangeUi[];
 }
 
 export interface DiagnosticsUi {
   profilerOverheadShare: number;
   unattributedJobsMilliseconds: number;
   messages: string[];
+  gameVersion: string;
+  profilerVersion: string;
+  discoveredMarkerCount: number;
+  capturedMarkerCount: number;
+  systemCount: number;
+  markerBatchSize: number;
+  samplingStride: number;
+  patchMapState: string;
 }
 
 export interface UiSnapshot {
@@ -95,7 +116,19 @@ export const EMPTY_SNAPSHOT: UiSnapshot = {
   domainMetrics: [],
   timeline: [],
   captures: [],
-  diagnostics: { profilerOverheadShare: 0, unattributedJobsMilliseconds: 0, messages: [] }
+  diagnostics: {
+    profilerOverheadShare: 0,
+    unattributedJobsMilliseconds: 0,
+    messages: [],
+    gameVersion: "",
+    profilerVersion: "",
+    discoveredMarkerCount: 0,
+    capturedMarkerCount: 0,
+    systemCount: 0,
+    markerBatchSize: 0,
+    samplingStride: 1,
+    patchMapState: ""
+  }
 };
 
 const GROUP = "CS2RuntimeProfiler";

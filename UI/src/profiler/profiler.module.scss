@@ -21,7 +21,7 @@
   position: absolute;
   top: 72rem;
   left: 28rem;
-  width: min(980rem, calc(100vw - 56rem));
+  width: min(1080rem, calc(100vw - 56rem));
   max-height: calc(100vh - 110rem);
   display: flex;
   flex-direction: column;
@@ -34,26 +34,13 @@
   z-index: 1000;
   font-size: 13rem;
 }
-.panelHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12rem 14rem;
-  border-bottom: 1rem solid rgba(255,255,255,.1);
-}
+.panelHeader { display: flex; justify-content: space-between; align-items: center; padding: 12rem 14rem; border-bottom: 1rem solid rgba(255,255,255,.1); }
 .panelHeader > div { display: flex; flex-direction: column; gap: 2rem; }
 .panelHeader strong { font-size: 16rem; }
 .panelHeader small { opacity: .65; }
 .closeButton { width: 30rem; height: 30rem; border: 0; border-radius: 6rem; background: rgba(255,255,255,.08); color: inherit; cursor: pointer; font-size: 20rem; }
-.tabs { display: flex; gap: 5rem; padding: 8rem 12rem; border-bottom: 1rem solid rgba(255,255,255,.08); }
-.tabs button, .actionRow button, .table th button {
-  border: 0;
-  border-radius: 5rem;
-  background: rgba(255,255,255,.07);
-  color: inherit;
-  padding: 6rem 10rem;
-  cursor: pointer;
-}
+.tabs { display: flex; gap: 5rem; padding: 8rem 12rem; border-bottom: 1rem solid rgba(255,255,255,.08); overflow-x: auto; }
+.tabs button, .actionRow button, .table th button { border: 0; border-radius: 5rem; background: rgba(255,255,255,.07); color: inherit; padding: 6rem 10rem; cursor: pointer; white-space: nowrap; }
 .tabs button:hover, .actionRow button:hover { background: rgba(255,255,255,.13); }
 .tabs .activeTab { background: rgba(86,166,255,.28); }
 .panelBody { overflow: auto; padding: 12rem; }
@@ -67,10 +54,11 @@
 .actionRow { display: flex; align-items: center; gap: 6rem; flex-wrap: wrap; }
 .actionRow button:disabled { opacity: .45; cursor: default; }
 .exportResult { opacity: .7; font-size: 10rem; }
+.metricList { display: flex; flex-direction: column; gap: 4rem; }
 .metricRow { display: grid; grid-template-columns: minmax(180rem,1fr) 100rem 100rem; align-items: center; gap: 8rem; min-height: 34rem; padding: 4rem 7rem; border-radius: 5rem; background: rgba(255,255,255,.035); }
 .metricIdentity { display: flex; flex-direction: column; min-width: 0; }
 .metricIdentity strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.metricIdentity small { opacity: .55; font-size: 9rem; }
+.metricIdentity small { opacity: .55; font-size: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .metricValue { font-variant-numeric: tabular-nums; text-align: right; }
 .badge { display: inline-flex; justify-content: center; padding: 2rem 6rem; border-radius: 999rem; font-size: 9rem; white-space: nowrap; }
 .badgeFull { background: rgba(74,190,118,.18); }
@@ -92,9 +80,41 @@
 .modCard:hover { background: rgba(255,255,255,.075); }
 .modCard > span { display: flex; justify-content: space-between; gap: 10rem; opacity: .82; }
 
+.seriesControls { display: flex; flex-wrap: wrap; gap: 5rem; }
+.seriesToggle { display: flex; align-items: center; gap: 4rem; padding: 4rem 7rem; border-radius: 5rem; background: rgba(255,255,255,.045); font-size: 10rem; }
+.chartWrap { min-height: 260rem; padding: 6rem; border-radius: 7rem; background: rgba(0,0,0,.18); }
+.timelineChart { width: 100%; height: 260rem; overflow: visible; }
+.chartAxis { stroke: rgba(255,255,255,.2); stroke-width: 2; }
+.chartLine { stroke: rgba(99,181,255,.75); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.chartPoint { fill: rgba(220,239,255,.9); cursor: pointer; }
+.chartPoint:hover { r: 8; }
+.chartNote { margin: 0; opacity: .6; font-size: 10rem; }
+.selectedPoint { display: flex; flex-wrap: wrap; gap: 8rem; padding: 8rem; border-radius: 6rem; background: rgba(255,255,255,.04); }
+
+.captureList { display: flex; flex-direction: column; gap: 8rem; }
+.captureCard { border: 1rem solid rgba(255,255,255,.08); border-radius: 7rem; overflow: hidden; background: rgba(255,255,255,.035); }
+.captureHeader { width: 100%; display: grid; grid-template-columns: minmax(180rem,1.5fr) repeat(4,minmax(90rem,1fr)); align-items: center; gap: 7rem; padding: 9rem; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.captureHeader:hover { background: rgba(255,255,255,.04); }
+.captureHeader > span:first-child { display: flex; flex-direction: column; }
+.captureHeader small { opacity: .5; font-size: 9rem; }
+.captureBody { display: flex; flex-direction: column; gap: 7rem; padding: 10rem; border-top: 1rem solid rgba(255,255,255,.07); }
+.captureBody h3 { margin: 4rem 0 0; }
+.captureFacts { display: flex; flex-wrap: wrap; gap: 8rem 16rem; }
+.changeRow { display: grid; grid-template-columns: minmax(170rem,1fr) 160rem 90rem 90rem; align-items: center; gap: 8rem; padding: 5rem 7rem; border-radius: 5rem; background: rgba(255,255,255,.035); }
+.warningBox { display: flex; flex-direction: column; gap: 3rem; padding: 8rem; border-radius: 5rem; background: rgba(230,184,74,.08); }
+.warningBox span { opacity: .75; }
+
+.diagnosticsGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6rem; }
+.diagnosticItem { display: flex; justify-content: space-between; gap: 12rem; padding: 7rem 9rem; border-radius: 5rem; background: rgba(255,255,255,.04); }
+.diagnosticItem span { opacity: .65; }
+.diagnosticItem strong { text-align: right; }
+.diagnosticMessage { margin: 0; padding: 6rem 8rem; border-left: 2rem solid rgba(99,181,255,.45); background: rgba(99,181,255,.05); }
+
 @media (max-width: 900px) {
   .panel { width: calc(100vw - 24rem); left: 12rem; }
   .summaryGrid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .metricRow { grid-template-columns: minmax(140rem,1fr) 80rem 90rem; }
-  .modGrid { grid-template-columns: 1fr; }
+  .modGrid, .diagnosticsGrid { grid-template-columns: 1fr; }
+  .captureHeader { grid-template-columns: 1fr 1fr; }
+  .changeRow { grid-template-columns: 1fr 1fr; }
 }

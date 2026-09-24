@@ -6,11 +6,11 @@
     <Configurations>Debug;Release</Configurations>
     <RootNamespace>CS2RuntimeProfiler</RootNamespace>
     <AssemblyName>CS2RuntimeProfiler</AssemblyName>
-    <CustomManagedPath Condition="'$(CustomManagedPath)' == ''">$([System.Environment]::GetEnvironmentVariable('CSII_MANAGED_PATH', 'Process'))</CustomManagedPath>
+    <CustomManagedPath Condition="'$(CustomManagedPath)' == ''">$([System.Environment]::GetEnvironmentVariable('CSII_MANAGED_PATH'))</CustomManagedPath>
   </PropertyGroup>
 
-  <Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'Process'))\Mod.props" />
-  <Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'Process'))\Mod.targets" />
+  <Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH'))\Mod.props" />
+  <Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH'))\Mod.targets" />
 
   <ItemGroup>
     <Reference Include="Game"><Private>false</Private></Reference>

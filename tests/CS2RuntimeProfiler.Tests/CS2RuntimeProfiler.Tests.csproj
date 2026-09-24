@@ -19,5 +19,8 @@
     <Compile Include="../../src/CS2RuntimeProfiler/Collectors/ReflectionMetricAccessor.cs" Link="Collectors/ReflectionMetricAccessor.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Collectors/PathfindingCollector.cs" Link="Collectors/PathfindingCollector.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Collectors/EntityMetricsCollector.cs" Link="Collectors/EntityMetricsCollector.cs" />
+    <Compile Include="../../src/CS2RuntimeProfiler/Export/PrivacySanitizer.cs" Link="Export/PrivacySanitizer.cs" />
+    <Compile Include="../../src/CS2RuntimeProfiler/Export/PerformanceReport.cs" Link="Export/PerformanceReport.cs" />
+    <Compile Include="../../src/CS2RuntimeProfiler/Export/PerformanceReportSerializer.cs" Link="Export/PerformanceReportSerializer.cs" />
   </ItemGroup>
 </Project>

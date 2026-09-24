@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Reflection;
 
@@ -7,7 +8,7 @@ namespace CS2RuntimeProfiler.Core
     {
         private const BindingFlags UpdateMethodFlags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
 
-        public static MethodInfo Resolve(Type type)
+        public static MethodInfo? Resolve(Type type)
         {
             if (type == null)
             {

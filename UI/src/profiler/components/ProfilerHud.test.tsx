@@ -6,7 +6,7 @@ import { ProfilerHud } from "./ProfilerHud";
 it("renders a native floating launcher with a Japanese status tooltip", () => {
   const html = renderToStaticMarkup(
     <ProfilerHud
-      snapshot={{ global: { available: true, selectedSpeed: 4, actualSpeed: 2.5, efficiency: 0.625 }, capture: { state: "DeepCapture", isDeepCapture: true, completedCount: 0 } } as any}
+      snapshot={{ selectedSpeed: 4, actualSpeed: 2.5, state: "DeepCapture", isDeepCapture: true }}
       panelVisible={false}
       onToggle={() => {}}
     />

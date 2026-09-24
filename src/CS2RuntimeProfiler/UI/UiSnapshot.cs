@@ -1,0 +1,133 @@
+using System;
+using System.Collections.Generic;
+using CS2RuntimeProfiler.Core;
+
+namespace CS2RuntimeProfiler.UI
+{
+    public sealed class GlobalUiMetrics
+    {
+        public bool Available { get; set; }
+        public double TimestampSeconds { get; set; }
+        public double? SelectedSpeed { get; set; }
+        public double? ActualSpeed { get; set; }
+        public double? Efficiency { get; set; }
+        public IReadOnlyList<UiMetricRow> RecorderMetrics { get; set; } = Array.Empty<UiMetricRow>();
+    }
+
+    public sealed class CaptureUiState
+    {
+        public string State { get; set; } = CaptureState.Monitoring.ToString();
+        public bool IsDeepCapture { get; set; }
+        public int CompletedCount { get; set; }
+    }
+
+    public sealed class UiMetricRow
+    {
+        public string Id { get; set; } = string.Empty;
+        public double? Value { get; set; }
+        public string Confidence { get; set; } = MetricConfidence.Unavailable.ToString();
+        public string Availability { get; set; } = MetricAvailability.Unavailable.ToString();
+        public string Reason { get; set; }
+    }
+
+    public sealed class SystemUiRow
+    {
+        public string Id { get; set; } = string.Empty;
+        public string OwnerAssembly { get; set; } = string.Empty;
+        public double CurrentMilliseconds { get; set; }
+        public double? MeanMilliseconds { get; set; }
+        public double? P95Milliseconds { get; set; }
+        public double? P99Milliseconds { get; set; }
+        public double? MaxMilliseconds { get; set; }
+        public int? Calls { get; set; }
+        public string Confidence { get; set; } = MetricConfidence.Unavailable.ToString();
+        public IReadOnlyList<string> PatchOwners { get; set; } = Array.Empty<string>();
+    }
+
+    public sealed class ModUiRow
+    {
+        public string AssemblyName { get; set; } = string.Empty;
+        public double DirectSystemMilliseconds { get; set; }
+        public int DirectSystemCount { get; set; }
+        public int PatchedVanillaSystemCount { get; set; }
+    }
+
+    public sealed class PathfindingUiMetrics
+    {
+        public IReadOnlyList<UiMetricRow> Metrics { get; set; } = Array.Empty<UiMetricRow>();
+    }
+
+    public sealed class TimelinePoint
+    {
+        public double TimestampSeconds { get; set; }
+        public string Metric { get; set; } = string.Empty;
+        public double Value { get; set; }
+        public string Confidence { get; set; } = MetricConfidence.Unavailable.ToString();
+    }
+
+    public sealed class CaptureSummaryUi
+    {
+        public string Id { get; set; } = string.Empty;
+        public string TriggerKind { get; set; } = string.Empty;
+        public double TriggeredAtSeconds { get; set; }
+        public int DiscoveredMarkers { get; set; }
+        public int CapturedMarkers { get; set; }
+        public bool Batched { get; set; }
+        public double CoverageRatio { get; set; }
+        public int WarningCount { get; set; }
+    }
+
+    public sealed class DiagnosticsUi
+    {
+        public double ProfilerOverheadShare { get; set; }
+        public double UnattributedJobsMilliseconds { get; set; }
+        public IReadOnlyList<string> Messages { get; set; } = Array.Empty<string>();
+    }
+
+    public sealed class UiSnapshot
+    {
+        public GlobalUiMetrics Global { get; set; } = new GlobalUiMetrics();
+        public CaptureUiState Capture { get; set; } = new CaptureUiState();
+        public IReadOnlyList<SystemUiRow> Systems { get; set; } = Array.Empty<SystemUiRow>();
+        public IReadOnlyList<ModUiRow> Mods { get; set; } = Array.Empty<ModUiRow>();
+        public PathfindingUiMetrics Pathfinding { get; set; } = new PathfindingUiMetrics();
+        public IReadOnlyList<UiMetricRow> DomainMetrics { get; set; } = Array.Empty<UiMetricRow>();
+        public IReadOnlyList<TimelinePoint> Timeline { get; set; } = Array.Empty<TimelinePoint>();
+        public IReadOnlyList<CaptureSummaryUi> Captures { get; set; } = Array.Empty<CaptureSummaryUi>();
+        public DiagnosticsUi Diagnostics { get; set; } = new DiagnosticsUi();
+    }
+
+    public sealed class UiSnapshotInput
+    {
+        public UiSnapshotInput() { }
+
+        public UiSnapshotInput(
+            GlobalMetricsSnapshot global,
+            CaptureState captureState,
+            NamedMetricSnapshot pathfinding,
+            NamedMetricSnapshot domains,
+            SystemTimingSnapshot systems,
+            IReadOnlyList<CaptureSession> captures,
+            double profilerOverheadShare,
+            IReadOnlyList<string> diagnostics)
+        {
+            Global = global;
+            CaptureState = captureState;
+            Pathfinding = pathfinding;
+            Domains = domains;
+            Systems = systems;
+            Captures = captures;
+            ProfilerOverheadShare = profilerOverheadShare;
+            Diagnostics = diagnostics;
+        }
+
+        public GlobalMetricsSnapshot Global { get; set; }
+        public CaptureState CaptureState { get; set; } = CaptureState.Monitoring;
+        public NamedMetricSnapshot Pathfinding { get; set; }
+        public NamedMetricSnapshot Domains { get; set; }
+        public SystemTimingSnapshot Systems { get; set; }
+        public IReadOnlyList<CaptureSession> Captures { get; set; } = Array.Empty<CaptureSession>();
+        public double ProfilerOverheadShare { get; set; }
+        public IReadOnlyList<string> Diagnostics { get; set; } = Array.Empty<string>();
+    }
+}

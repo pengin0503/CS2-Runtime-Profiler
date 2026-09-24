@@ -22,5 +22,7 @@
     <Compile Include="../../src/CS2RuntimeProfiler/Export/PrivacySanitizer.cs" Link="Export/PrivacySanitizer.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Export/PerformanceReport.cs" Link="Export/PerformanceReport.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Export/PerformanceReportSerializer.cs" Link="Export/PerformanceReportSerializer.cs" />
+    <Compile Include="../../src/CS2RuntimeProfiler/UI/UiSnapshot.cs" Link="UI/UiSnapshot.cs" />
+    <Compile Include="../../src/CS2RuntimeProfiler/UI/UiSnapshotBuilder.cs" Link="UI/UiSnapshotBuilder.cs" />
   </ItemGroup>
 </Project>

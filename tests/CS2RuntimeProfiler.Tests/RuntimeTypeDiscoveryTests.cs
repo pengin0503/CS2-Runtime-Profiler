@@ -1,0 +1,34 @@
+using System.Reflection;
+using CS2RuntimeProfiler.Core;
+using NUnit.Framework;
+
+namespace CS2RuntimeProfiler.Tests;
+
+public class RuntimeTypeDiscoveryTests
+{
+    [Test]
+    public void Assembly_enumeration_failure_isolated_to_that_assembly()
+    {
+        var assembly = typeof(RuntimeTypeDiscoveryTests).Assembly;
+        var types = RuntimeTypeDiscovery.Enumerate(
+            new[] { assembly },
+            _ => throw new InvalidOperationException("blocked"));
+
+        Assert.That(types, Is.Empty);
+    }
+
+    [Test]
+    public void Reflection_type_load_exception_preserves_successfully_loaded_types()
+    {
+        var assembly = typeof(RuntimeTypeDiscoveryTests).Assembly;
+        var exception = new ReflectionTypeLoadException(
+            new Type?[] { typeof(string), null },
+            new Exception[] { new TypeLoadException("missing") });
+
+        var types = RuntimeTypeDiscovery.Enumerate(
+            new[] { assembly },
+            _ => throw exception);
+
+        Assert.That(types, Is.EqualTo(new[] { typeof(string) }));
+    }
+}

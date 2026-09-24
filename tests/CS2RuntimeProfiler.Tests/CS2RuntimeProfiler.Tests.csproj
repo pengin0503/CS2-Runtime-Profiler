@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../../src/CS2RuntimeProfiler/Core/**/*.cs" LinkBase="Core" />
+    <Compile Include="../../src/CS2RuntimeProfiler/Attribution/AssemblyAttributor.cs" Link="Attribution/AssemblyAttributor.cs" />
   </ItemGroup>
 </Project>

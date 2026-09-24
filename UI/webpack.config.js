@@ -36,7 +36,7 @@ module.exports = {
         include: path.join(__dirname, "src"),
         use: [
           MiniCssExtractPlugin.loader,
-          { loader: "css-loader", options: { modules: { auto: true, exportLocalsConvention: "camelCase" } } },
+          { loader: "css-loader", options: { modules: { auto: true, namedExport: false, exportLocalsConvention: "camelCase" } } },
           "sass-loader"
         ]
       }

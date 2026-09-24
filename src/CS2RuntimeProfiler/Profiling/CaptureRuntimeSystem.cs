@@ -100,12 +100,8 @@ namespace CS2RuntimeProfiler.Profiling
             }
             catch (Exception ex)
             {
-                var failedIndex = _completionTiming.ProcessedCount - 1;
-                if (failedIndex >= 0 && failedIndex < _controller.CompletedSessions.Count)
-                {
-                    _controller.CompletedSessions[failedIndex]?.AddWarning(
-                        "System timing projection failed for this capture; per-system timing is unavailable.");
-                }
+                _completionTiming.LastProcessedCapture?.AddWarning(
+                    "System timing projection failed for this capture; per-system timing is unavailable.");
 
                 // Keep capture/global monitoring alive even if one timing projection fails.
                 Mod.Log.Error(ex, "System timing projection failed for a completed capture");

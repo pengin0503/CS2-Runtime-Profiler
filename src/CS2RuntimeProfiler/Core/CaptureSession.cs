@@ -47,6 +47,18 @@ namespace CS2RuntimeProfiler.Core
         public IReadOnlyDictionary<string, IReadOnlyList<MetricSample>> MarkerSamples =>
             _markerSamples.ToDictionary(pair => pair.Key, pair => pair.Value.Snapshot(), StringComparer.Ordinal);
 
+        public bool TryGetMarkerSamples(string markerId, out IReadOnlyList<MetricSample> samples)
+        {
+            if (!string.IsNullOrWhiteSpace(markerId) && _markerSamples.TryGetValue(markerId, out var series))
+            {
+                samples = series.Snapshot();
+                return true;
+            }
+
+            samples = Array.Empty<MetricSample>();
+            return false;
+        }
+
         public void SetMarkerCoverage(int discovered, int captured, bool isBatched)
         {
             MarkerCoverage = new MarkerCoverageInfo(discovered, captured, isBatched);

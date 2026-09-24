@@ -59,6 +59,23 @@ public class ModProjectEvaluationTests
             "System.Collections.Generic.Queue<T> resolves from both System and mscorlib in the current CS2 build profile. Use the fixed-capacity ring buffer instead.");
     }
 
+    [Test]
+    public void Domain_metrics_uses_the_Game_Tools_Temp_component()
+    {
+        var sourcePath = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CS2RuntimeProfiler",
+            "Collectors",
+            "DomainMetricsSystem.cs");
+        var source = File.ReadAllText(sourcePath);
+
+        Assert.That(
+            source,
+            Does.Contain("ComponentType.ReadOnly<Game.Tools.Temp>()"),
+            "The CS2 Game.dll exposes Temp as Game.Tools.Temp, not Game.Common.Temp.");
+    }
+
     private static string FindModProjectPath()
     {
         return Path.Combine(

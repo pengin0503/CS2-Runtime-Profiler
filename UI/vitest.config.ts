@@ -7,6 +7,7 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
+      "cs2/api": path.resolve(root, "src/test/cs2ApiStub.ts"),
       "cs2/ui": path.resolve(root, "src/test/cs2UiStub.tsx")
     }
   }

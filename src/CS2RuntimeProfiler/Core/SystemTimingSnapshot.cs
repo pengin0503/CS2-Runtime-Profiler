@@ -18,7 +18,8 @@ namespace CS2RuntimeProfiler.Core
             double? p99Milliseconds = null,
             double? maxMilliseconds = null,
             double? totalMilliseconds = null,
-            int? calls = null)
+            int? calls = null,
+            SystemSourceKind sourceKind = SystemSourceKind.Unknown)
         {
             SystemId = systemId ?? string.Empty;
             Milliseconds = Math.Max(0d, milliseconds);
@@ -32,6 +33,7 @@ namespace CS2RuntimeProfiler.Core
             MaxMilliseconds = Normalize(maxMilliseconds);
             TotalMilliseconds = Normalize(totalMilliseconds);
             Calls = calls.HasValue ? Math.Max(0, calls.Value) : (int?)null;
+            SourceKind = sourceKind;
         }
 
         public string SystemId { get; }
@@ -46,6 +48,7 @@ namespace CS2RuntimeProfiler.Core
         public double? MaxMilliseconds { get; }
         public double? TotalMilliseconds { get; }
         public int? Calls { get; }
+        public SystemSourceKind SourceKind { get; }
 
         private static double? Normalize(double? value)
         {
@@ -62,12 +65,28 @@ namespace CS2RuntimeProfiler.Core
         public IReadOnlyList<SystemTimingEntry> Systems => _systems;
         public double UnattributedJobsMilliseconds { get; private set; }
 
-        public void AddSystem(string systemId, double milliseconds, MetricConfidence confidence, string ownerAssembly = "", IEnumerable<string> patchOwners = null)
+        public void AddSystem(
+            string systemId,
+            double milliseconds,
+            MetricConfidence confidence,
+            string ownerAssembly = "",
+            IEnumerable<string> patchOwners = null,
+            SystemSourceKind sourceKind = SystemSourceKind.Unknown)
         {
-            _systems.Add(new SystemTimingEntry(systemId, milliseconds, confidence, ownerAssembly, patchOwners));
+            _systems.Add(new SystemTimingEntry(
+                systemId,
+                milliseconds,
+                confidence,
+                ownerAssembly,
+                patchOwners,
+                sourceKind: sourceKind));
         }
 
-        public void AddSystemAggregate(SystemMetricAggregate aggregate, string ownerAssembly = "", IEnumerable<string> patchOwners = null)
+        public void AddSystemAggregate(
+            SystemMetricAggregate aggregate,
+            string ownerAssembly = "",
+            IEnumerable<string> patchOwners = null,
+            SystemSourceKind sourceKind = SystemSourceKind.Unknown)
         {
             if (aggregate == null)
                 return;
@@ -84,7 +103,8 @@ namespace CS2RuntimeProfiler.Core
                 aggregate.P99Milliseconds,
                 aggregate.MaxMilliseconds,
                 aggregate.TotalMilliseconds,
-                aggregate.Calls));
+                aggregate.Calls,
+                sourceKind));
         }
 
         public void SetUnattributedJobsMilliseconds(double milliseconds)

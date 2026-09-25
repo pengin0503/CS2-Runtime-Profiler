@@ -44,14 +44,22 @@ namespace CS2RuntimeProfiler.Core
                 if (!capture.TryGetMarkerSamples(recorder.Id, out var samples) || samples.Count == 0)
                     continue;
 
-                var milliseconds = samples
+                var validSamples = samples
                     .Where(sample => sample.Value >= 0d && !double.IsNaN(sample.Value) && !double.IsInfinity(sample.Value))
-                    .Select(sample => sample.Value / NanosecondsPerMillisecond)
                     .ToArray();
-                if (milliseconds.Length == 0)
+                if (validSamples.Length == 0)
                     continue;
 
-                var aggregate = SystemMetricAggregate.FromSamples(system.FullTypeName, milliseconds, MetricConfidence.Full);
+                var milliseconds = validSamples
+                    .Select(sample => sample.Value / NanosecondsPerMillisecond)
+                    .ToArray();
+                var calls = SumCallCounts(validSamples);
+
+                var aggregate = SystemMetricAggregate.FromSamples(
+                    system.FullTypeName,
+                    milliseconds,
+                    MetricConfidence.Full,
+                    calls);
                 result.AddSystemAggregate(
                     aggregate,
                     system.AssemblyName,
@@ -59,6 +67,23 @@ namespace CS2RuntimeProfiler.Core
             }
 
             return result;
+        }
+
+        private static int? SumCallCounts(IReadOnlyList<MetricSample> samples)
+        {
+            if (samples.Count == 0 || samples.Any(sample => !sample.CallCount.HasValue))
+                return null;
+
+            long total = 0;
+            foreach (var sample in samples)
+            {
+                var count = Math.Max(0L, sample.CallCount.Value);
+                if (count >= int.MaxValue - total)
+                    return int.MaxValue;
+                total += count;
+            }
+
+            return (int)total;
         }
 
         private static bool MatchesFullSystemName(string markerName, string fullTypeName)

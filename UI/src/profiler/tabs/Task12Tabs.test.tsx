@@ -80,4 +80,12 @@ describe("Task 12 profiler tabs", () => {
     expect(html).toContain("75");
     expect(html).toContain("runtime build unverified");
   });
+
+  it("diagnostics describes measured capture-processing overhead instead of total profiler overhead", () => {
+    const html = renderToStaticMarkup(<DiagnosticsTab diagnostics={snapshot.diagnostics} captures={snapshot.captures} />);
+    expect(html).toContain("キャプチャ処理負荷");
+    expect(html).toContain("最大キャプチャ処理負荷");
+    expect(html).not.toContain("現在のプロファイラー負荷");
+    expect(html).not.toContain("最大自己負荷");
+  });
 });

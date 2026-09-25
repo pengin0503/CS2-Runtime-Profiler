@@ -123,11 +123,11 @@ namespace CS2RuntimeProfiler.UI
         {
             try
             {
-                RefreshSnapshot();
+                var exportSnapshot = UiSnapshotBuilder.BuildForExport(CreateSnapshotInput());
                 var report = ProfilerReportBuilder.Build(
-                    _snapshot,
-                    gameVersion: _snapshot.Diagnostics?.GameVersion,
-                    profilerVersion: _snapshot.Diagnostics?.ProfilerVersion);
+                    exportSnapshot,
+                    gameVersion: exportSnapshot.Diagnostics?.GameVersion,
+                    profilerVersion: exportSnapshot.Diagnostics?.ProfilerVersion);
                 var result = _exporter.Export(report);
                 var message = result.Success
                     ? $"ok:{Path.GetFileName(result.Path)}"
@@ -142,6 +142,11 @@ namespace CS2RuntimeProfiler.UI
         }
 
         private void RefreshSnapshot()
+        {
+            _snapshot = UiSnapshotBuilder.Build(CreateSnapshotInput());
+        }
+
+        private UiSnapshotInput CreateSnapshotInput()
         {
             var captures = new List<CaptureSession>();
             if (_capture?.CompletedSessions != null)
@@ -176,7 +181,7 @@ namespace CS2RuntimeProfiler.UI
                     ? "現在のシステム時間スナップショットでパッチ情報を検出しました。"
                     : "現在のシステム時間スナップショットではパッチ所有者を検出していません。";
 
-            var input = new UiSnapshotInput(
+            return new UiSnapshotInput(
                 _global?.Latest,
                 _capture?.State ?? CaptureState.Monitoring,
                 _domains?.Pathfinding?.Latest,
@@ -196,8 +201,6 @@ namespace CS2RuntimeProfiler.UI
                 SamplingStride = _capture?.SamplingStride ?? 1,
                 PatchMapState = patchMapState
             };
-
-            _snapshot = UiSnapshotBuilder.Build(input);
         }
 
         private void WriteHudSnapshot(IJsonWriter writer)
@@ -274,6 +277,8 @@ namespace CS2RuntimeProfiler.UI
             writer.PropertyName("state"); writer.Write(capture.State ?? string.Empty);
             writer.PropertyName("isDeepCapture"); writer.Write(capture.IsDeepCapture);
             writer.PropertyName("completedCount"); writer.Write(capture.CompletedCount);
+            writer.PropertyName("detailCaptureId"); writer.Write(capture.DetailCaptureId ?? string.Empty);
+            writer.PropertyName("detailScope"); writer.Write(capture.DetailScope ?? string.Empty);
             writer.TypeEnd();
         }
 

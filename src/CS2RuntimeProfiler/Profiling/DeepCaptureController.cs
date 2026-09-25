@@ -90,6 +90,24 @@ namespace CS2RuntimeProfiler.Profiling
             _lastState = after;
         }
 
+        public void InterruptActiveCapture(string warning)
+        {
+            _recorders.DeactivateAll();
+
+            if (CurrentSession != null)
+            {
+                CurrentSession.AddWarning(warning);
+                FinalizeCapture();
+            }
+
+            _stateMachine.ResetToMonitoring();
+            _capturedMarkerIds.Clear();
+            _currentBatchIndex = -1;
+            _sampleCounter = 0;
+            _consecutiveOverheadBreaches = 0;
+            _lastState = _stateMachine.State;
+        }
+
         public void ReportProfilerOverheadShare(double share)
         {
             if (CurrentSession == null)

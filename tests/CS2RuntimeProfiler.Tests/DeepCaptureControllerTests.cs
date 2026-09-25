@@ -29,6 +29,27 @@ public class DeepCaptureControllerTests
     }
 
     [Test]
+    public void Zero_count_profiler_read_does_not_create_marker_sample_or_coverage()
+    {
+        var descriptor = new RecorderDescriptor("cpu", "CPU", "Simulation Example.System", "TimeNanoseconds", "Int64");
+        var backend = new FakeBackend(new RecorderReading(0d, 0), descriptor);
+        using var manager = new RecorderManager(backend);
+        using var controller = new DeepCaptureController(manager, CreateStateMachine(), maxConcurrent: 8);
+        controller.Initialize();
+        controller.RequestManualCapture(0);
+
+        controller.Observe(0.5, global: null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.CurrentSession, Is.Not.Null);
+            Assert.That(controller.CurrentSession!.MarkerCoverage.Captured, Is.Zero);
+            Assert.That(controller.CurrentSession.TryGetMarkerSamples(descriptor.Id, out var samples), Is.False);
+            Assert.That(samples, Is.Empty);
+        });
+    }
+
+    [Test]
     public void Overhead_outside_a_capture_does_not_degrade_batching()
     {
         using var controller = CreateController(maxConcurrent: 8);
@@ -141,19 +162,36 @@ public class DeepCaptureControllerTests
     private sealed class FakeBackend : IRecorderBackend
     {
         private readonly IReadOnlyList<RecorderDescriptor> _descriptors;
+        private readonly RecorderReading _reading;
 
-        public FakeBackend(params RecorderDescriptor[] descriptors) => _descriptors = descriptors;
+        public FakeBackend(params RecorderDescriptor[] descriptors)
+            : this(new RecorderReading(1d, 1), descriptors)
+        {
+        }
+
+        public FakeBackend(RecorderReading reading, params RecorderDescriptor[] descriptors)
+        {
+            _reading = reading;
+            _descriptors = descriptors;
+        }
 
         public IReadOnlyList<RecorderDescriptor> Discover() => _descriptors;
 
-        public IActiveRecorder Start(RecorderDescriptor descriptor, int capacity) => new FakeRecorder(descriptor.Id);
+        public IActiveRecorder Start(RecorderDescriptor descriptor, int capacity) => new FakeRecorder(descriptor.Id, _reading);
     }
 
     private sealed class FakeRecorder : IActiveRecorder
     {
-        public FakeRecorder(string id) => Id = id;
+        private readonly RecorderReading _reading;
+
+        public FakeRecorder(string id, RecorderReading reading)
+        {
+            Id = id;
+            _reading = reading;
+        }
+
         public string Id { get; }
-        public RecorderReading Read() => new(1.0, 1);
+        public RecorderReading Read() => _reading;
         public void Dispose() { }
     }
 }

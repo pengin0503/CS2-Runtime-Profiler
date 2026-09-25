@@ -153,6 +153,8 @@ namespace CS2RuntimeProfiler.UI
         public NamedMetricSnapshot Domains { get; set; }
         public SystemTimingSnapshot Systems { get; set; }
         public IReadOnlyList<CaptureSession> Captures { get; set; } = Array.Empty<CaptureSession>();
+        public CaptureSession CurrentCapture { get; set; }
+        public string SelectedCaptureId { get; set; } = string.Empty;
         public double ProfilerOverheadShare { get; set; }
         public IReadOnlyList<string> Diagnostics { get; set; } = Array.Empty<string>();
         public string GameVersion { get; set; } = string.Empty;

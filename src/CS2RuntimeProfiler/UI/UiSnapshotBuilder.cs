@@ -105,6 +105,7 @@ namespace CS2RuntimeProfiler.UI
                 {
                     Id = system.SystemId,
                     OwnerAssembly = system.OwnerAssembly,
+                    SourceKind = system.SourceKind.ToString(),
                     CurrentMilliseconds = system.Milliseconds,
                     MeanMilliseconds = system.MeanMilliseconds,
                     P95Milliseconds = system.P95Milliseconds,
@@ -125,7 +126,8 @@ namespace CS2RuntimeProfiler.UI
                 return Array.Empty<ModUiRow>();
 
             var direct = systems
-                .Where(system => !string.IsNullOrWhiteSpace(system.OwnerAssembly))
+                .Where(system => string.Equals(system.SourceKind, SystemSourceKind.Mod.ToString(), StringComparison.Ordinal)
+                    && !string.IsNullOrWhiteSpace(system.OwnerAssembly))
                 .GroupBy(system => system.OwnerAssembly, StringComparer.Ordinal)
                 .ToDictionary(
                     group => group.Key,

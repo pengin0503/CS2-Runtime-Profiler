@@ -20,7 +20,7 @@ public class DynamicTimingProjectionTests
                 Array.Empty<PatchOwnerInfo>())
         };
         var recorders = new List<RecorderDescriptor>();
-        var processor = new CaptureCompletionTimingProcessor(systems, recorders);
+        var processor = new CaptureCompletionTimingProcessor(systems, () => recorders);
         var recorder = new RecorderDescriptor("system-marker", "CPU", "World " + systemName, "TimeNanoseconds", "Int64");
         recorders.Add(recorder);
 

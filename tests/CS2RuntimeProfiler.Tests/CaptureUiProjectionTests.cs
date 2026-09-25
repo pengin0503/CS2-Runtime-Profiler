@@ -43,6 +43,25 @@ public class CaptureUiProjectionTests
     }
 
     [Test]
+    public void Zero_discovered_markers_keep_coverage_unavailable_instead_of_reporting_one_hundred_percent()
+    {
+        var capture = new CaptureSession("no-markers", new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null), 8);
+        capture.SetMarkerCoverage(0, 0, false);
+
+        var snapshot = UiSnapshotBuilder.Build(new UiSnapshotInput
+        {
+            Captures = new[] { capture },
+            SelectedCaptureId = "no-markers"
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(capture.MarkerCoverage.Ratio, Is.Null);
+            Assert.That(snapshot.Captures.Single().CoverageRatio, Is.Null);
+        });
+    }
+
+    [Test]
     public void Current_capture_is_not_counted_or_listed_as_completed()
     {
         var completed = new CaptureSession("completed", new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null), 16);

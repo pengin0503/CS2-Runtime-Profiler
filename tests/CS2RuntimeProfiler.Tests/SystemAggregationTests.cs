@@ -13,7 +13,7 @@ public class SystemAggregationTests
         Assert.That(result.Confidence, Is.EqualTo(MetricConfidence.Managed));
         Assert.That(result.MeanMilliseconds, Is.EqualTo(0.4).Within(0.001));
         Assert.That(result.TotalMilliseconds, Is.EqualTo(1.2).Within(0.001));
-        Assert.That(result.Calls, Is.EqualTo(3));
+        Assert.That(result.Calls, Is.Null, "managed timing samples do not prove runtime call counts");
     }
 
     [Test]

@@ -96,6 +96,44 @@ public class CaptureUiProjectionTests
     }
 
     [Test]
+    public void Historical_export_uses_capture_global_and_omits_live_only_metrics()
+    {
+        var capture = new CaptureSession("historical", new CaptureTrigger(CaptureTriggerKind.Manual, 10d, null), 16);
+        capture.AddGlobalSample(Global(10d, 4d, 3d, 10d));
+        capture.AddGlobalSample(Global(12d, 4d, 2.5d, 11d));
+
+        var liveGlobal = Global(100d, 4d, 1d, 99d);
+        var pathfinding = new NamedMetricSnapshot(100d, new[]
+        {
+            NamedMetricValue.Available("pendingPathfindActions", 42d, MetricConfidence.Indirect)
+        });
+        var domains = new NamedMetricSnapshot(100d, new[]
+        {
+            NamedMetricValue.Available("citizens", 40000d, MetricConfidence.Indirect)
+        });
+
+        var snapshot = UiSnapshotBuilder.BuildForExport(new UiSnapshotInput
+        {
+            Global = liveGlobal,
+            Pathfinding = pathfinding,
+            Domains = domains,
+            Captures = new[] { capture },
+            SelectedCaptureId = "historical"
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Global.TimestampSeconds, Is.EqualTo(12d));
+            Assert.That(snapshot.Global.ActualSpeed, Is.EqualTo(2.5d));
+            Assert.That(snapshot.Pathfinding.Metrics, Is.Empty);
+            Assert.That(snapshot.DomainMetrics, Is.Empty);
+            Assert.That(snapshot.Capture.DetailCaptureId, Is.EqualTo("historical"));
+            Assert.That(snapshot.Capture.DetailScope, Is.EqualTo("historical-capture"));
+            Assert.That(snapshot.Diagnostics.Messages.Any(message => message.Contains("historical", System.StringComparison.OrdinalIgnoreCase)), Is.True);
+        });
+    }
+
+    [Test]
     public void Capture_overhead_keeps_the_maximum_observed_share()
     {
         var capture = new CaptureSession("capture-2", new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null), 8);

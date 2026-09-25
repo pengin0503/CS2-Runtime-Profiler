@@ -19,16 +19,36 @@ public class ProfilerReportBuilderTests
                 Efficiency = 0.7,
                 RecorderMetrics = new[]
                 {
-                    new UiMetricRow { Id = "main", Value = 9.2, Confidence = "Full", Availability = "Available" }
+                    new UiMetricRow
+                    {
+                        Id = "main",
+                        Value = 9.2,
+                        UnitType = "TimeNanoseconds",
+                        Confidence = "Full",
+                        Availability = "Available"
+                    }
                 }
             },
             Systems = new[]
             {
-                new SystemUiRow { Id = "Example.System", OwnerAssembly = "Example.Mod", CurrentMilliseconds = 1.4, Confidence = "Managed" }
+                new SystemUiRow
+                {
+                    Id = "Example.System",
+                    OwnerAssembly = "Example.Mod",
+                    CurrentMilliseconds = 6.0,
+                    MeanMilliseconds = 4.0,
+                    MedianMilliseconds = 4.0,
+                    P95Milliseconds = 6.0,
+                    P99Milliseconds = 6.0,
+                    MaxMilliseconds = 6.0,
+                    TotalMilliseconds = 12.0,
+                    Calls = 9,
+                    Confidence = "Full"
+                }
             },
             Mods = new[]
             {
-                new ModUiRow { AssemblyName = "Example.Mod", DirectSystemMilliseconds = 1.4, DirectSystemCount = 1 }
+                new ModUiRow { AssemblyName = "Example.Mod", DirectSystemMilliseconds = 6.0, DirectSystemCount = 1 }
             },
             Pathfinding = new PathfindingUiMetrics
             {
@@ -47,7 +67,22 @@ public class ProfilerReportBuilderTests
         Assert.That(report.ProfilerVersion, Is.EqualTo("0.1.0"));
         Assert.That(report.CityName, Is.Null);
         Assert.That(report.GlobalMetrics.Any(x => x.Name == "efficiency" && x.Value == 0.7), Is.True);
-        Assert.That(report.Systems.Single().OwnerAssembly, Is.EqualTo("Example.Mod"));
+        Assert.That(report.GlobalMetrics.Single(x => x.Name == "main").Unit, Is.EqualTo("TimeNanoseconds"));
+
+        var system = report.Systems.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(system.OwnerAssembly, Is.EqualTo("Example.Mod"));
+            Assert.That(system.CurrentMilliseconds, Is.EqualTo(6.0));
+            Assert.That(system.MeanMilliseconds, Is.EqualTo(4.0));
+            Assert.That(system.MedianMilliseconds, Is.EqualTo(4.0));
+            Assert.That(system.P95Milliseconds, Is.EqualTo(6.0));
+            Assert.That(system.P99Milliseconds, Is.EqualTo(6.0));
+            Assert.That(system.MaxMilliseconds, Is.EqualTo(6.0));
+            Assert.That(system.TotalMilliseconds, Is.EqualTo(12.0));
+            Assert.That(system.Calls, Is.EqualTo(9));
+        });
+
         Assert.That(report.ModAttribution.Any(x => x.Name == "Example.Mod"), Is.True);
         Assert.That(report.Pathfinding.Single().Name, Is.EqualTo("pendingPathfindActions"));
         Assert.That(report.DomainMetrics.Single().Name, Is.EqualTo("citizens"));

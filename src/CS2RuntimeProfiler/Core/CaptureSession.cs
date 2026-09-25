@@ -16,7 +16,7 @@ namespace CS2RuntimeProfiler.Core
         public int Discovered { get; }
         public int Captured { get; }
         public bool IsBatched { get; }
-        public double Ratio => Discovered == 0 ? 1d : (double)Captured / Discovered;
+        public double? Ratio => Discovered == 0 ? (double?)null : (double)Captured / Discovered;
     }
 
     public sealed class CaptureSession
@@ -78,8 +78,8 @@ namespace CS2RuntimeProfiler.Core
 
         public void AddWarning(string warning)
         {
-            if (!string.IsNullOrWhiteSpace(warning) && !_warnings.Contains(warning))
-                _warnings.Add(warning);
+            if (!string.IsNullOrWhiteSpace(warning))
+                _warnings.Add(warning.Trim());
         }
 
         public void AddGlobalSample(GlobalMetricsSnapshot sample)
@@ -87,8 +87,9 @@ namespace CS2RuntimeProfiler.Core
             if (sample == null)
                 return;
             _globalSamples.Add(sample);
-            if (_globalSamples.Count > _maxSamplesPerSeries)
-                _globalSamples.RemoveAt(0);
+            var maxGlobalSamples = Math.Max(32, _maxSamplesPerSeries * 2);
+            if (_globalSamples.Count > maxGlobalSamples)
+                _globalSamples.RemoveRange(0, _globalSamples.Count - maxGlobalSamples);
         }
 
         public void AddMarkerSample(string markerId, MetricSample sample)

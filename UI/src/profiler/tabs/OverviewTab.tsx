@@ -29,6 +29,7 @@ function MetricRow({ metric }: { metric: UiMetricRow }) {
 export function OverviewTab({ snapshot, onManualCapture, onExport, exportResult }: OverviewTabProps) {
   const pathfinding = snapshot.pathfinding?.metrics ?? [];
   const recorders = snapshot.global?.recorderMetrics ?? [];
+  const canManualCapture = snapshot.capture.state === "Monitoring" || snapshot.capture.state === "Cooldown";
 
   return (
     <div className={styles.tabBody}>
@@ -42,7 +43,7 @@ export function OverviewTab({ snapshot, onManualCapture, onExport, exportResult 
       </section>
 
       <div className={styles.actionRow}>
-        <Button as="button" variant="flat" onSelect={onManualCapture} disabled={snapshot.capture.isDeepCapture}>手動詳細キャプチャ</Button>
+        <Button as="button" variant="flat" onSelect={onManualCapture} disabled={!canManualCapture}>手動詳細キャプチャ</Button>
         <Button as="button" variant="flat" onSelect={onExport}>JSONをエクスポート</Button>
         {exportResult && <span className={styles.exportResult}>{exportResultLabel(exportResult)}</span>}
       </div>

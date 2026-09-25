@@ -13,11 +13,13 @@ namespace CS2RuntimeProfiler.UI
         public static UiSnapshot Build(UiSnapshotInput input)
         {
             input = input ?? new UiSnapshotInput();
-            var systems = BuildSystems(input.Systems);
-            var captures = (input.Captures ?? Array.Empty<CaptureSession>())
+            var completedSessions = (input.Captures ?? Array.Empty<CaptureSession>())
                 .Where(capture => capture != null)
-                .Select(BuildCapture)
                 .ToArray();
+            var detailCapture = SelectDetailCapture(input, completedSessions);
+            var detailTiming = detailCapture != null ? detailCapture.SystemTiming : input.Systems;
+            var systems = BuildSystems(detailTiming);
+            var captures = completedSessions.Select(BuildCapture).ToArray();
 
             return new UiSnapshot
             {
@@ -32,12 +34,12 @@ namespace CS2RuntimeProfiler.UI
                 Mods = BuildMods(systems),
                 Pathfinding = new PathfindingUiMetrics { Metrics = BuildMetrics(input.Pathfinding) },
                 DomainMetrics = BuildMetrics(input.Domains),
-                Timeline = BuildTimeline(input.Captures ?? Array.Empty<CaptureSession>()),
+                Timeline = BuildTimeline(detailCapture),
                 Captures = captures,
                 Diagnostics = new DiagnosticsUi
                 {
                     ProfilerOverheadShare = Math.Max(0d, input.ProfilerOverheadShare),
-                    UnattributedJobsMilliseconds = input.Systems?.UnattributedJobsMilliseconds ?? 0d,
+                    UnattributedJobsMilliseconds = detailTiming?.UnattributedJobsMilliseconds ?? 0d,
                     Messages = (input.Diagnostics ?? Array.Empty<string>()).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray(),
                     GameVersion = input.GameVersion ?? string.Empty,
                     ProfilerVersion = input.ProfilerVersion ?? string.Empty,
@@ -49,6 +51,22 @@ namespace CS2RuntimeProfiler.UI
                     PatchMapState = input.PatchMapState ?? string.Empty
                 }
             };
+        }
+
+        private static CaptureSession SelectDetailCapture(UiSnapshotInput input, IReadOnlyList<CaptureSession> completed)
+        {
+            if (!string.IsNullOrWhiteSpace(input.SelectedCaptureId))
+            {
+                var selected = completed.FirstOrDefault(capture =>
+                    string.Equals(capture.Id, input.SelectedCaptureId, StringComparison.Ordinal));
+                if (selected != null)
+                    return selected;
+            }
+
+            if (input.CurrentCapture != null)
+                return input.CurrentCapture;
+
+            return completed.Count == 0 ? null : completed[completed.Count - 1];
         }
 
         private static GlobalUiMetrics BuildGlobal(GlobalMetricsSnapshot global)
@@ -242,68 +260,65 @@ namespace CS2RuntimeProfiler.UI
             });
         }
 
-        private static IReadOnlyList<TimelinePoint> BuildTimeline(IReadOnlyList<CaptureSession> captures)
+        private static IReadOnlyList<TimelinePoint> BuildTimeline(CaptureSession capture)
         {
-            if (captures == null || captures.Count == 0)
+            if (capture == null)
                 return Array.Empty<TimelinePoint>();
 
             var points = new List<TimelinePoint>();
-            foreach (var capture in captures.Where(capture => capture != null))
+            foreach (var sample in capture.GlobalSamples)
             {
-                foreach (var sample in capture.GlobalSamples)
+                points.Add(new TimelinePoint
+                {
+                    TimestampSeconds = sample.TimestampSeconds,
+                    Metric = "actualSpeed",
+                    Value = sample.ActualSpeed,
+                    Confidence = MetricConfidence.Full.ToString()
+                });
+                points.Add(new TimelinePoint
+                {
+                    TimestampSeconds = sample.TimestampSeconds,
+                    Metric = "efficiency",
+                    Value = sample.Efficiency,
+                    Confidence = MetricConfidence.Full.ToString()
+                });
+                foreach (var recorder in sample.RecorderReadings)
                 {
                     points.Add(new TimelinePoint
                     {
                         TimestampSeconds = sample.TimestampSeconds,
-                        Metric = "actualSpeed",
-                        Value = sample.ActualSpeed,
+                        Metric = "recorder:" + recorder.Key,
+                        Value = recorder.Value.Value,
                         Confidence = MetricConfidence.Full.ToString()
                     });
+                }
+            }
+
+            foreach (var marker in capture.MarkerSamples)
+            {
+                foreach (var sample in marker.Value)
+                {
                     points.Add(new TimelinePoint
                     {
                         TimestampSeconds = sample.TimestampSeconds,
-                        Metric = "efficiency",
-                        Value = sample.Efficiency,
-                        Confidence = MetricConfidence.Full.ToString()
+                        Metric = "marker:" + marker.Key,
+                        Value = sample.Value,
+                        Confidence = sample.Confidence.ToString()
                     });
-                    foreach (var recorder in sample.RecorderReadings)
-                    {
-                        points.Add(new TimelinePoint
-                        {
-                            TimestampSeconds = sample.TimestampSeconds,
-                            Metric = "recorder:" + recorder.Key,
-                            Value = recorder.Value.Value,
-                            Confidence = MetricConfidence.Full.ToString()
-                        });
-                    }
                 }
+            }
 
-                foreach (var marker in capture.MarkerSamples)
+            if (capture.SystemTiming != null)
+            {
+                foreach (var system in capture.SystemTiming.Systems)
                 {
-                    foreach (var sample in marker.Value)
+                    points.Add(new TimelinePoint
                     {
-                        points.Add(new TimelinePoint
-                        {
-                            TimestampSeconds = sample.TimestampSeconds,
-                            Metric = "marker:" + marker.Key,
-                            Value = sample.Value,
-                            Confidence = sample.Confidence.ToString()
-                        });
-                    }
-                }
-
-                if (capture.SystemTiming != null)
-                {
-                    foreach (var system in capture.SystemTiming.Systems)
-                    {
-                        points.Add(new TimelinePoint
-                        {
-                            TimestampSeconds = capture.Trigger.TimestampSeconds,
-                            Metric = "system:" + system.SystemId,
-                            Value = system.Milliseconds,
-                            Confidence = system.Confidence.ToString()
-                        });
-                    }
+                        TimestampSeconds = capture.Trigger.TimestampSeconds,
+                        Metric = "system:" + system.SystemId,
+                        Value = system.Milliseconds,
+                        Confidence = system.Confidence.ToString()
+                    });
                 }
             }
 

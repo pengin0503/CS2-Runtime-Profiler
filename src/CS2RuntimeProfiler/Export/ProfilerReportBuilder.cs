@@ -7,15 +7,30 @@ namespace CS2RuntimeProfiler.Export
 {
     public static class ProfilerReportBuilder
     {
-        public static PerformanceReport Build(UiSnapshot snapshot, string gameVersion = null, string profilerVersion = null)
+        public static PerformanceReport Build(
+            UiSnapshot snapshot,
+            string gameVersion = null,
+            string profilerVersion = null,
+            RuntimeReportMetadata metadata = null)
         {
             snapshot = snapshot ?? new UiSnapshot();
             var report = new PerformanceReport
             {
                 GameVersion = gameVersion,
                 ProfilerVersion = profilerVersion,
+                HardwareSummary = string.IsNullOrWhiteSpace(metadata?.HardwareSummary) ? null : metadata.HardwareSummary,
                 CityName = null
             };
+
+            foreach (var mod in metadata?.EnabledMods ?? Array.Empty<string>())
+            {
+                if (!string.IsNullOrWhiteSpace(mod))
+                    report.EnabledMods.Add(mod.Trim());
+            }
+            report.EnabledMods = report.EnabledMods
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
             AddCaptureScope(report, snapshot);
             AddGlobal(report, snapshot.Global);

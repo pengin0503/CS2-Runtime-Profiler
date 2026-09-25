@@ -40,6 +40,16 @@ describe("core profiler tabs", () => {
     expect(html).toContain("not exposed");
   });
 
+  it("manual capture is disabled while the state machine is in post-buffer", () => {
+    const postBufferSnapshot = {
+      ...snapshot,
+      capture: { state: "PostBuffer", isDeepCapture: false, completedCount: 1 }
+    };
+    const html = renderToStaticMarkup(<OverviewTab snapshot={postBufferSnapshot} onManualCapture={() => {}} onExport={() => {}} exportResult="" />);
+    expect(html).toContain("手動詳細キャプチャ");
+    expect(html).toContain("disabled=\"\"");
+  });
+
   it("systems view keeps owner and patch metadata separate", () => {
     const html = renderToStaticMarkup(<SystemsTab systems={snapshot.systems} />);
     expect(html).toContain("TrafficSystem");

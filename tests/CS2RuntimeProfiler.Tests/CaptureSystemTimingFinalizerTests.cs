@@ -46,7 +46,7 @@ public class CaptureSystemTimingFinalizerTests
         Assert.That(row.P99Milliseconds, Is.EqualTo(4d).Within(0.0001d));
         Assert.That(row.MaxMilliseconds, Is.EqualTo(4d).Within(0.0001d));
         Assert.That(row.TotalMilliseconds, Is.EqualTo(6d).Within(0.0001d));
-        Assert.That(row.Calls, Is.EqualTo(2));
+        Assert.That(row.Calls, Is.Null, "call count is unavailable when capture samples do not carry recorder counts");
         Assert.That(row.Confidence, Is.EqualTo(MetricConfidence.Full));
     }
 }

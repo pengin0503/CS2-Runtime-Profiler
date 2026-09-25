@@ -16,7 +16,7 @@ namespace CS2RuntimeProfiler.UI
     public partial class ProfilerUISystem : UISystemBase
     {
         private const string Group = Mod.Id;
-        private const double UiRefreshPeriodSeconds = 0.5d;
+        private const double DefaultUiRefreshPeriodSeconds = 0.5d;
 
         private readonly Stopwatch _clock = Stopwatch.StartNew();
         private GlobalMetricsCollector _global;
@@ -27,6 +27,7 @@ namespace CS2RuntimeProfiler.UI
         private RawValueBinding _snapshotBinding;
         private RawValueBinding _hudSnapshotBinding;
         private ValueBinding<bool> _panelVisibleBinding;
+        private ValueBinding<int> _uiScalePercentBinding;
         private ValueBinding<string> _selectedCaptureBinding;
         private ValueBinding<string> _selectedSystemBinding;
         private ValueBinding<string> _selectedModBinding;
@@ -49,6 +50,7 @@ namespace CS2RuntimeProfiler.UI
             AddBinding(_snapshotBinding = new RawValueBinding(Group, "snapshot", WriteSnapshot));
             AddBinding(_hudSnapshotBinding = new RawValueBinding(Group, "hudSnapshot", WriteHudSnapshot));
             AddBinding(_panelVisibleBinding = new ValueBinding<bool>(Group, "panelVisible", false));
+            AddBinding(_uiScalePercentBinding = new ValueBinding<int>(Group, "uiScalePercent", GetUiScalePercent()));
             AddBinding(_selectedCaptureBinding = new ValueBinding<string>(Group, "selectedCaptureId", string.Empty));
             AddBinding(_selectedSystemBinding = new ValueBinding<string>(Group, "selectedSystemId", string.Empty));
             AddBinding(_selectedModBinding = new ValueBinding<string>(Group, "selectedModId", string.Empty));
@@ -72,7 +74,8 @@ namespace CS2RuntimeProfiler.UI
             if (now < _nextRefreshAt)
                 return;
 
-            _nextRefreshAt = now + UiRefreshPeriodSeconds;
+            _nextRefreshAt = now + GetUiRefreshPeriodSeconds();
+            _uiScalePercentBinding.Update(GetUiScalePercent());
             _hudSnapshotBinding.Update();
 
             if (!_panelVisible)
@@ -86,6 +89,7 @@ namespace CS2RuntimeProfiler.UI
         {
             _panelVisible = !_panelVisible;
             _panelVisibleBinding.Update(_panelVisible);
+            _uiScalePercentBinding.Update(GetUiScalePercent());
             _hudSnapshotBinding.Update();
 
             if (_panelVisible)
@@ -144,6 +148,16 @@ namespace CS2RuntimeProfiler.UI
         private void RefreshSnapshot()
         {
             _snapshot = UiSnapshotBuilder.Build(CreateSnapshotInput());
+        }
+
+        private static int GetUiScalePercent()
+        {
+            return Mod.Settings?.ResolvedUiScalePercent ?? 100;
+        }
+
+        private static double GetUiRefreshPeriodSeconds()
+        {
+            return Mod.Settings?.ResolvedUiRefreshPeriodSeconds ?? DefaultUiRefreshPeriodSeconds;
         }
 
         private UiSnapshotInput CreateSnapshotInput()

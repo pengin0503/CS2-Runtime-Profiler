@@ -165,8 +165,13 @@ namespace CS2RuntimeProfiler.Profiling
 
             foreach (var pair in _recorders.SampleActive())
             {
+                if (pair.Value.Count <= 0)
+                    continue;
+
                 _capturedMarkerIds.Add(pair.Key);
-                CurrentSession.AddMarkerSample(pair.Key, new MetricSample(nowSeconds, pair.Value.Value, MetricConfidence.Full));
+                CurrentSession.AddMarkerSample(
+                    pair.Key,
+                    new MetricSample(nowSeconds, pair.Value.Value, MetricConfidence.Full, pair.Value.Count));
             }
 
             CurrentSession.SetMarkerCoverage(_plan.DiscoveredCount, _capturedMarkerIds.Count, _plan.IsBatched);

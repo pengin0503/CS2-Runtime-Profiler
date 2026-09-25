@@ -13,7 +13,7 @@ export function DiagnosticsTab({ diagnostics, captures }: { diagnostics: Diagnos
     ["システム行数", diagnostics.systemCount],
     ["マーカーバッチサイズ", diagnostics.markerBatchSize],
     ["サンプリング間引き", diagnostics.samplingStride],
-    ["現在のプロファイラー負荷", formatPercent(diagnostics.profilerOverheadShare)],
+    ["キャプチャ処理負荷", formatPercent(diagnostics.profilerOverheadShare)],
     ["未帰属ジョブ時間", formatMilliseconds(diagnostics.unattributedJobsMilliseconds)],
     ["パッチ情報", diagnostics.patchMapState || "利用不可"]
   ];
@@ -23,13 +23,14 @@ export function DiagnosticsTab({ diagnostics, captures }: { diagnostics: Diagnos
       <div className={styles.diagnosticsGrid}>
         {values.map(([name, value]) => <div className={styles.diagnosticItem} key={name}><span>{name}</span><strong>{value}</strong></div>)}
       </div>
+      <p className={styles.diagnosticMessage}>キャプチャ処理負荷は、詳細キャプチャ制御・集計処理を0.5秒の監視周期に対する割合で示した値です。ゲーム全体のプロファイラー負荷ではありません。</p>
       {latest && (
         <section>
           <h3>最新キャプチャのカバレッジ</h3>
           <div className={styles.captureFacts}>
             <span>カバレッジ <b>{formatPercent(latest.coverageRatio)}</b></span>
             <span>方式 <b>{latest.batched ? "分割計測" : "同時計測"}</b></span>
-            <span>最大自己負荷 <b>{formatPercent(latest.profilerOverheadShare)}</b></span>
+            <span>最大キャプチャ処理負荷 <b>{formatPercent(latest.profilerOverheadShare)}</b></span>
           </div>
         </section>
       )}

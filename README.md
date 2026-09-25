@@ -65,27 +65,60 @@ The exporter applies a privacy sanitizer intended to replace Windows/macOS/Linux
 - Git が使用可能
 - Node.js 18 以上 / npm が使用可能
 - .NET SDK が使用可能
-- Cities: Skylines II の公式 Modding Toolchain がゲームファイル内に存在する
+- **Cities: Skylines II の公式 Modding Toolchain をゲーム側で一度セットアップ済み**
 
-### 1. PowerShell を開き、ゲーム関連パスを設定する
+公式 `Mod.props` / `Mod.targets` は複数の **User スコープ環境変数**を参照します。`CSII_MANAGEDPATH`、`CSII_USERDATAPATH`、`CSII_LOCALMODSPATH` だけでなく、Unity Mod Project、Post Processor、Entities Source Generator、mscorlib 等のパスも必要です。通常はこれらを手作業で構成せず、ゲーム内の公式 Modding Toolchain セットアップに生成・更新させてください。
 
-Steam を既定の場所へインストールしている場合は、そのまま以下を実行できます。
-Steam ライブラリを別ドライブへ置いている場合は、`$gameDir` だけ実際のゲームフォルダへ変更してください。
+### 1. PowerShell で公式 Toolchain の環境を確認する
+
+新しい PowerShell を開き、まず公式Toolchainが設定した **User環境変数**を確認します。
 
 ```powershell
-$gameDir = "${env:ProgramFiles(x86)}\Steam\steamapps\common\Cities Skylines II"
+$toolVars = @(
+    "CSII_TOOLPATH",
+    "CSII_MANAGEDPATH",
+    "CSII_USERDATAPATH",
+    "CSII_LOCALMODSPATH",
+    "CSII_UNITYMODPROJECTPATH",
+    "CSII_MODPOSTPROCESSORPATH",
+    "CSII_ENTITIESVERSION",
+    "CSII_MSCORLIBPATH"
+)
 
-$env:CSII_USERDATAPATH = "$env:USERPROFILE\AppData\LocalLow\Colossal Order\Cities Skylines II"
-$env:CSII_MANAGED_PATH = Join-Path $gameDir "Cities2_Data\Managed"
-$env:CSII_TOOLPATH = Join-Path $gameDir "Cities2_Data\Content\Game\.ModdingToolchain"
-
-Test-Path $gameDir
-Test-Path $env:CSII_USERDATAPATH
-Test-Path $env:CSII_MANAGED_PATH
-Test-Path $env:CSII_TOOLPATH
+$toolVars | ForEach-Object {
+    [PSCustomObject]@{
+        Name  = $_
+        Value = [Environment]::GetEnvironmentVariable($_, "User")
+    }
+} | Format-Table -AutoSize
 ```
 
-最後の4行がすべて `True` になることを確認してください。
+特に次を確認してください。
+
+```powershell
+$toolPath   = [Environment]::GetEnvironmentVariable("CSII_TOOLPATH", "User")
+$managed    = [Environment]::GetEnvironmentVariable("CSII_MANAGEDPATH", "User")
+$userData   = [Environment]::GetEnvironmentVariable("CSII_USERDATAPATH", "User")
+$localMods  = [Environment]::GetEnvironmentVariable("CSII_LOCALMODSPATH", "User")
+$postProc   = [Environment]::GetEnvironmentVariable("CSII_MODPOSTPROCESSORPATH", "User")
+$unityProj  = [Environment]::GetEnvironmentVariable("CSII_UNITYMODPROJECTPATH", "User")
+$mscorlib   = [Environment]::GetEnvironmentVariable("CSII_MSCORLIBPATH", "User")
+$entities   = [Environment]::GetEnvironmentVariable("CSII_ENTITIESVERSION", "User")
+
+Test-Path (Join-Path $toolPath "Mod.props")
+Test-Path (Join-Path $toolPath "Mod.targets")
+Test-Path (Join-Path $managed "Game.dll")
+Test-Path $userData
+Test-Path $localMods
+Test-Path $postProc
+Test-Path $unityProj
+Test-Path $mscorlib
+$entities
+```
+
+`Mod.props` が読む変数名は **`CSII_MANAGEDPATH`** です。`CSII_MANAGED_PATH` ではありません。
+
+上記の主要パスが空、または `False` の場合は、先に Cities: Skylines II 側の公式 Modding Toolchain セットアップを再実行してください。単に現在のPowerShellで `$env:CSII_...` を数個設定するだけでは不十分です。提供されている `Mod.props` は多くの値を `EnvironmentVariableTarget.User` から取得します。
 
 ### 2. リポジトリを取得する
 
@@ -134,20 +167,17 @@ dotnet test .\tests\CS2RuntimeProfiler.Tests\CS2RuntimeProfiler.Tests.csproj -v 
 
 ### 5. Release ビルドする
 
+`CS2RuntimeProfiler.csproj` は `$(CSII_TOOLPATH)\Mod.props` と `Mod.targets` をImportします。公式Toolchain環境が正しく設定された状態で実行してください。
+
 ```powershell
 dotnet build .\CS2RuntimeProfiler.sln -c Release
 ```
 
-公式 Modding Toolchain の `Mod.props` / `Mod.targets` と `CSII_USERDATAPATH` が正しく設定されていれば、ビルド成果物は次のローカル Mod フォルダへ配置されます。
-
-```text
-%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II\Mods\CS2RuntimeProfiler
-```
-
-PowerShell では次の変数で確認できます。
+提供されている `Mod.targets` の `DeployWIP` は、成果物を **`CSII_LOCALMODSPATH\$(TargetName)`** へ配置します。このプロジェクトの `TargetName` は通常 `CS2RuntimeProfiler` です。
 
 ```powershell
-$modDir = Join-Path $env:CSII_USERDATAPATH "Mods\CS2RuntimeProfiler"
+$localMods = [Environment]::GetEnvironmentVariable("CSII_LOCALMODSPATH", "User")
+$modDir = Join-Path $localMods "CS2RuntimeProfiler"
 Get-ChildItem $modDir -Recurse
 ```
 
@@ -175,7 +205,7 @@ explorer $modDir
 
 ### 更新後に再導入する場合
 
-2回目以降は、PowerShell で次の流れだけ実行すれば更新できます。
+2回目以降は、公式Toolchain環境が既に有効なら次の流れで更新できます。
 
 ```powershell
 cd "$HOME\Downloads\CS2-Runtime-Profiler"
@@ -183,10 +213,14 @@ cd "$HOME\Downloads\CS2-Runtime-Profiler"
 git switch main
 git pull --ff-only origin main
 
-$gameDir = "${env:ProgramFiles(x86)}\Steam\steamapps\common\Cities Skylines II"
-$env:CSII_USERDATAPATH = "$env:USERPROFILE\AppData\LocalLow\Colossal Order\Cities Skylines II"
-$env:CSII_MANAGED_PATH = Join-Path $gameDir "Cities2_Data\Managed"
-$env:CSII_TOOLPATH = Join-Path $gameDir "Cities2_Data\Content\Game\.ModdingToolchain"
+$toolPath  = [Environment]::GetEnvironmentVariable("CSII_TOOLPATH", "User")
+$managed   = [Environment]::GetEnvironmentVariable("CSII_MANAGEDPATH", "User")
+$localMods = [Environment]::GetEnvironmentVariable("CSII_LOCALMODSPATH", "User")
+
+Test-Path (Join-Path $toolPath "Mod.props")
+Test-Path (Join-Path $toolPath "Mod.targets")
+Test-Path (Join-Path $managed "Game.dll")
+Test-Path $localMods
 
 cd .\UI
 npm.cmd install
@@ -197,7 +231,7 @@ cd ..
 dotnet test .\tests\CS2RuntimeProfiler.Tests\CS2RuntimeProfiler.Tests.csproj -v minimal
 dotnet build .\CS2RuntimeProfiler.sln -c Release
 
-$modDir = Join-Path $env:CSII_USERDATAPATH "Mods\CS2RuntimeProfiler"
+$modDir = Join-Path $localMods "CS2RuntimeProfiler"
 Get-ChildItem $modDir -Recurse -File |
     Where-Object { $_.Extension -in ".dll", ".mjs", ".css" } |
     Select-Object FullName, Length, LastWriteTime

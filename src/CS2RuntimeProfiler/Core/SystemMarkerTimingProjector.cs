@@ -63,7 +63,8 @@ namespace CS2RuntimeProfiler.Core
                 result.AddSystemAggregate(
                     aggregate,
                     system.AssemblyName,
-                    system.PatchOwners.Select(owner => owner.OwnerId));
+                    system.PatchOwners.Select(owner => owner.OwnerId),
+                    system.SourceKind);
             }
 
             return result;
@@ -77,7 +78,7 @@ namespace CS2RuntimeProfiler.Core
             long total = 0;
             foreach (var sample in samples)
             {
-                var count = Math.Max(0L, sample.CallCount.Value);
+                var count = Math.Max(0L, sample.CallCount.GetValueOrDefault());
                 if (count >= int.MaxValue - total)
                     return int.MaxValue;
                 total += count;

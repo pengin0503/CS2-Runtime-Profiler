@@ -79,6 +79,13 @@ namespace CS2RuntimeProfiler.Core
             StartCapture(nowSeconds, new CaptureTrigger(CaptureTriggerKind.Manual, nowSeconds, null));
         }
 
+        public void ResetToMonitoring()
+        {
+            State = CaptureState.Monitoring;
+            _stateEnteredAt = 0d;
+            _lowEfficiencySince = null;
+        }
+
         private void StartCapture(double nowSeconds, CaptureTrigger trigger)
         {
             State = CaptureState.DeepCapture;

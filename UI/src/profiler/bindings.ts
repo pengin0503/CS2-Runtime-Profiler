@@ -80,7 +80,7 @@ export interface CaptureSummaryUi {
   discoveredMarkers: number;
   capturedMarkers: number;
   batched: boolean;
-  coverageRatio: number;
+  coverageRatio: number | null;
   warningCount: number;
   profilerOverheadShare: number;
   warnings: string[];

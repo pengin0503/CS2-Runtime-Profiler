@@ -1,6 +1,7 @@
 using Colossal.IO.AssetDatabase;
 using Colossal.Logging;
 using CS2RuntimeProfiler.Collectors;
+using CS2RuntimeProfiler.Export;
 using CS2RuntimeProfiler.Localization;
 using CS2RuntimeProfiler.Profiling;
 using CS2RuntimeProfiler.UI;
@@ -21,6 +22,7 @@ namespace CS2RuntimeProfiler
             Log.Info(nameof(OnLoad));
 
             Settings = new Setting(this);
+            ProfilerReportBuilder.RuntimeMetadataProvider = RuntimeReportMetadataProvider.Capture;
 
             var localizationManager = GameManager.instance?.localizationManager;
             if (localizationManager != null)
@@ -43,6 +45,7 @@ namespace CS2RuntimeProfiler
         public void OnDispose()
         {
             Log.Info(nameof(OnDispose));
+            ProfilerReportBuilder.RuntimeMetadataProvider = null;
             Settings?.UnregisterInOptionsUI();
             Settings = null;
         }

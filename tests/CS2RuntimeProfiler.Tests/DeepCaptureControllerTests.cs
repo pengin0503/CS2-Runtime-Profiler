@@ -50,6 +50,30 @@ public class DeepCaptureControllerTests
     }
 
     [Test]
+    public void Interrupt_active_capture_finalizes_partial_session_and_returns_to_monitoring()
+    {
+        var descriptor = new RecorderDescriptor("cpu", "CPU", "Simulation Example.System", "TimeNanoseconds", "Int64");
+        using var manager = new RecorderManager(new FakeBackend(descriptor));
+        using var controller = new DeepCaptureController(manager, CreateStateMachine(), maxConcurrent: 8);
+        controller.Initialize();
+        controller.RequestManualCapture(0);
+        controller.Observe(0.5, global: null);
+
+        Assert.That(manager.ActiveIds, Is.Not.Empty);
+
+        controller.InterruptActiveCapture("Monitoring disabled during Deep Capture.");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.State, Is.EqualTo(CaptureState.Monitoring));
+            Assert.That(controller.CurrentSession, Is.Null);
+            Assert.That(controller.CompletedSessions.Count, Is.EqualTo(1));
+            Assert.That(controller.CompletedSessions[0].Warnings, Does.Contain("Monitoring disabled during Deep Capture."));
+            Assert.That(manager.ActiveIds, Is.Empty);
+        });
+    }
+
+    [Test]
     public void Overhead_outside_a_capture_does_not_degrade_batching()
     {
         using var controller = CreateController(maxConcurrent: 8);

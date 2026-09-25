@@ -33,6 +33,7 @@ namespace CS2RuntimeProfiler.UI
         private ValueBinding<string> _exportResultBinding;
         private double _nextRefreshAt;
         private bool _panelVisible;
+        private string _selectedCaptureId = string.Empty;
 
         public override GameMode gameMode => GameMode.Game;
 
@@ -55,7 +56,7 @@ namespace CS2RuntimeProfiler.UI
 
             AddBinding(new TriggerBinding(Group, "togglePanel", TogglePanel));
             AddBinding(new TriggerBinding(Group, "manualCapture", ManualCapture));
-            AddBinding(new TriggerBinding<string>(Group, "selectCapture", id => _selectedCaptureBinding.Update(id ?? string.Empty)));
+            AddBinding(new TriggerBinding<string>(Group, "selectCapture", SelectCapture));
             AddBinding(new TriggerBinding<string>(Group, "selectSystem", id => _selectedSystemBinding.Update(id ?? string.Empty)));
             AddBinding(new TriggerBinding<string>(Group, "selectMod", id => _selectedModBinding.Update(id ?? string.Empty)));
             AddBinding(new TriggerBinding(Group, "exportReport", ExportReport));
@@ -106,6 +107,18 @@ namespace CS2RuntimeProfiler.UI
             }
         }
 
+        private void SelectCapture(string id)
+        {
+            _selectedCaptureId = id ?? string.Empty;
+            _selectedCaptureBinding.Update(_selectedCaptureId);
+
+            if (_panelVisible)
+            {
+                RefreshSnapshot();
+                _snapshotBinding.Update();
+            }
+        }
+
         private void ExportReport()
         {
             try
@@ -133,19 +146,30 @@ namespace CS2RuntimeProfiler.UI
             var captures = new List<CaptureSession>();
             if (_capture?.CompletedSessions != null)
                 captures.AddRange(_capture.CompletedSessions.Where(capture => capture != null));
-            if (_capture?.CurrentSession != null)
-                captures.Add(_capture.CurrentSession);
 
-            var timing = _capture?.CurrentSession?.SystemTiming;
-            if (timing == null && _capture?.CompletedSessions != null)
-                timing = _capture.CompletedSessions.LastOrDefault(capture => capture?.SystemTiming != null)?.SystemTiming;
+            if (!string.IsNullOrWhiteSpace(_selectedCaptureId)
+                && !captures.Any(capture => string.Equals(capture.Id, _selectedCaptureId, StringComparison.Ordinal)))
+            {
+                _selectedCaptureId = string.Empty;
+                _selectedCaptureBinding.Update(string.Empty);
+            }
 
+            var currentCapture = _capture?.CurrentSession;
+            CaptureSession detailCapture = null;
+            if (!string.IsNullOrWhiteSpace(_selectedCaptureId))
+            {
+                detailCapture = captures.FirstOrDefault(capture =>
+                    string.Equals(capture.Id, _selectedCaptureId, StringComparison.Ordinal));
+            }
+            detailCapture = detailCapture ?? currentCapture ?? captures.LastOrDefault();
+
+            var timing = detailCapture?.SystemTiming;
             var diagnostics = new List<string>();
             if (timing == null)
                 diagnostics.Add("システム別の実行時間は、対応する詳細キャプチャが作成されるまで利用できません。");
-            diagnostics.Add("タイムラインは現在のコレクターが実際に保持した履歴だけを表示します。利用できない系列を推測で生成することはありません。");
+            diagnostics.Add("タイムラインは現在選択しているキャプチャが実際に保持した履歴だけを表示します。利用できない系列を推測で生成することはありません。");
 
-            var latestCapture = captures.LastOrDefault();
+            var markerCapture = detailCapture ?? currentCapture ?? captures.LastOrDefault();
             var patchMapState = timing == null
                 ? "利用不可: システム時間スナップショットがありません。"
                 : timing.Systems.Any(system => system.PatchOwners != null && system.PatchOwners.Count > 0)
@@ -162,10 +186,12 @@ namespace CS2RuntimeProfiler.UI
                 _capture?.LastOverheadShare ?? 0d,
                 diagnostics)
             {
+                CurrentCapture = currentCapture,
+                SelectedCaptureId = _selectedCaptureId,
                 GameVersion = GetGameVersion(),
                 ProfilerVersion = typeof(Mod).Assembly.GetName().Version?.ToString() ?? string.Empty,
                 DiscoveredMarkerCount = _global?.Recorders?.Descriptors?.Count ?? 0,
-                CapturedMarkerCount = latestCapture?.MarkerCoverage.Captured ?? 0,
+                CapturedMarkerCount = markerCapture?.MarkerCoverage.Captured ?? 0,
                 MarkerBatchSize = _capture?.CurrentBatchSize ?? 0,
                 SamplingStride = _capture?.SamplingStride ?? 1,
                 PatchMapState = patchMapState
@@ -261,11 +287,14 @@ namespace CS2RuntimeProfiler.UI
                 writer.TypeBegin("CS2RuntimeProfiler.SystemUiRow");
                 writer.PropertyName("id"); writer.Write(item.Id ?? string.Empty);
                 writer.PropertyName("ownerAssembly"); writer.Write(item.OwnerAssembly ?? string.Empty);
+                writer.PropertyName("sourceKind"); writer.Write(item.SourceKind ?? string.Empty);
                 writer.PropertyName("currentMilliseconds"); writer.Write(item.CurrentMilliseconds);
                 writer.PropertyName("meanMilliseconds"); WriteNullable(writer, item.MeanMilliseconds);
+                writer.PropertyName("medianMilliseconds"); WriteNullable(writer, item.MedianMilliseconds);
                 writer.PropertyName("p95Milliseconds"); WriteNullable(writer, item.P95Milliseconds);
                 writer.PropertyName("p99Milliseconds"); WriteNullable(writer, item.P99Milliseconds);
                 writer.PropertyName("maxMilliseconds"); WriteNullable(writer, item.MaxMilliseconds);
+                writer.PropertyName("totalMilliseconds"); WriteNullable(writer, item.TotalMilliseconds);
                 writer.PropertyName("calls"); if (item.Calls.HasValue) writer.Write(item.Calls.Value); else writer.WriteNull();
                 writer.PropertyName("confidence"); writer.Write(item.Confidence ?? string.Empty);
                 writer.PropertyName("patchOwners"); WriteStrings(writer, item.PatchOwners);

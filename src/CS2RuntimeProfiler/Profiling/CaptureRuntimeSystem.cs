@@ -12,9 +12,10 @@ namespace CS2RuntimeProfiler.Profiling
     /// </summary>
     public partial class CaptureRuntimeSystem : GameSystemBase
     {
-        private const double PrebufferSeconds = 5d;
+        private const double DefaultPrebufferSeconds = 5d;
         private readonly MonitoringLifecycleGate _monitoringGate = new MonitoringLifecycleGate(initiallyEnabled: true);
         private GlobalMetricsCollector _global;
+        private DeepCaptureStateMachine _stateMachine;
         private DeepCaptureController _controller;
         private ProfilerOverheadTracker _overhead;
         private CaptureCompletionTimingProcessor _completionTiming;
@@ -33,12 +34,14 @@ namespace CS2RuntimeProfiler.Profiling
             base.OnCreate();
             _global = World.GetOrCreateSystemManaged<GlobalMetricsCollector>();
             _overhead = new ProfilerOverheadTracker();
+            _stateMachine = DeepCaptureStateMachine.CreateDefault();
             _controller = new DeepCaptureController(
                 _global.Recorders,
-                DeepCaptureStateMachine.CreateDefault(),
+                _stateMachine,
                 maxConcurrent: 150,
                 overheadCeiling: 0.08);
             _controller.Initialize();
+            ApplyRuntimeSettings();
 
             try
             {
@@ -58,6 +61,8 @@ namespace CS2RuntimeProfiler.Profiling
 
         protected override void OnUpdate()
         {
+            ApplyRuntimeSettings();
+
             var monitoringEnabled = Mod.Settings == null || Mod.Settings.EnableMonitoring;
             var transition = _monitoringGate.Observe(monitoringEnabled);
 
@@ -76,16 +81,17 @@ namespace CS2RuntimeProfiler.Profiling
                 return;
 
             var before = _controller.State;
-            var prebuffer = _global.GetRecentHistory(PrebufferSeconds);
+            var prebuffer = _global.GetRecentHistory(GetPrebufferSeconds());
             _overhead.Measure(latest.TimestampSeconds, () =>
             {
                 _controller.Observe(latest.TimestampSeconds, latest, prebuffer);
                 ProjectCompletedCaptureTiming();
             });
 
+            var samplingPeriod = Math.Max(0.001d, _global?.SamplingPeriodSeconds ?? GlobalMetricsCollector.DefaultSamplingPeriodSeconds);
             _lastOverheadShare = Math.Max(
                 0d,
-                _overhead.LastMilliseconds / (GlobalMetricsCollector.SamplingPeriodSeconds * 1000d));
+                _overhead.LastMilliseconds / (samplingPeriod * 1000d));
             _controller.CurrentSession?.ObserveProfilerOverheadShare(_lastOverheadShare);
             _controller.ReportProfilerOverheadShare(_lastOverheadShare);
 
@@ -100,9 +106,35 @@ namespace CS2RuntimeProfiler.Profiling
             if (Mod.Settings != null && !Mod.Settings.EnableMonitoring)
                 return;
 
+            ApplyRuntimeSettings();
             var latest = _global?.Latest;
             var now = latest?.TimestampSeconds ?? Math.Max(0d, _lastObservedTimestamp);
-            _controller?.RequestManualCapture(now, _global?.GetRecentHistory(PrebufferSeconds));
+            _controller?.RequestManualCapture(now, _global?.GetRecentHistory(GetPrebufferSeconds()));
+        }
+
+        private double GetPrebufferSeconds()
+        {
+            return Mod.Settings?.ResolvedPrebufferSeconds ?? DefaultPrebufferSeconds;
+        }
+
+        private void ApplyRuntimeSettings()
+        {
+            var settings = Mod.Settings;
+            if (settings == null || _stateMachine == null || _controller == null)
+                return;
+
+            _stateMachine.Configure(
+                settings.ResolvedEfficiencyThreshold,
+                settings.ResolvedLowEfficiencySustainSeconds,
+                settings.ResolvedDeepCaptureSeconds,
+                settings.ResolvedPostbufferSeconds,
+                settings.ResolvedCooldownSeconds,
+                settings.EnableAutomaticCapture);
+
+            _controller.UpdateConfiguration(
+                settings.ResolvedMaxConcurrentMarkers,
+                settings.ResolvedProfilerOverheadLimit,
+                settings.ResolvedMaxCompletedCaptures);
         }
 
         private void ProjectCompletedCaptureTiming()

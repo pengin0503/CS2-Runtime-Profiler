@@ -144,8 +144,17 @@ namespace CS2RuntimeProfiler.Profiling
 
         private void BeginCapture(double nowSeconds, IEnumerable<GlobalMetricsSnapshot> prebuffer)
         {
-            if (_plan == null)
-                Initialize();
+            string discoveryWarning = null;
+            try
+            {
+                // Unity Entities can register per-system profiler markers after this mod's systems are created.
+                // Refresh at capture start so Deep Capture does not stay pinned to the startup marker catalog.
+                _recorders.DiscoverAvailableMarkers();
+            }
+            catch (Exception ex)
+            {
+                discoveryWarning = $"Profiler marker refresh failed at capture start; using the remaining catalog where available: {ex.Message}";
+            }
 
             _maxConcurrent = _configuredMaxConcurrent;
             _sampleStride = 1;
@@ -156,6 +165,9 @@ namespace CS2RuntimeProfiler.Profiling
                 $"capture-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}",
                 _stateMachine.LastTrigger ?? new CaptureTrigger(CaptureTriggerKind.Manual, nowSeconds, null),
                 maxSamplesPerSeries: 4096);
+
+            if (!string.IsNullOrWhiteSpace(discoveryWarning))
+                CurrentSession.AddWarning(discoveryWarning);
 
             if (prebuffer != null)
             {

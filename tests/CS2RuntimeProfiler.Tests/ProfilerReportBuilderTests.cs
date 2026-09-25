@@ -14,6 +14,7 @@ public class ProfilerReportBuilderTests
             Global = new GlobalUiMetrics
             {
                 Available = true,
+                TimestampSeconds = 12d,
                 SelectedSpeed = 4,
                 ActualSpeed = 2.8,
                 Efficiency = 0.7,
@@ -28,6 +29,12 @@ public class ProfilerReportBuilderTests
                         Availability = "Available"
                     }
                 }
+            },
+            Capture = new CaptureUiState
+            {
+                State = "Monitoring",
+                DetailCaptureId = "capture-1",
+                DetailScope = "historical-capture"
             },
             Systems = new[]
             {
@@ -68,6 +75,9 @@ public class ProfilerReportBuilderTests
         Assert.That(report.CityName, Is.Null);
         Assert.That(report.GlobalMetrics.Any(x => x.Name == "efficiency" && x.Value == 0.7), Is.True);
         Assert.That(report.GlobalMetrics.Single(x => x.Name == "main").Unit, Is.EqualTo("TimeNanoseconds"));
+        Assert.That(report.CaptureConfig.Any(x => x.Name == "detailCaptureId" && x.Value == "capture-1"), Is.True);
+        Assert.That(report.CaptureConfig.Any(x => x.Name == "detailScope" && x.Value == "historical-capture"), Is.True);
+        Assert.That(report.CaptureConfig.Any(x => x.Name == "globalTimestampSeconds" && x.Value == "12"), Is.True);
 
         var system = report.Systems.Single();
         Assert.Multiple(() =>

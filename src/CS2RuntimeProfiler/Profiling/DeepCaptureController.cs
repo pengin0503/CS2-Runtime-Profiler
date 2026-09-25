@@ -13,9 +13,9 @@ namespace CS2RuntimeProfiler.Profiling
         private readonly DeepCaptureStateMachine _stateMachine;
         private readonly List<CaptureSession> _completed = new List<CaptureSession>();
         private readonly HashSet<string> _capturedMarkerIds = new HashSet<string>(StringComparer.Ordinal);
-        private readonly double _overheadCeiling;
-        private readonly int _configuredMaxConcurrent;
-        private readonly int _maxCompletedSessions;
+        private double _overheadCeiling;
+        private int _configuredMaxConcurrent;
+        private int _maxCompletedSessions;
         private int _maxConcurrent;
         private int _currentBatchIndex = -1;
         private int _sampleStride = 1;
@@ -51,6 +51,23 @@ namespace CS2RuntimeProfiler.Profiling
         {
             _recorders.DiscoverAvailableMarkers();
             _plan = MarkerBatchPlanner.Create(_recorders.Descriptors.Select(d => d.Id), _maxConcurrent);
+        }
+
+        public void UpdateConfiguration(int maxConcurrent, double overheadCeiling, int maxCompletedSessions)
+        {
+            _configuredMaxConcurrent = Math.Max(1, maxConcurrent);
+            _overheadCeiling = Math.Max(0.001d, overheadCeiling);
+            _maxCompletedSessions = Math.Max(1, maxCompletedSessions);
+
+            while (_completed.Count > _maxCompletedSessions)
+                _completed.RemoveAt(0);
+
+            if (CurrentSession != null)
+                return;
+
+            _maxConcurrent = _configuredMaxConcurrent;
+            if (_recorders.Descriptors != null)
+                _plan = MarkerBatchPlanner.Create(_recorders.Descriptors.Select(d => d.Id), _maxConcurrent);
         }
 
         public void RequestManualCapture(double nowSeconds, IEnumerable<GlobalMetricsSnapshot> prebuffer = null)
@@ -227,7 +244,7 @@ namespace CS2RuntimeProfiler.Profiling
         {
             CurrentSession.SetMarkerCoverage(_plan?.DiscoveredCount ?? 0, _capturedMarkerIds.Count, _plan?.IsBatched ?? false);
             _completed.Add(CurrentSession);
-            if (_completed.Count > _maxCompletedSessions)
+            while (_completed.Count > _maxCompletedSessions)
                 _completed.RemoveAt(0);
             CurrentSession = null;
             _consecutiveOverheadBreaches = 0;

@@ -9,7 +9,8 @@ import {
   togglePanel,
   useExportResult,
   usePanelVisible,
-  useProfilerSnapshot
+  useProfilerSnapshot,
+  useUiScalePercent
 } from "./bindings";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { SystemsTab } from "./tabs/SystemsTab";
@@ -27,9 +28,21 @@ export function ProfilerRoot() {
   const visible = usePanelVisible();
   const snapshot = useProfilerSnapshot();
   const exportResult = useExportResult();
+  const uiScalePercent = useUiScalePercent();
   const [tab, setTab] = useState<ProfilerTab>("overview");
 
   if (!visible) return null;
+
+  const safeScalePercent = Math.min(150, Math.max(75, uiScalePercent || 100));
+  const scale = safeScalePercent / 100;
+  const inverseScale = 1 / scale;
+  const panelStyle: React.CSSProperties = {
+    transform: `scale(${scale})`,
+    transformOrigin: "top left",
+    maxWidth: `calc(${100 * inverseScale}vw - ${56 * inverseScale}rem)`,
+    height: `calc(${100 * inverseScale}vh - ${110 * inverseScale}rem)`,
+    maxHeight: `calc(${100 * inverseScale}vh - ${110 * inverseScale}rem)`
+  };
 
   const tabs: Array<[ProfilerTab, string]> = [
     ["overview", "概要"],
@@ -42,7 +55,7 @@ export function ProfilerRoot() {
   ];
 
   return (
-    <div className={styles.panel} role="dialog" aria-label="CS2 ランタイムプロファイラー">
+    <div className={styles.panel} style={panelStyle} role="dialog" aria-label="CS2 ランタイムプロファイラー">
       <header className={styles.panelHeader}>
         <div>
           <strong>CS2 ランタイムプロファイラー</strong>

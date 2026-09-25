@@ -19,6 +19,8 @@ namespace CS2RuntimeProfiler.UI
         public string State { get; set; } = CaptureState.Monitoring.ToString();
         public bool IsDeepCapture { get; set; }
         public int CompletedCount { get; set; }
+        public string DetailCaptureId { get; set; } = string.Empty;
+        public string DetailScope { get; set; } = "live";
     }
 
     public sealed class UiMetricRow

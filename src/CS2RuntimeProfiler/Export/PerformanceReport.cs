@@ -58,8 +58,13 @@ namespace CS2RuntimeProfiler.Export
         [DataMember(Name = "confidence", Order = 4, EmitDefaultValue = false)] public string Confidence { get; set; }
         [DataMember(Name = "currentMilliseconds", Order = 5, EmitDefaultValue = false)] public double? CurrentMilliseconds { get; set; }
         [DataMember(Name = "meanMilliseconds", Order = 6, EmitDefaultValue = false)] public double? MeanMilliseconds { get; set; }
-        [DataMember(Name = "p95Milliseconds", Order = 7, EmitDefaultValue = false)] public double? P95Milliseconds { get; set; }
-        [DataMember(Name = "patchOwners", Order = 8)] public List<string> PatchOwners { get; set; }
+        [DataMember(Name = "medianMilliseconds", Order = 7, EmitDefaultValue = false)] public double? MedianMilliseconds { get; set; }
+        [DataMember(Name = "p95Milliseconds", Order = 8, EmitDefaultValue = false)] public double? P95Milliseconds { get; set; }
+        [DataMember(Name = "p99Milliseconds", Order = 9, EmitDefaultValue = false)] public double? P99Milliseconds { get; set; }
+        [DataMember(Name = "maxMilliseconds", Order = 10, EmitDefaultValue = false)] public double? MaxMilliseconds { get; set; }
+        [DataMember(Name = "totalMilliseconds", Order = 11, EmitDefaultValue = false)] public double? TotalMilliseconds { get; set; }
+        [DataMember(Name = "calls", Order = 12, EmitDefaultValue = false)] public int? Calls { get; set; }
+        [DataMember(Name = "patchOwners", Order = 13)] public List<string> PatchOwners { get; set; }
 
         internal ReportSystem SanitizedCopy() => new ReportSystem
         {
@@ -69,7 +74,12 @@ namespace CS2RuntimeProfiler.Export
             Confidence = PrivacySanitizer.Sanitize(Confidence),
             CurrentMilliseconds = CurrentMilliseconds,
             MeanMilliseconds = MeanMilliseconds,
+            MedianMilliseconds = MedianMilliseconds,
             P95Milliseconds = P95Milliseconds,
+            P99Milliseconds = P99Milliseconds,
+            MaxMilliseconds = MaxMilliseconds,
+            TotalMilliseconds = TotalMilliseconds,
+            Calls = Calls,
             PatchOwners = (PatchOwners ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList()
         };
     }

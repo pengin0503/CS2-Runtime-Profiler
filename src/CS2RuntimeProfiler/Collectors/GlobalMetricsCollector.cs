@@ -10,7 +10,7 @@ namespace CS2RuntimeProfiler.Collectors
 {
     public partial class GlobalMetricsCollector : GameSystemBase, IMetricCollector
     {
-        public const double SamplingPeriodSeconds = 0.5;
+        public const double DefaultSamplingPeriodSeconds = 0.5;
         private const int HistoryCapacity = 60;
         private readonly Stopwatch _clock = Stopwatch.StartNew();
         private readonly MonitoringLifecycleGate _monitoringGate = new MonitoringLifecycleGate(initiallyEnabled: true);
@@ -25,6 +25,7 @@ namespace CS2RuntimeProfiler.Collectors
         public GlobalMetricsSnapshot Latest { get; private set; }
         public ProfilerOverheadTracker Overhead => _overhead;
         public RecorderManager Recorders => _recorderManager;
+        public double SamplingPeriodSeconds => Mod.Settings?.ResolvedSamplingPeriodSeconds ?? DefaultSamplingPeriodSeconds;
 
         protected override void OnCreate()
         {

@@ -38,9 +38,11 @@ namespace CS2RuntimeProfiler.UI
         public string SourceKind { get; set; } = SystemSourceKind.Unknown.ToString();
         public double CurrentMilliseconds { get; set; }
         public double? MeanMilliseconds { get; set; }
+        public double? MedianMilliseconds { get; set; }
         public double? P95Milliseconds { get; set; }
         public double? P99Milliseconds { get; set; }
         public double? MaxMilliseconds { get; set; }
+        public double? TotalMilliseconds { get; set; }
         public int? Calls { get; set; }
         public string Confidence { get; set; } = MetricConfidence.Unavailable.ToString();
         public IReadOnlyList<string> PatchOwners { get; set; } = Array.Empty<string>();

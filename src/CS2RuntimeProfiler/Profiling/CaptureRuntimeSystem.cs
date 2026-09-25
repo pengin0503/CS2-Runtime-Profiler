@@ -43,7 +43,9 @@ namespace CS2RuntimeProfiler.Profiling
             try
             {
                 var systems = new ProfilerCatalog().Discover();
-                _completionTiming = new CaptureCompletionTimingProcessor(systems, _global.Recorders.Descriptors);
+                _completionTiming = new CaptureCompletionTimingProcessor(
+                    systems,
+                    () => _global?.Recorders?.Descriptors ?? Array.Empty<RecorderDescriptor>());
             }
             catch (Exception ex)
             {

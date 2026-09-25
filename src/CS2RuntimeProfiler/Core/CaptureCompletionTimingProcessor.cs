@@ -12,15 +12,22 @@ namespace CS2RuntimeProfiler.Core
     public sealed class CaptureCompletionTimingProcessor
     {
         private readonly IReadOnlyList<SystemDescriptor> _systems;
-        private readonly IReadOnlyList<RecorderDescriptor> _recorders;
+        private readonly Func<IEnumerable<RecorderDescriptor>> _recorderProvider;
         private readonly HashSet<CaptureSession> _processed = new HashSet<CaptureSession>();
 
         public CaptureCompletionTimingProcessor(
             IEnumerable<SystemDescriptor> systems,
             IEnumerable<RecorderDescriptor> recorders)
+            : this(systems, () => recorders ?? Array.Empty<RecorderDescriptor>())
+        {
+        }
+
+        public CaptureCompletionTimingProcessor(
+            IEnumerable<SystemDescriptor> systems,
+            Func<IEnumerable<RecorderDescriptor>> recorderProvider)
         {
             _systems = (systems ?? Array.Empty<SystemDescriptor>()).Where(x => x != null).ToArray();
-            _recorders = (recorders ?? Array.Empty<RecorderDescriptor>()).Where(x => x != null).ToArray();
+            _recorderProvider = recorderProvider ?? (() => Array.Empty<RecorderDescriptor>());
         }
 
         public int ProcessedCount { get; private set; }
@@ -39,9 +46,13 @@ namespace CS2RuntimeProfiler.Core
                 if (capture == null || !_processed.Add(capture))
                     continue;
 
+                var recorders = (_recorderProvider() ?? Array.Empty<RecorderDescriptor>())
+                    .Where(x => x != null)
+                    .ToArray();
+
                 ProcessedCount++;
                 LastProcessedCapture = capture;
-                CaptureSystemTimingFinalizer.Apply(capture, _systems, _recorders);
+                CaptureSystemTimingFinalizer.Apply(capture, _systems, recorders);
             }
         }
     }

@@ -108,9 +108,11 @@ namespace CS2RuntimeProfiler.UI
                     SourceKind = system.SourceKind.ToString(),
                     CurrentMilliseconds = system.Milliseconds,
                     MeanMilliseconds = system.MeanMilliseconds,
+                    MedianMilliseconds = system.MedianMilliseconds,
                     P95Milliseconds = system.P95Milliseconds,
                     P99Milliseconds = system.P99Milliseconds,
                     MaxMilliseconds = system.MaxMilliseconds,
+                    TotalMilliseconds = system.TotalMilliseconds,
                     Calls = system.Calls,
                     Confidence = system.Confidence.ToString(),
                     PatchOwners = system.PatchOwners.ToArray()

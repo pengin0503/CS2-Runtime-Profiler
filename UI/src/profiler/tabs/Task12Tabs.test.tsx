@@ -73,6 +73,13 @@ describe("Task 12 profiler tabs", () => {
     expect(html).not.toContain("Profiler overhead remains high");
   });
 
+  it("captures render unavailable marker coverage as a dash instead of one hundred percent", () => {
+    const unavailable = [{ ...snapshot.captures[0], discoveredMarkers: 0, capturedMarkers: 0, coverageRatio: null }];
+    const html = renderToStaticMarkup(<CapturesTab captures={unavailable} />);
+    expect(html).toContain("カバレッジ —");
+    expect(html).not.toContain("カバレッジ 100.0%");
+  });
+
   it("diagnostics surfaces coverage sampling and self-overhead state", () => {
     const html = renderToStaticMarkup(<DiagnosticsTab diagnostics={snapshot.diagnostics} captures={snapshot.captures} />);
     expect(html).toContain("1.6.2f1");

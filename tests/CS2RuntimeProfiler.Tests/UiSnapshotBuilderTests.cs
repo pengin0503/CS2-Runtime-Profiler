@@ -31,7 +31,13 @@ public class UiSnapshotBuilderTests
         });
 
         var systems = new SystemTimingSnapshot();
-        systems.AddSystem("Example.Mod.System", 1.4, MetricConfidence.Managed, "Example.Mod", new[] { "patch.owner" });
+        systems.AddSystem(
+            "Example.Mod.System",
+            1.4,
+            MetricConfidence.Managed,
+            "Example.Mod",
+            new[] { "patch.owner" },
+            sourceKind: SystemSourceKind.Mod);
         systems.SetUnattributedJobsMilliseconds(3.1);
 
         var input = new UiSnapshotInput(
@@ -56,6 +62,35 @@ public class UiSnapshotBuilderTests
         Assert.That(snapshot.Pathfinding.Metrics.Single(x => x.Id == "requestsPerSecond").Value, Is.Null);
         Assert.That(snapshot.Pathfinding.Metrics.Single(x => x.Id == "requestsPerSecond").Reason, Does.Contain("verified"));
         Assert.That(snapshot.DomainMetrics.Single(x => x.Id == "citizens").Value, Is.EqualTo(40000));
+    }
+
+    [Test]
+    public void Mods_projection_excludes_vanilla_direct_cost_but_keeps_mod_direct_cost()
+    {
+        var systems = new SystemTimingSnapshot();
+        systems.AddSystem(
+            "Game.VanillaSystem",
+            7.0,
+            MetricConfidence.Full,
+            ownerAssembly: "Game",
+            patchOwners: new[] { "Patch.Mod" },
+            sourceKind: SystemSourceKind.Vanilla);
+        systems.AddSystem(
+            "Example.ModSystem",
+            2.5,
+            MetricConfidence.Full,
+            ownerAssembly: "Example.Mod",
+            sourceKind: SystemSourceKind.Mod);
+
+        var snapshot = UiSnapshotBuilder.Build(new UiSnapshotInput { Systems = systems });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Mods.Any(row => row.AssemblyName == "Game"), Is.False);
+            Assert.That(snapshot.Mods.Single(row => row.AssemblyName == "Example.Mod").DirectSystemMilliseconds, Is.EqualTo(2.5));
+            Assert.That(snapshot.Mods.Single(row => row.AssemblyName == "Patch.Mod").DirectSystemMilliseconds, Is.Zero);
+            Assert.That(snapshot.Systems.Single(row => row.Id == "Game.VanillaSystem").SourceKind, Is.EqualTo("Vanilla"));
+        });
     }
 
     [Test]

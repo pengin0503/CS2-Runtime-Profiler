@@ -12,35 +12,65 @@ namespace CS2RuntimeProfiler.UI
 
         public static UiSnapshot Build(UiSnapshotInput input)
         {
+            return BuildCore(input, forExport: false);
+        }
+
+        public static UiSnapshot BuildForExport(UiSnapshotInput input)
+        {
+            return BuildCore(input, forExport: true);
+        }
+
+        private static UiSnapshot BuildCore(UiSnapshotInput input, bool forExport)
+        {
             input = input ?? new UiSnapshotInput();
             var completedSessions = (input.Captures ?? Array.Empty<CaptureSession>())
                 .Where(capture => capture != null)
                 .ToArray();
             var detailCapture = SelectDetailCapture(input, completedSessions);
+            var detailIsCurrent = detailCapture != null && ReferenceEquals(detailCapture, input.CurrentCapture);
+            var historicalExport = forExport && detailCapture != null && !detailIsCurrent;
             var detailTiming = detailCapture != null ? detailCapture.SystemTiming : input.Systems;
             var systems = BuildSystems(detailTiming);
             var captures = completedSessions.Select(BuildCapture).ToArray();
 
+            var diagnostics = (input.Diagnostics ?? Array.Empty<string>())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+            if (historicalExport)
+            {
+                diagnostics.Add(
+                    "Historical capture export omits live-only pathfinding and domain metrics because those snapshots are not stored in CaptureSession.");
+            }
+
+            var global = historicalExport ? GetLatestGlobalSample(detailCapture) : input.Global;
+            var pathfinding = historicalExport ? null : input.Pathfinding;
+            var domains = historicalExport ? null : input.Domains;
+            var overheadShare = historicalExport
+                ? Math.Max(0d, detailCapture.MaxProfilerOverheadShare)
+                : Math.Max(0d, input.ProfilerOverheadShare);
+
             return new UiSnapshot
             {
-                Global = BuildGlobal(input.Global),
+                Global = BuildGlobal(global),
                 Capture = new CaptureUiState
                 {
                     State = input.CaptureState.ToString(),
                     IsDeepCapture = input.CaptureState == CaptureState.DeepCapture,
-                    CompletedCount = captures.Length
+                    CompletedCount = captures.Length,
+                    DetailCaptureId = detailCapture?.Id ?? string.Empty,
+                    DetailScope = ResolveDetailScope(detailCapture, detailIsCurrent, historicalExport)
                 },
                 Systems = systems,
                 Mods = BuildMods(systems),
-                Pathfinding = new PathfindingUiMetrics { Metrics = BuildMetrics(input.Pathfinding) },
-                DomainMetrics = BuildMetrics(input.Domains),
+                Pathfinding = new PathfindingUiMetrics { Metrics = BuildMetrics(pathfinding) },
+                DomainMetrics = BuildMetrics(domains),
                 Timeline = BuildTimeline(detailCapture),
                 Captures = captures,
                 Diagnostics = new DiagnosticsUi
                 {
-                    ProfilerOverheadShare = Math.Max(0d, input.ProfilerOverheadShare),
+                    ProfilerOverheadShare = overheadShare,
                     UnattributedJobsMilliseconds = detailTiming?.UnattributedJobsMilliseconds ?? 0d,
-                    Messages = (input.Diagnostics ?? Array.Empty<string>()).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray(),
+                    Messages = diagnostics.ToArray(),
                     GameVersion = input.GameVersion ?? string.Empty,
                     ProfilerVersion = input.ProfilerVersion ?? string.Empty,
                     DiscoveredMarkerCount = Math.Max(0, input.DiscoveredMarkerCount),
@@ -67,6 +97,25 @@ namespace CS2RuntimeProfiler.UI
                 return input.CurrentCapture;
 
             return completed.Count == 0 ? null : completed[completed.Count - 1];
+        }
+
+        private static string ResolveDetailScope(CaptureSession detailCapture, bool detailIsCurrent, bool historicalExport)
+        {
+            if (detailCapture == null)
+                return "live";
+            if (detailIsCurrent)
+                return "active-capture";
+            return historicalExport ? "historical-capture" : "completed-capture-detail";
+        }
+
+        private static GlobalMetricsSnapshot GetLatestGlobalSample(CaptureSession capture)
+        {
+            if (capture?.GlobalSamples == null || capture.GlobalSamples.Count == 0)
+                return null;
+
+            return capture.GlobalSamples
+                .OrderBy(sample => sample.TimestampSeconds)
+                .LastOrDefault();
         }
 
         private static GlobalUiMetrics BuildGlobal(GlobalMetricsSnapshot global)

@@ -4,11 +4,12 @@ namespace CS2RuntimeProfiler.Core
 {
     public sealed class DeepCaptureStateMachine
     {
-        private readonly double _efficiencyThreshold;
-        private readonly double _sustainSeconds;
-        private readonly double _deepSeconds;
-        private readonly double _postSeconds;
-        private readonly double _cooldownSeconds;
+        private double _efficiencyThreshold;
+        private double _sustainSeconds;
+        private double _deepSeconds;
+        private double _postSeconds;
+        private double _cooldownSeconds;
+        private bool _automaticCaptureEnabled;
 
         private double? _lowEfficiencySince;
         private double _stateEnteredAt;
@@ -20,11 +21,13 @@ namespace CS2RuntimeProfiler.Core
             double postSeconds,
             double cooldownSeconds)
         {
-            _efficiencyThreshold = efficiencyThreshold;
-            _sustainSeconds = sustainSeconds;
-            _deepSeconds = deepSeconds;
-            _postSeconds = postSeconds;
-            _cooldownSeconds = cooldownSeconds;
+            Configure(
+                efficiencyThreshold,
+                sustainSeconds,
+                deepSeconds,
+                postSeconds,
+                cooldownSeconds,
+                automaticCaptureEnabled: true);
             State = CaptureState.Monitoring;
         }
 
@@ -41,12 +44,37 @@ namespace CS2RuntimeProfiler.Core
                 cooldownSeconds: 30);
         }
 
+        public void Configure(
+            double efficiencyThreshold,
+            double sustainSeconds,
+            double deepSeconds,
+            double postSeconds,
+            double cooldownSeconds,
+            bool automaticCaptureEnabled)
+        {
+            _efficiencyThreshold = Clamp(efficiencyThreshold, 0.01d, 1d);
+            _sustainSeconds = Math.Max(0.1d, sustainSeconds);
+            _deepSeconds = Math.Max(0.1d, deepSeconds);
+            _postSeconds = Math.Max(0d, postSeconds);
+            _cooldownSeconds = Math.Max(0d, cooldownSeconds);
+            _automaticCaptureEnabled = automaticCaptureEnabled;
+
+            if (!_automaticCaptureEnabled)
+                _lowEfficiencySince = null;
+        }
+
         public void Observe(double nowSeconds, double selectedSpeed, double actualSpeed)
         {
             AdvanceTimedStates(nowSeconds);
 
             if (State != CaptureState.Monitoring)
                 return;
+
+            if (!_automaticCaptureEnabled)
+            {
+                _lowEfficiencySince = null;
+                return;
+            }
 
             if (selectedSpeed <= 0)
             {
@@ -121,6 +149,15 @@ namespace CS2RuntimeProfiler.Core
                     advanced = true;
                 }
             }
+        }
+
+        private static double Clamp(double value, double min, double max)
+        {
+            if (value < min)
+                return min;
+            if (value > max)
+                return max;
+            return value;
         }
     }
 }

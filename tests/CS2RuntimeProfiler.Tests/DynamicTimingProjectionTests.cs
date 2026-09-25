@@ -26,7 +26,8 @@ public class DynamicTimingProjectionTests
 
         var capture = new CaptureSession(
             "capture-dynamic",
-            new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null));
+            new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null),
+            maxSamplesPerSeries: 16);
         capture.AddMarkerSample(
             recorder.Id,
             new MetricSample(1d, 2_000_000d, MetricConfidence.Full, 1));

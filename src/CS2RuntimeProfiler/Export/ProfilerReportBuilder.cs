@@ -7,6 +7,8 @@ namespace CS2RuntimeProfiler.Export
 {
     public static class ProfilerReportBuilder
     {
+        public static Func<RuntimeReportMetadata> RuntimeMetadataProvider { get; set; }
+
         public static PerformanceReport Build(
             UiSnapshot snapshot,
             string gameVersion = null,
@@ -14,6 +16,8 @@ namespace CS2RuntimeProfiler.Export
             RuntimeReportMetadata metadata = null)
         {
             snapshot = snapshot ?? new UiSnapshot();
+            metadata = metadata ?? ResolveRuntimeMetadata();
+
             var report = new PerformanceReport
             {
                 GameVersion = gameVersion,
@@ -123,6 +127,23 @@ namespace CS2RuntimeProfiler.Export
                 report.DomainMetrics.Count > 0 ? "available" : "unavailable"));
 
             return report;
+        }
+
+        private static RuntimeReportMetadata ResolveRuntimeMetadata()
+        {
+            var provider = RuntimeMetadataProvider;
+            if (provider == null)
+                return null;
+
+            try
+            {
+                return provider();
+            }
+            catch
+            {
+                // Export metadata is best-effort and must never make the report itself fail.
+                return null;
+            }
         }
 
         private static void AddCaptureScope(PerformanceReport report, UiSnapshot snapshot)

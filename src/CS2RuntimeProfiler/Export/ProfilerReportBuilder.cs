@@ -30,7 +30,12 @@ namespace CS2RuntimeProfiler.Export
                     Confidence = system.Confidence,
                     CurrentMilliseconds = system.CurrentMilliseconds,
                     MeanMilliseconds = system.MeanMilliseconds,
+                    MedianMilliseconds = system.MedianMilliseconds,
                     P95Milliseconds = system.P95Milliseconds,
+                    P99Milliseconds = system.P99Milliseconds,
+                    MaxMilliseconds = system.MaxMilliseconds,
+                    TotalMilliseconds = system.TotalMilliseconds,
+                    Calls = system.Calls,
                     PatchOwners = (system.PatchOwners ?? Array.Empty<string>()).ToList()
                 });
             }
@@ -138,6 +143,7 @@ namespace CS2RuntimeProfiler.Export
             {
                 Name = metric.Id,
                 Value = metric.Value,
+                Unit = metric.UnitType,
                 Confidence = metric.Confidence,
                 Availability = metric.Availability,
                 Note = metric.Reason

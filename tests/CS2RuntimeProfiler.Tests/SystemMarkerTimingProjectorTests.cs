@@ -35,7 +35,7 @@ public class SystemMarkerTimingProjectorTests
         Assert.That(system.Milliseconds, Is.EqualTo(6d).Within(0.0001));
         Assert.That(system.MeanMilliseconds, Is.EqualTo(4d).Within(0.0001));
         Assert.That(system.MaxMilliseconds, Is.EqualTo(6d).Within(0.0001));
-        Assert.That(system.Calls, Is.EqualTo(3));
+        Assert.That(system.Calls, Is.Null, "poll count is not a substitute for profiler call count");
         Assert.That(system.Confidence, Is.EqualTo(MetricConfidence.Full));
         Assert.That(system.OwnerAssembly, Is.EqualTo("Game"));
         Assert.That(system.PatchOwners, Is.EquivalentTo(new[] { "TrafficTweaks" }));
@@ -48,7 +48,31 @@ public class SystemMarkerTimingProjectorTests
         Assert.That(row.P95Milliseconds, Is.Not.Null);
         Assert.That(row.P99Milliseconds, Is.Not.Null);
         Assert.That(row.MaxMilliseconds, Is.EqualTo(6d).Within(0.0001));
-        Assert.That(row.Calls, Is.EqualTo(3));
+        Assert.That(row.Calls, Is.Null);
+    }
+
+    [Test]
+    public void Profiler_call_counts_are_summed_instead_of_counting_poll_observations()
+    {
+        var descriptor = new SystemDescriptor(
+            "Example.System",
+            "Example.Mod",
+            SystemSourceKind.Mod,
+            "Example Mod",
+            MetricConfidence.Unavailable);
+        var recorder = new RecorderDescriptor(
+            "CPU\u001fSimulation Example.System",
+            "CPU",
+            "Simulation Example.System",
+            "TimeNanoseconds",
+            "Int64");
+        var capture = new CaptureSession("capture-calls", new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null), 16);
+        capture.AddMarkerSample(recorder.Id, new MetricSample(1d, 2_000_000d, MetricConfidence.Full, callCount: 2));
+        capture.AddMarkerSample(recorder.Id, new MetricSample(1.5d, 4_000_000d, MetricConfidence.Full, callCount: 3));
+
+        var timing = SystemMarkerTimingProjector.Project(new[] { descriptor }, new[] { recorder }, capture);
+
+        Assert.That(timing.Systems.Single().Calls, Is.EqualTo(5));
     }
 
     [Test]

@@ -22,6 +22,8 @@ export interface CaptureUiState {
   state: string;
   isDeepCapture: boolean;
   completedCount: number;
+  detailCaptureId: string;
+  detailScope: string;
 }
 
 export interface UiHudSnapshot {
@@ -127,7 +129,13 @@ export const EMPTY_SNAPSHOT: UiSnapshot = {
     efficiency: null,
     recorderMetrics: []
   },
-  capture: { state: "Monitoring", isDeepCapture: false, completedCount: 0 },
+  capture: {
+    state: "Monitoring",
+    isDeepCapture: false,
+    completedCount: 0,
+    detailCaptureId: "",
+    detailScope: "live"
+  },
   systems: [],
   mods: [],
   pathfinding: { metrics: [] },

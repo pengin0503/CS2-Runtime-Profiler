@@ -34,11 +34,14 @@ export interface UiHudSnapshot {
 export interface SystemUiRow {
   id: string;
   ownerAssembly: string;
+  sourceKind: string;
   currentMilliseconds: number;
   meanMilliseconds: number | null;
+  medianMilliseconds: number | null;
   p95Milliseconds: number | null;
   p99Milliseconds: number | null;
   maxMilliseconds: number | null;
+  totalMilliseconds: number | null;
   calls: number | null;
   confidence: string;
   patchOwners: string[];

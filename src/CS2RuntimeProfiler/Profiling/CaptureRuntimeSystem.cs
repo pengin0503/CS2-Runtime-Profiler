@@ -13,6 +13,7 @@ namespace CS2RuntimeProfiler.Profiling
     public partial class CaptureRuntimeSystem : GameSystemBase
     {
         private const double PrebufferSeconds = 5d;
+        private readonly MonitoringLifecycleGate _monitoringGate = new MonitoringLifecycleGate(initiallyEnabled: true);
         private GlobalMetricsCollector _global;
         private DeepCaptureController _controller;
         private ProfilerOverheadTracker _overhead;
@@ -55,7 +56,17 @@ namespace CS2RuntimeProfiler.Profiling
 
         protected override void OnUpdate()
         {
-            if (Mod.Settings != null && !Mod.Settings.EnableMonitoring)
+            var monitoringEnabled = Mod.Settings == null || Mod.Settings.EnableMonitoring;
+            var transition = _monitoringGate.Observe(monitoringEnabled);
+
+            if (transition == MonitoringTransition.Disabled)
+            {
+                _controller?.InterruptActiveCapture(
+                    "Monitoring was disabled; the active capture was finalized early and recorder activity was stopped.");
+                ProjectCompletedCaptureTiming();
+            }
+
+            if (!monitoringEnabled)
                 return;
 
             var latest = _global?.Latest;
@@ -84,6 +95,9 @@ namespace CS2RuntimeProfiler.Profiling
 
         public void RequestManualCapture()
         {
+            if (Mod.Settings != null && !Mod.Settings.EnableMonitoring)
+                return;
+
             var latest = _global?.Latest;
             var now = latest?.TimestampSeconds ?? Math.Max(0d, _lastObservedTimestamp);
             _controller?.RequestManualCapture(now, _global?.GetRecentHistory(PrebufferSeconds));

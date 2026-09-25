@@ -124,8 +124,11 @@ Evidence: RED `9ad7a57726f9cf072c03beb53a6953f1ccd73e93` / run `36086170499`; GR
 - [x] Verify RED.
 - [x] Store selected capture ID in C# system, rebuild snapshot on selection, project only relevant capture timeline, keep active capture separate.
 - [x] Verify Pure Core + UI GREEN.
+- [x] Final-review extension: keep historical JSON export in the same capture time scope instead of mixing current-only collector snapshots.
 
-Evidence: RED commits `1362ce21db4ecb188e4eb61531213cd5f8bf9824`, `0015fe361f7964d2f533046c7d502283521d04dd`; final UI run `36088488554` PASS and Pure Core run `36088562657` PASS. Runtime serializer also now preserves `sourceKind`, `medianMilliseconds`, and `totalMilliseconds`.
+Evidence: initial RED commits `1362ce21db4ecb188e4eb61531213cd5f8bf9824`, `0015fe361f7964d2f533046c7d502283521d04dd`; initial UI run `36088488554` PASS and Pure Core run `36088562657` PASS. Runtime serializer also preserves `sourceKind`, `medianMilliseconds`, and `totalMilliseconds`.
+
+Final-review export extension: RED `ac3fb8a84aabd45ad5a84866154784e6f5d35e88` / `473bf17562b1277c29e3ffd76767ce53e848f3f9`, run `36089481878`; GREEN `d79733defe882c29de28474cdeacbaa547f55067`, Pure Core run `36089778625`, UI/webpack run `36089778609`. Historical export now uses the retained capture's Global sample, omits non-retained live-only Pathfinding/Domain metrics, and records capture ID/scope/timestamp.
 
 ### Task 6: Make overhead diagnostics semantically truthful
 
@@ -174,7 +177,7 @@ Evidence: supplied `CS2-managed-reference-fix(1).zip` shows `Mod.props` reading 
 - [x] Confirm no branch other than `main` was created by this work.
 - [x] Keep actual in-game scenarios explicitly UNVERIFIED until executed in Cities: Skylines II.
 
-Evidence: final code-bearing UI/Pure verification on `f3a068eb0c01cb0112ad35a453f84490d64a27f3` is PASS (`36088777589`, `36088777556`). Task-5 C# selection wiring is also covered by Pure Core run `36088562657`; UI build by `36088488554`. Diff review from `a756b1fb4435d04af2ec19de4460f29c20983e04` found only profiler core/UI/tests/docs/README changes. Repository branch search returned only `main`. Runtime validation remains NOT RUN / UNVERIFIED and is recorded in `docs/validation/runtime-validation.md`.
+Evidence: final code-bearing HEAD `d79733defe882c29de28474cdeacbaa547f55067` passes Pure Core (`36089778625`) and UI tests + production webpack build (`36089778609`). Diff review from `a756b1fb4435d04af2ec19de4460f29c20983e04` is restricted to profiler core/UI/tests/docs/README work. Repository branch search returned only `main`. Runtime validation remains NOT RUN / UNVERIFIED and is recorded in `docs/validation/runtime-validation.md`.
 
 ## Remaining separately tracked item
 

@@ -43,6 +43,59 @@ public class CaptureUiProjectionTests
     }
 
     [Test]
+    public void Current_capture_is_not_counted_or_listed_as_completed()
+    {
+        var completed = new CaptureSession("completed", new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null), 16);
+        completed.AddGlobalSample(Global(1d, 1d, 1d, 1d));
+        var current = new CaptureSession("current", new CaptureTrigger(CaptureTriggerKind.Manual, 2d, null), 16);
+        current.AddGlobalSample(Global(2d, 1d, 1d, 2d));
+
+        var snapshot = UiSnapshotBuilder.Build(new UiSnapshotInput
+        {
+            Captures = new[] { completed },
+            CurrentCapture = current,
+            CaptureState = CaptureState.DeepCapture
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Capture.CompletedCount, Is.EqualTo(1));
+            Assert.That(snapshot.Captures.Select(capture => capture.Id), Is.EqualTo(new[] { "completed" }));
+            Assert.That(snapshot.Captures.Any(capture => capture.Id == "current"), Is.False);
+        });
+    }
+
+    [Test]
+    public void Selected_completed_capture_drives_systems_and_timeline_without_mixing_other_captures()
+    {
+        var first = new CaptureSession("first", new CaptureTrigger(CaptureTriggerKind.Manual, 10d, null), 16);
+        first.AddGlobalSample(Global(10d, 4d, 3d, 10d));
+        var firstTiming = new SystemTimingSnapshot();
+        firstTiming.AddSystem("First.System", 1.5d, MetricConfidence.Full, "First.Mod", sourceKind: SystemSourceKind.Mod);
+        first.SetSystemTiming(firstTiming);
+
+        var second = new CaptureSession("second", new CaptureTrigger(CaptureTriggerKind.Manual, 20d, null), 16);
+        second.AddGlobalSample(Global(20d, 4d, 2d, 20d));
+        var secondTiming = new SystemTimingSnapshot();
+        secondTiming.AddSystem("Second.System", 9d, MetricConfidence.Full, "Second.Mod", sourceKind: SystemSourceKind.Mod);
+        second.SetSystemTiming(secondTiming);
+
+        var snapshot = UiSnapshotBuilder.Build(new UiSnapshotInput
+        {
+            Captures = new[] { first, second },
+            SelectedCaptureId = "first"
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Systems.Select(row => row.Id), Is.EqualTo(new[] { "First.System" }));
+            Assert.That(snapshot.Timeline.Any(point => point.Metric == "system:First.System"), Is.True);
+            Assert.That(snapshot.Timeline.Any(point => point.Metric == "system:Second.System"), Is.False);
+            Assert.That(snapshot.Timeline.Any(point => point.TimestampSeconds == 20d), Is.False);
+        });
+    }
+
+    [Test]
     public void Capture_overhead_keeps_the_maximum_observed_share()
     {
         var capture = new CaptureSession("capture-2", new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null), 8);

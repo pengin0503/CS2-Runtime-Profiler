@@ -90,7 +90,7 @@ namespace CS2RuntimeProfiler.UI
         public int DiscoveredMarkers { get; set; }
         public int CapturedMarkers { get; set; }
         public bool Batched { get; set; }
-        public double CoverageRatio { get; set; }
+        public double? CoverageRatio { get; set; }
         public int WarningCount { get; set; }
         public double ProfilerOverheadShare { get; set; }
         public IReadOnlyList<string> Warnings { get; set; } = Array.Empty<string>();

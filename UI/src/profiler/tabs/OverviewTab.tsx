@@ -38,7 +38,7 @@ export function OverviewTab({ snapshot, onManualCapture, onExport, exportResult 
         <div className={styles.summaryCard}><span>実効速度</span><strong>{formatSpeed(snapshot.global.actualSpeed)}</strong></div>
         <div className={styles.summaryCard}><span>シミュレーション効率</span><strong>{formatPercent(snapshot.global.efficiency)}</strong></div>
         <div className={styles.summaryCard}><span>キャプチャ状態</span><strong>{captureStateLabel(snapshot.capture.state, snapshot.capture.isDeepCapture)}</strong></div>
-        <div className={styles.summaryCard}><span>プロファイラー負荷</span><strong>{formatPercent(snapshot.diagnostics.profilerOverheadShare)}</strong></div>
+        <div className={styles.summaryCard} title="詳細キャプチャ制御・集計処理を0.5秒の監視周期に対する割合で示します。ゲーム全体のプロファイラー負荷ではありません。"><span>キャプチャ処理負荷</span><strong>{formatPercent(snapshot.diagnostics.profilerOverheadShare)}</strong></div>
         <div className={styles.summaryCard} title="現在のC#スナップショットにはFPS専用フィールドがありません。"><span>FPS</span><strong>—</strong><small>利用不可</small></div>
       </section>
 

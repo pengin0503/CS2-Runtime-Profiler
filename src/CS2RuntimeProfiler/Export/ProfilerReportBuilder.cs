@@ -17,6 +17,7 @@ namespace CS2RuntimeProfiler.Export
                 CityName = null
             };
 
+            AddCaptureScope(report, snapshot);
             AddGlobal(report, snapshot.Global);
 
             foreach (var system in snapshot.Systems ?? Array.Empty<SystemUiRow>())
@@ -107,6 +108,24 @@ namespace CS2RuntimeProfiler.Export
                 report.DomainMetrics.Count > 0 ? "available" : "unavailable"));
 
             return report;
+        }
+
+        private static void AddCaptureScope(PerformanceReport report, UiSnapshot snapshot)
+        {
+            var capture = snapshot.Capture ?? new CaptureUiState();
+            if (!string.IsNullOrWhiteSpace(capture.DetailCaptureId))
+                report.CaptureConfig.Add(new ReportNamedValue("detailCaptureId", capture.DetailCaptureId));
+
+            report.CaptureConfig.Add(new ReportNamedValue(
+                "detailScope",
+                string.IsNullOrWhiteSpace(capture.DetailScope) ? "live" : capture.DetailScope));
+
+            if (snapshot.Global?.Available == true)
+            {
+                report.CaptureConfig.Add(new ReportNamedValue(
+                    "globalTimestampSeconds",
+                    snapshot.Global.TimestampSeconds.ToString("R", CultureInfo.InvariantCulture)));
+            }
         }
 
         private static void AddGlobal(PerformanceReport report, GlobalUiMetrics global)

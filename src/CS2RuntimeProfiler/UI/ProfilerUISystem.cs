@@ -383,7 +383,7 @@ namespace CS2RuntimeProfiler.UI
                 writer.PropertyName("discoveredMarkers"); writer.Write(item.DiscoveredMarkers);
                 writer.PropertyName("capturedMarkers"); writer.Write(item.CapturedMarkers);
                 writer.PropertyName("batched"); writer.Write(item.Batched);
-                writer.PropertyName("coverageRatio"); writer.Write(item.CoverageRatio);
+                writer.PropertyName("coverageRatio"); WriteNullable(writer, item.CoverageRatio);
                 writer.PropertyName("warningCount"); writer.Write(item.WarningCount);
                 writer.PropertyName("profilerOverheadShare"); writer.Write(item.ProfilerOverheadShare);
                 writer.PropertyName("warnings"); WriteStrings(writer, item.Warnings);

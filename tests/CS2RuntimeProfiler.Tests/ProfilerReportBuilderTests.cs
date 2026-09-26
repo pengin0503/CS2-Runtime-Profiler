@@ -125,4 +125,56 @@ public class ProfilerReportBuilderTests
         Assert.That(report.DomainMetrics.Single().Name, Is.EqualTo("citizens"));
         Assert.That(report.ProfilerOverhead.Any(x => x.Name == "captureOverheadShare" && x.Value == 0.025), Is.True);
     }
+
+    [Test]
+    public void Unavailable_only_metric_groups_are_not_reported_as_available()
+    {
+        var snapshot = new UiSnapshot
+        {
+            Pathfinding = new PathfindingUiMetrics
+            {
+                Metrics = new[]
+                {
+                    new UiMetricRow
+                    {
+                        Id = "requestsPerSecond",
+                        Value = null,
+                        Confidence = "Unavailable",
+                        Availability = "Unavailable",
+                        Reason = "No verified counter."
+                    }
+                }
+            },
+            DomainMetrics = new[]
+            {
+                new UiMetricRow
+                {
+                    Id = "serviceVehicles",
+                    Value = null,
+                    Confidence = "Unavailable",
+                    Availability = "Unavailable",
+                    Reason = "No verified source."
+                }
+            }
+        };
+
+        var report = ProfilerReportBuilder.Build(snapshot);
+
+        Assert.That(report.Capabilities.Single(x => x.Name == "pathfinding").Value, Is.EqualTo("unavailable"));
+        Assert.That(report.Capabilities.Single(x => x.Name == "domainMetrics").Value, Is.EqualTo("unavailable"));
+
+        snapshot.DomainMetrics = new[]
+        {
+            new UiMetricRow
+            {
+                Id = "citizens",
+                Value = 100,
+                Confidence = "Indirect",
+                Availability = "Available"
+            }
+        };
+
+        report = ProfilerReportBuilder.Build(snapshot);
+        Assert.That(report.Capabilities.Single(x => x.Name == "domainMetrics").Value, Is.EqualTo("available"));
+    }
 }

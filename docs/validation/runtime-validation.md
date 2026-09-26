@@ -1,6 +1,6 @@
 # Runtime validation
 
-Date: 2026-09-25  
+Date: 2026-09-26  
 Branch: `main`
 
 This document separates automated evidence from checks that require a real Cities: Skylines II session. Unit tests, CI and static inspection do **not** convert an in-game scenario into a pass. If a scenario was not actually executed, its status remains **NOT RUN / UNVERIFIED**.
@@ -51,11 +51,20 @@ This document separates automated evidence from checks that require a real Citie
 | Current/completed/selected capture separation RED | commits `1362ce21db4ecb188e4eb61531213cd5f8bf9824`, `0015fe361f7964d2f533046c7d502283521d04dd` | Expected failure | Pure tests failed on missing `CurrentCapture`/`SelectedCaptureId`; UI test showed PostBuffer manual capture was still enabled. |
 | Current/completed/selected capture separation GREEN | commits `4aa16993a2bcc87637b752f2ab155d3150d5ac6e`, `f5f8dc29f4f18450f93ef3a38291a16cf0ad8c56`, `bd3929367c4f442a5efeb682ffe872a59c4e3424`, `689376951cc54583fdbeabccd149405836e939f6`; UI run `36088488554`, Pure Core run `36088562657` | PASS | Completed summaries no longer include the active capture. Systems/timeline use one selected/current/latest capture. PostBuffer manual capture is disabled. Raw UI serialization now preserves source kind, median and total fields. |
 | Historical export scope RED | commits `ac3fb8a84aabd45ad5a84866154784e6f5d35e88`, `473bf17562b1277c29e3ffd76767ce53e848f3f9`; Pure Core run `36089481878` | Expected failure | Final review found that selected historical Systems/Timeline could still be exported beside current Global/Pathfinding/Domain data. RED failed on missing export-specific projection/scope fields. |
-| Historical export scope GREEN | commit `d79733defe882c29de28474cdeacbaa547f55067`; Pure Core run `36089778625`, UI run `36089778609` | PASS | Historical export uses the selected/latest completed capture's stored Global sample, omits current-only Pathfinding/Domain data that was never retained in the capture, and records `detailCaptureId`, `detailScope`, and `globalTimestampSeconds`. Live UI projection remains unchanged. |
+| Historical export scope GREEN | commit `d79733defe882c29de28474cdeacbaa547f55067`; Pure Core run `36089778625`, UI run `36089778609` | PASS | Historical export uses the selected/latest completed capture's stored Global sample and retained Pathfinding/Domain snapshots when present, and records `detailCaptureId`, `detailScope`, and `globalTimestampSeconds`. Live UI projection remains unchanged. |
 | Capture-processing overhead wording RED | commit `0be803fbac09880919d1e57233823e3fd6143f9c`, UI run `36088653568` | Expected failure | Regression test rejected ambiguous whole-profiler-overhead wording. |
 | Capture-processing overhead wording GREEN | commit `f3a068eb0c01cb0112ad35a453f84490d64a27f3`, UI run `36088777589`, Pure Core run `36088777556` | PASS | UI labels explicitly describe the measured capture-processing share and state that it is not total game-wide profiler overhead. |
 | Official toolchain variable/deploy inspection | supplied `CS2-managed-reference-fix(1).zip`, README commit `6566dc845f968f74ea854e02d579ff02123f9f7a` | PASS for documentation/source agreement | Supplied `Mod.props` uses `CSII_MANAGEDPATH` and User-scope toolchain variables; supplied `Mod.targets` deploys to `CSII_LOCALMODSPATH\$(TargetName)`. This validates the README against the supplied toolchain files, not against an actual Windows build. |
-| UI dependency audit notice | UI CI install output | OPEN | `npm install` currently reports 5 dependency vulnerabilities (3 moderate, 1 high, 1 critical). No forced dependency upgrade was applied without advisory/package-level evidence; this remains a separate dependency-maintenance item. |
+| UI dependency audit | UI run `36250034356` | PASS | `npm ci` reported `found 0 vulnerabilities`. The previous 5-vulnerability maintenance note is resolved for the current lockfile used by CI. |
+
+## 2026-09-26 review-hardening evidence
+
+| Check | Evidence | Result | Scope / limitation |
+| --- | --- | --- | --- |
+| Capability/queue/service-vehicle/timing diagnostics RED | commit `7b94494c576021af12a9bd99e32eb85654f9c6c9`, Pure Core run `36250926271` | Expected failure | Four targeted regressions failed while the other 95 tests passed: unavailable-only capability groups were reported available, Length-only queue containers were rejected, the service-vehicle aggregate stayed unavailable, and zero-result system timing lacked projection-stage diagnostics. |
+| Capability/queue/service-vehicle/timing diagnostics GREEN | commit `15bcb6f1b60aa079d7927d37f711e4f3c75b715f`, Pure Core run `36251219666` | PASS | 99/99 Pure Core tests passed after the focused changes. The pure project still does not compile `DomainMetricsSystem` against the full official game toolchain. |
+| Service-vehicle managed-reference inspection | supplied `CS2-managed-reference-fix(1).zip` | PASS for static type evidence | The supplied `Game.dll` exposes `Game.Vehicles` components for Ambulance, Hearse, MaintenanceVehicle, FireEngine, GarbageTruck, PoliceCar, PostVan and PrisonerTransport, with generated ECS ComponentTypeHandle/ComponentLookup names. This supports the read-only union query, but actual runtime counts remain an in-game validation item. |
+| Pathfinding request/result rates | supplied `Game.dll` + source review | INTENTIONALLY UNAVAILABLE | `GetPathfindCompleted` and related names exist, but binary-name presence does not establish counter lifetime/reset semantics. `requestsPerSecond` and `resultsPerSecond` therefore remain unavailable rather than inventing a rate. |
 
 ## In-game validation matrix
 
@@ -72,18 +81,19 @@ Record concrete measurements and evidence in this table when the scenarios are e
 | 7 | Collector failure / deliberately unavailable member | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | Failure remains isolated; monitoring continues; warning/diagnostic is visible; unavailable data is not rendered as zero or fabricated. |
 | 8 | Mod-owned ECS system classification | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | A uniquely matched direct system marker produces timing for the correct full type; direct owner assembly/mod metadata is retained and Mods totals use direct ownership only. |
 | 9 | Patched vanilla system metadata | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | Vanilla system remains the timing owner; patch owner(s) appear as metadata and do not inherit the vanilla timing as direct mod cost. |
-| 10 | JSON export and privacy inspection | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | Selected-capture values in JSON match the UI/source capture. Historical export must not mix current-only pathfinding/domain values into the retained capture scope. Inspect for `C:\Users\`, account name, absolute `ModsData`/home paths and other identifying path leakage before sharing. |
-| 11 | Monitoring OFF during an active Deep Capture | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | Verify active recorders stop on the disable transition, no capture sampling continues while disabled, and re-enabling returns to a coherent normal/deep lifecycle without errors. |
+| 10 | JSON export and privacy inspection | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | Selected-capture values in JSON match the UI/source capture. Historical export must not mix current-only values into the retained capture scope. Inspect for `C:\Users\`, account name, absolute `ModsData`/home paths and other identifying path leakage before sharing. |
+| 11 | Monitoring OFF during an active Deep Capture | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | Verify normal and dedicated Deep Capture recorders stop on the disable transition, no capture sampling continues while disabled, and re-enabling returns to a coherent normal/deep lifecycle without errors. |
 | 12 | Profiler panel closed for an extended session | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | HUD speed/capture state continues updating while the full Systems/Mods/Timeline/Captures snapshot is not periodically rebuilt; opening the panel immediately refreshes full detail. |
+| 13 | Service-vehicle domain aggregate | **NOT RUN / UNVERIFIED** | — | — | — | — | — | — | Compare `serviceVehicles` against a controlled city state and verify Ambulance/Hearse/MaintenanceVehicle/FireEngine/GarbageTruck/PoliceCar/PostVan/PrisonerTransport entities are included while `Deleted`/`Temp` entities are excluded. |
 
 ## Measurement protocol
 
 1. Use the same save, camera position and simulation state where practical.
-2. For the disabled baseline, set `EnableMonitoring` false and allow the monitoring lifecycle transition to execute. The current implementation deactivates the shared recorder manager on that transition and restores the normal recorder set once when monitoring is enabled again. Independently verify recorder inactivity in-game before treating the run as a zero-sampling baseline.
+2. For the disabled baseline, set `EnableMonitoring` false and allow the monitoring lifecycle transition to execute. The current implementation deactivates the normal-monitoring recorder manager in `GlobalMetricsCollector`; `CaptureRuntimeSystem` also deactivates its dedicated Deep Capture recorder manager and resets an active capture. Independently verify recorder inactivity in-game before treating the run as a zero-sampling baseline.
 3. Record selected speed, actual speed, FPS, profiler self-overhead, capture coverage, errors and warnings.
 4. Exercise both manual and automatic capture paths.
 5. For the representative slowdown case, preserve the pre/deep/post timeline and describe only observed correlations unless an independent causal test supports a stronger statement.
-6. Inspect the exported JSON itself; UI appearance alone is not sufficient for privacy/export validation. For a completed historical capture, verify `captureConfig.detailCaptureId`, `detailScope=historical-capture`, and the exported global timestamp against the selected capture; pathfinding/domain sections should remain unavailable unless historical samples are actually retained in a future implementation.
+6. Inspect the exported JSON itself; UI appearance alone is not sufficient for privacy/export validation. For a completed historical capture, verify `captureConfig.detailCaptureId`, `detailScope=historical-capture`, and the exported global timestamp against the selected capture. When retained Pathfinding/Domain snapshots exist, verify those sections also come from the selected capture; otherwise keep them unavailable rather than substituting current live values.
 7. For long-session memory validation, create more than 20 captures and confirm the UI retains only the newest 20 completed sessions while timing projection continues for newly completed captures.
 8. With the panel closed, compare profiler self-overhead against the panel-open state; the closed state should perform only the lightweight HUD binding update at the periodic UI refresh cadence.
 
@@ -96,12 +106,13 @@ For a completed capture that contains a uniquely matching ECS profiler marker:
 - `TimeNanoseconds` is converted to milliseconds.
 - Current, mean, median, P95, P99, max, total and calls are preserved where samples exist.
 - Full type name matching is conservative; ambiguous matches are skipped rather than guessed.
+- If zero systems can be projected, the warning exposes catalog-system count, profiler-marker count, TimeNanoseconds marker count, unique and ambiguous matches, unique matches without captured samples, and captured marker coverage.
 - The completed `CaptureSession.SystemTiming` is populated exactly once while it remains in retained history and remains available to Systems/Mods UI projection.
 - Completed capture history is bounded; eviction of older sessions must not cause new sessions to be skipped by timing finalization.
 - Direct mod ownership and patch-owner metadata remain separate concepts.
 - Missing or unsafe-to-measure work remains unavailable/unattributed; no forced Job completion is introduced.
 
-The pure-layer tests cover projection/finalization, skipped-state lifecycle behavior, monitoring edge tracking, overhead adaptation, bounded-history behavior and historical-export scoping. UI CI covers the compact HUD binding, closed-panel refresh policy and current binding/build contract. Actual Unity/CS2 profiler marker names, game lifecycle behavior, full Windows mod compilation and UI presentation with real captures still require the in-game matrix above.
+The pure-layer tests cover projection/finalization, skipped-state lifecycle behavior, monitoring edge tracking, overhead adaptation, bounded-history behavior, historical-export scoping, truthful capability reporting and supported Pathfinding/domain fallback behavior. UI CI covers the compact HUD binding, closed-panel refresh policy and current binding/build contract. Actual Unity/CS2 profiler marker names, game lifecycle behavior, full Windows mod compilation and UI presentation with real captures still require the in-game matrix above.
 
 ## Release-candidate evidence policy
 

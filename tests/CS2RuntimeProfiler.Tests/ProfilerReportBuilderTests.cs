@@ -173,8 +173,22 @@ public class ProfilerReportBuilderTests
                 Availability = "Available"
             }
         };
+        snapshot.Pathfinding = new PathfindingUiMetrics
+        {
+            Metrics = new[]
+            {
+                new UiMetricRow
+                {
+                    Id = "pendingPathfindActions",
+                    Value = 4,
+                    Confidence = "Indirect",
+                    Availability = "Available"
+                }
+            }
+        };
 
         report = ProfilerReportBuilder.Build(snapshot);
         Assert.That(report.Capabilities.Single(x => x.Name == "domainMetrics").Value, Is.EqualTo("available"));
+        Assert.That(report.Capabilities.Single(x => x.Name == "pathfinding").Value, Is.EqualTo("available"));
     }
 }

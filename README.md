@@ -75,7 +75,9 @@ Monitoring（監視中）またはCooldown（クールダウン中）の状態�
 
 JSONレポートは、Cities: Skylines II のユーザーデータディレクトリ内にある以下の場所へ保存されます。
 
-`ModsData/CS2RuntimeProfiler/CS2Profiler-report-YYYY-MM-DD_HHmmss.json`
+`ModsData/CS2RuntimeProfiler/CS2Profiler-report-YYYY-MM-DD_HHmmss_fff.json`
+
+ファイル名にはミリ秒まで含まれます。同一ファイル名がすでに存在する場合は上書きせず、`-1`、`-2` のような連番サフィックスを付けて別ファイルとして保存します。
 
 エクスポーターにはプライバシー保護用のサニタイザーが実装されており、検出された場合には以下の情報を置換するよう設計されています。
 

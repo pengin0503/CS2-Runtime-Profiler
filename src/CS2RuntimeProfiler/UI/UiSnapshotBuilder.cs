@@ -36,15 +36,15 @@ namespace CS2RuntimeProfiler.UI
             var diagnostics = (input.Diagnostics ?? Array.Empty<string>())
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .ToList();
-            if (historicalExport)
-            {
-                diagnostics.Add(
-                    "Historical capture export omits live-only pathfinding and domain metrics because those snapshots are not stored in CaptureSession.");
-            }
 
             var global = historicalExport ? GetLatestGlobalSample(detailCapture) : input.Global;
-            var pathfinding = historicalExport ? null : input.Pathfinding;
-            var domains = historicalExport ? null : input.Domains;
+            var pathfinding = historicalExport ? detailCapture?.PathfindingSnapshot : input.Pathfinding;
+            var domains = historicalExport ? detailCapture?.DomainMetricsSnapshot : input.Domains;
+            if (historicalExport && pathfinding == null)
+                diagnostics.Add("Historical capture has no retained pathfinding snapshot; this metric group is unavailable for this capture.");
+            if (historicalExport && domains == null)
+                diagnostics.Add("Historical capture has no retained domain-metrics snapshot; this metric group is unavailable for this capture.");
+
             var overheadShare = historicalExport
                 ? Math.Max(0d, detailCapture.MaxProfilerOverheadShare)
                 : Math.Max(0d, input.ProfilerOverheadShare);
@@ -131,6 +131,7 @@ namespace CS2RuntimeProfiler.UI
                 ActualSpeed = global.ActualSpeed,
                 Efficiency = global.Efficiency,
                 RecorderMetrics = global.RecorderReadings
+                    .Where(pair => pair.Value.Count > 0)
                     .OrderBy(pair => pair.Key, StringComparer.Ordinal)
                     .Select(pair => new UiMetricRow
                     {
@@ -272,14 +273,20 @@ namespace CS2RuntimeProfiler.UI
             AddChange(changes, "efficiency", pre.Average(sample => sample.Efficiency), post.Average(sample => sample.Efficiency), MetricConfidence.Full);
 
             var sharedRecorderIds = pre
-                .SelectMany(sample => sample.RecorderReadings.Keys)
-                .Intersect(post.SelectMany(sample => sample.RecorderReadings.Keys), StringComparer.Ordinal)
+                .SelectMany(sample => sample.RecorderReadings.Where(pair => pair.Value.Count > 0).Select(pair => pair.Key))
+                .Intersect(post.SelectMany(sample => sample.RecorderReadings.Where(pair => pair.Value.Count > 0).Select(pair => pair.Key)), StringComparer.Ordinal)
                 .Distinct(StringComparer.Ordinal);
 
             foreach (var id in sharedRecorderIds)
             {
-                var beforeValues = pre.Where(sample => sample.RecorderReadings.ContainsKey(id)).Select(sample => sample.RecorderReadings[id].Value).ToArray();
-                var afterValues = post.Where(sample => sample.RecorderReadings.ContainsKey(id)).Select(sample => sample.RecorderReadings[id].Value).ToArray();
+                var beforeValues = pre
+                    .Where(sample => sample.RecorderReadings.TryGetValue(id, out var reading) && reading.Count > 0)
+                    .Select(sample => sample.RecorderReadings[id].Value)
+                    .ToArray();
+                var afterValues = post
+                    .Where(sample => sample.RecorderReadings.TryGetValue(id, out var reading) && reading.Count > 0)
+                    .Select(sample => sample.RecorderReadings[id].Value)
+                    .ToArray();
                 if (beforeValues.Length == 0 || afterValues.Length == 0)
                     continue;
                 AddChange(changes, id, beforeValues.Average(), afterValues.Average(), MetricConfidence.Full);
@@ -331,7 +338,7 @@ namespace CS2RuntimeProfiler.UI
                     Value = sample.Efficiency,
                     Confidence = MetricConfidence.Full.ToString()
                 });
-                foreach (var recorder in sample.RecorderReadings)
+                foreach (var recorder in sample.RecorderReadings.Where(pair => pair.Value.Count > 0))
                 {
                     points.Add(new TimelinePoint
                     {

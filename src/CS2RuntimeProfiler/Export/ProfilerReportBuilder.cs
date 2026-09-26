@@ -39,6 +39,25 @@ namespace CS2RuntimeProfiler.Export
             AddCaptureScope(report, snapshot);
             AddGlobal(report, snapshot.Global);
 
+            foreach (var capture in snapshot.Captures ?? Array.Empty<CaptureSummaryUi>())
+            {
+                if (capture == null)
+                    continue;
+                report.Captures.Add(new ReportCapture
+                {
+                    Id = capture.Id,
+                    TriggerKind = capture.TriggerKind,
+                    TriggeredAtSeconds = capture.TriggeredAtSeconds,
+                    DurationSeconds = capture.DurationSeconds,
+                    DiscoveredMarkers = capture.DiscoveredMarkers,
+                    CapturedMarkers = capture.CapturedMarkers,
+                    CoverageRatio = capture.CoverageRatio,
+                    Batched = capture.Batched,
+                    ProfilerOverheadShare = capture.ProfilerOverheadShare,
+                    Warnings = (capture.Warnings ?? Array.Empty<string>()).ToList()
+                });
+            }
+
             foreach (var system in snapshot.Systems ?? Array.Empty<SystemUiRow>())
             {
                 if (system == null)
@@ -141,7 +160,6 @@ namespace CS2RuntimeProfiler.Export
             }
             catch
             {
-                // Export metadata is best-effort and must never make the report itself fail.
                 return null;
             }
         }

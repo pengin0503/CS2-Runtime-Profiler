@@ -48,5 +48,42 @@ public class CaptureSystemTimingFinalizerTests
         Assert.That(row.TotalMilliseconds, Is.EqualTo(6d).Within(0.0001d));
         Assert.That(row.Calls, Is.Null, "call count is unavailable when capture samples do not carry recorder counts");
         Assert.That(row.Confidence, Is.EqualTo(MetricConfidence.Full));
+        Assert.That(capture.Warnings, Is.Empty);
+    }
+
+    [Test]
+    public void Apply_explains_when_no_ecs_system_marker_can_be_projected()
+    {
+        var capture = new CaptureSession(
+            "no-system-match",
+            new CaptureTrigger(CaptureTriggerKind.Manual, 0d, null),
+            maxSamplesPerSeries: 16);
+        capture.SetMarkerCoverage(592, 34, true);
+        capture.AddMarkerSample("render-marker", new MetricSample(1d, 2_000_000d, MetricConfidence.Full));
+
+        var systems = new[]
+        {
+            new SystemDescriptor(
+                "Game.Pathfind.ExampleSystem",
+                "Game",
+                SystemSourceKind.Vanilla,
+                null,
+                MetricConfidence.Unavailable)
+        };
+        var recorders = new[]
+        {
+            new RecorderDescriptor("render-marker", "Render", "GPU Frame Time", "TimeNanoseconds", "Int64")
+        };
+
+        var timing = CaptureSystemTimingFinalizer.Apply(capture, systems, recorders);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(timing.Systems, Is.Empty);
+            Assert.That(capture.Warnings.Count, Is.EqualTo(1));
+            Assert.That(capture.Warnings.Single(), Does.Contain("catalogSystems=1"));
+            Assert.That(capture.Warnings.Single(), Does.Contain("sampledMarkers=1"));
+            Assert.That(capture.Warnings.Single(), Does.Contain("capturedMarkers=34/592"));
+        });
     }
 }

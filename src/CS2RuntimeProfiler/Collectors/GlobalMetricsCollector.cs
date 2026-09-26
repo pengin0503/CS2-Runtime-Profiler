@@ -63,11 +63,15 @@ namespace CS2RuntimeProfiler.Collectors
 
         public void Sample(double timestampSeconds)
         {
+            var readings = _recorderManager.SampleActive()
+                .Where(pair => pair.Value.Count > 0)
+                .ToDictionary(pair => pair.Key, pair => pair.Value, System.StringComparer.Ordinal);
+
             Latest = new GlobalMetricsSnapshot(
                 timestampSeconds,
                 _simulationSystem.selectedSpeed,
                 _simulationSystem.smoothSpeed,
-                _recorderManager.SampleActive(),
+                readings,
                 _recorderUnits);
             _history?.Add(Latest);
         }

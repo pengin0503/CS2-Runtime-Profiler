@@ -43,6 +43,32 @@ public class CaptureUiProjectionTests
     }
 
     [Test]
+    public void Zero_count_recorder_readings_are_not_projected_as_numeric_zero()
+    {
+        var capture = new CaptureSession("zero-count", new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null), 8);
+        capture.AddGlobalSample(new GlobalMetricsSnapshot(1d, 1d, 1d, new Dictionary<string, RecorderReading>
+        {
+            ["valid"] = new RecorderReading(5d, 1),
+            ["unavailable"] = new RecorderReading(0d, 0)
+        }));
+
+        var snapshot = UiSnapshotBuilder.Build(new UiSnapshotInput
+        {
+            Global = capture.GlobalSamples.Single(),
+            Captures = new[] { capture },
+            SelectedCaptureId = "zero-count"
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Global.RecorderMetrics.Select(x => x.Id), Does.Contain("valid"));
+            Assert.That(snapshot.Global.RecorderMetrics.Select(x => x.Id), Does.Not.Contain("unavailable"));
+            Assert.That(snapshot.Timeline.Select(x => x.Metric), Does.Contain("recorder:valid"));
+            Assert.That(snapshot.Timeline.Select(x => x.Metric), Does.Not.Contain("recorder:unavailable"));
+        });
+    }
+
+    [Test]
     public void Zero_discovered_markers_keep_coverage_unavailable_instead_of_reporting_one_hundred_percent()
     {
         var capture = new CaptureSession("no-markers", new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null), 8);
@@ -115,27 +141,27 @@ public class CaptureUiProjectionTests
     }
 
     [Test]
-    public void Historical_export_uses_capture_global_and_omits_live_only_metrics()
+    public void Historical_export_uses_capture_global_and_retained_runtime_metrics()
     {
         var capture = new CaptureSession("historical", new CaptureTrigger(CaptureTriggerKind.Manual, 10d, null), 16);
         capture.AddGlobalSample(Global(10d, 4d, 3d, 10d));
         capture.AddGlobalSample(Global(12d, 4d, 2.5d, 11d));
+        capture.SetRuntimeSnapshots(
+            new NamedMetricSnapshot(12d, new[]
+            {
+                NamedMetricValue.Available("pendingPathfindActions", 42d, MetricConfidence.Indirect)
+            }),
+            new NamedMetricSnapshot(12d, new[]
+            {
+                NamedMetricValue.Available("citizens", 40000d, MetricConfidence.Indirect)
+            }));
 
         var liveGlobal = Global(100d, 4d, 1d, 99d);
-        var pathfinding = new NamedMetricSnapshot(100d, new[]
-        {
-            NamedMetricValue.Available("pendingPathfindActions", 42d, MetricConfidence.Indirect)
-        });
-        var domains = new NamedMetricSnapshot(100d, new[]
-        {
-            NamedMetricValue.Available("citizens", 40000d, MetricConfidence.Indirect)
-        });
-
         var snapshot = UiSnapshotBuilder.BuildForExport(new UiSnapshotInput
         {
             Global = liveGlobal,
-            Pathfinding = pathfinding,
-            Domains = domains,
+            Pathfinding = new NamedMetricSnapshot(100d, new[] { NamedMetricValue.Available("live-path", 99d, MetricConfidence.Indirect) }),
+            Domains = new NamedMetricSnapshot(100d, new[] { NamedMetricValue.Available("live-domain", 99d, MetricConfidence.Indirect) }),
             Captures = new[] { capture },
             SelectedCaptureId = "historical"
         });
@@ -144,11 +170,31 @@ public class CaptureUiProjectionTests
         {
             Assert.That(snapshot.Global.TimestampSeconds, Is.EqualTo(12d));
             Assert.That(snapshot.Global.ActualSpeed, Is.EqualTo(2.5d));
-            Assert.That(snapshot.Pathfinding.Metrics, Is.Empty);
-            Assert.That(snapshot.DomainMetrics, Is.Empty);
+            Assert.That(snapshot.Pathfinding.Metrics.Single().Id, Is.EqualTo("pendingPathfindActions"));
+            Assert.That(snapshot.DomainMetrics.Single().Id, Is.EqualTo("citizens"));
             Assert.That(snapshot.Capture.DetailCaptureId, Is.EqualTo("historical"));
             Assert.That(snapshot.Capture.DetailScope, Is.EqualTo("historical-capture"));
-            Assert.That(snapshot.Diagnostics.Messages.Any(message => message.Contains("historical", System.StringComparison.OrdinalIgnoreCase)), Is.True);
+        });
+    }
+
+    [Test]
+    public void Historical_export_explains_missing_runtime_snapshots_without_fabricating_values()
+    {
+        var capture = new CaptureSession("historical-empty", new CaptureTrigger(CaptureTriggerKind.Manual, 10d, null), 16);
+        capture.AddGlobalSample(Global(10d, 1d, 1d, 1d));
+
+        var snapshot = UiSnapshotBuilder.BuildForExport(new UiSnapshotInput
+        {
+            Captures = new[] { capture },
+            SelectedCaptureId = "historical-empty"
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Pathfinding.Metrics, Is.Empty);
+            Assert.That(snapshot.DomainMetrics, Is.Empty);
+            Assert.That(snapshot.Diagnostics.Messages.Any(message => message.Contains("pathfinding", System.StringComparison.OrdinalIgnoreCase)), Is.True);
+            Assert.That(snapshot.Diagnostics.Messages.Any(message => message.Contains("domain", System.StringComparison.OrdinalIgnoreCase)), Is.True);
         });
     }
 

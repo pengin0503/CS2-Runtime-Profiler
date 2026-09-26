@@ -41,6 +41,8 @@ namespace CS2RuntimeProfiler.Core
         public CaptureTrigger Trigger { get; }
         public MarkerCoverageInfo MarkerCoverage { get; private set; }
         public SystemTimingSnapshot SystemTiming { get; private set; }
+        public NamedMetricSnapshot PathfindingSnapshot { get; private set; }
+        public NamedMetricSnapshot DomainMetricsSnapshot { get; private set; }
         public double MaxProfilerOverheadShare { get; private set; }
         public IReadOnlyList<string> Warnings => _warnings;
         public IReadOnlyList<GlobalMetricsSnapshot> GlobalSamples => _globalSamples;
@@ -67,6 +69,14 @@ namespace CS2RuntimeProfiler.Core
         public void SetSystemTiming(SystemTimingSnapshot snapshot)
         {
             SystemTiming = snapshot;
+        }
+
+        public void SetRuntimeSnapshots(NamedMetricSnapshot pathfinding, NamedMetricSnapshot domains)
+        {
+            if (pathfinding != null)
+                PathfindingSnapshot = pathfinding;
+            if (domains != null)
+                DomainMetricsSnapshot = domains;
         }
 
         public void ObserveProfilerOverheadShare(double share)

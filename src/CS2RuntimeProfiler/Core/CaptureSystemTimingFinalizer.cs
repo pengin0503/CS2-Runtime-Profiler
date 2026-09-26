@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CS2RuntimeProfiler.Core
 {
@@ -17,8 +18,18 @@ namespace CS2RuntimeProfiler.Core
             if (capture == null)
                 throw new ArgumentNullException(nameof(capture));
 
-            var timing = SystemMarkerTimingProjector.Project(systems, recorders, capture);
+            var systemArray = (systems ?? Array.Empty<SystemDescriptor>()).Where(x => x != null).ToArray();
+            var recorderArray = (recorders ?? Array.Empty<RecorderDescriptor>()).Where(x => x != null).ToArray();
+            var timing = SystemMarkerTimingProjector.Project(systemArray, recorderArray, capture);
             capture.SetSystemTiming(timing);
+
+            if (timing.Systems.Count == 0)
+            {
+                var sampledMarkers = capture.MarkerSamples.Count;
+                capture.AddWarning(
+                    $"System timing unavailable: catalogSystems={systemArray.Length}, profilerMarkers={recorderArray.Length}, sampledMarkers={sampledMarkers}, capturedMarkers={capture.MarkerCoverage.Captured}/{capture.MarkerCoverage.Discovered}. No uniquely matching TimeNanoseconds ECS system marker produced a usable sample.");
+            }
+
             return timing;
         }
     }

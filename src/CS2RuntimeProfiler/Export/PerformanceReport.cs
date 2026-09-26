@@ -85,6 +85,40 @@ namespace CS2RuntimeProfiler.Export
     }
 
     [DataContract]
+    public sealed class ReportCapture
+    {
+        public ReportCapture()
+        {
+            Warnings = new List<string>();
+        }
+
+        [DataMember(Name = "id", Order = 1)] public string Id { get; set; }
+        [DataMember(Name = "triggerKind", Order = 2, EmitDefaultValue = false)] public string TriggerKind { get; set; }
+        [DataMember(Name = "triggeredAtSeconds", Order = 3)] public double TriggeredAtSeconds { get; set; }
+        [DataMember(Name = "durationSeconds", Order = 4)] public double DurationSeconds { get; set; }
+        [DataMember(Name = "discoveredMarkers", Order = 5)] public int DiscoveredMarkers { get; set; }
+        [DataMember(Name = "capturedMarkers", Order = 6)] public int CapturedMarkers { get; set; }
+        [DataMember(Name = "coverageRatio", Order = 7, EmitDefaultValue = false)] public double? CoverageRatio { get; set; }
+        [DataMember(Name = "batched", Order = 8)] public bool Batched { get; set; }
+        [DataMember(Name = "profilerOverheadShare", Order = 9)] public double ProfilerOverheadShare { get; set; }
+        [DataMember(Name = "warnings", Order = 10)] public List<string> Warnings { get; set; }
+
+        internal ReportCapture SanitizedCopy() => new ReportCapture
+        {
+            Id = PrivacySanitizer.Sanitize(Id),
+            TriggerKind = PrivacySanitizer.Sanitize(TriggerKind),
+            TriggeredAtSeconds = TriggeredAtSeconds,
+            DurationSeconds = DurationSeconds,
+            DiscoveredMarkers = DiscoveredMarkers,
+            CapturedMarkers = CapturedMarkers,
+            CoverageRatio = CoverageRatio,
+            Batched = Batched,
+            ProfilerOverheadShare = ProfilerOverheadShare,
+            Warnings = (Warnings ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList()
+        };
+    }
+
+    [DataContract]
     public sealed class ReportTimelinePoint
     {
         [DataMember(Name = "timestampSeconds", Order = 1)] public double TimestampSeconds { get; set; }
@@ -104,7 +138,7 @@ namespace CS2RuntimeProfiler.Export
     [DataContract]
     public sealed class PerformanceReport
     {
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
 
         public PerformanceReport()
         {
@@ -118,6 +152,7 @@ namespace CS2RuntimeProfiler.Export
             Pathfinding = new List<ReportMetric>();
             DomainMetrics = new List<ReportMetric>();
             Timeline = new List<ReportTimelinePoint>();
+            Captures = new List<ReportCapture>();
             ProfilerOverhead = new List<ReportMetric>();
             Warnings = new List<string>();
         }
@@ -137,8 +172,8 @@ namespace CS2RuntimeProfiler.Export
         [DataMember(Name = "timeline", Order = 13)] public List<ReportTimelinePoint> Timeline { get; set; }
         [DataMember(Name = "profilerOverhead", Order = 14)] public List<ReportMetric> ProfilerOverhead { get; set; }
         [DataMember(Name = "warnings", Order = 15)] public List<string> Warnings { get; set; }
+        [DataMember(Name = "captures", Order = 16)] public List<ReportCapture> Captures { get; set; }
 
-        // Deliberately opt-in. When null, DataContractJsonSerializer does not emit it.
         [DataMember(Name = "cityName", Order = 100, EmitDefaultValue = false)] public string CityName { get; set; }
 
         public static PerformanceReport CreateForTest()
@@ -169,6 +204,7 @@ namespace CS2RuntimeProfiler.Export
                 Timeline = (Timeline ?? new List<ReportTimelinePoint>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
                 ProfilerOverhead = (ProfilerOverhead ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
                 Warnings = (Warnings ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(),
+                Captures = (Captures ?? new List<ReportCapture>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
                 CityName = string.IsNullOrWhiteSpace(CityName) ? null : PrivacySanitizer.Sanitize(CityName)
             };
         }

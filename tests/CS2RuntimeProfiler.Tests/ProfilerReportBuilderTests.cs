@@ -36,6 +36,22 @@ public class ProfilerReportBuilderTests
                 DetailCaptureId = "capture-1",
                 DetailScope = "historical-capture"
             },
+            Captures = new[]
+            {
+                new CaptureSummaryUi
+                {
+                    Id = "capture-1",
+                    TriggerKind = "Manual",
+                    TriggeredAtSeconds = 10d,
+                    DurationSeconds = 12d,
+                    DiscoveredMarkers = 592,
+                    CapturedMarkers = 34,
+                    CoverageRatio = 34d / 592d,
+                    Batched = true,
+                    ProfilerOverheadShare = 0.025d,
+                    Warnings = new[] { "diagnostic warning" }
+                }
+            },
             Systems = new[]
             {
                 new SystemUiRow
@@ -70,6 +86,7 @@ public class ProfilerReportBuilderTests
 
         var report = ProfilerReportBuilder.Build(snapshot, gameVersion: "1.6.0f1", profilerVersion: "0.1.0");
 
+        Assert.That(report.SchemaVersion, Is.EqualTo(2));
         Assert.That(report.GameVersion, Is.EqualTo("1.6.0f1"));
         Assert.That(report.ProfilerVersion, Is.EqualTo("0.1.0"));
         Assert.That(report.CityName, Is.Null);
@@ -78,6 +95,16 @@ public class ProfilerReportBuilderTests
         Assert.That(report.CaptureConfig.Any(x => x.Name == "detailCaptureId" && x.Value == "capture-1"), Is.True);
         Assert.That(report.CaptureConfig.Any(x => x.Name == "detailScope" && x.Value == "historical-capture"), Is.True);
         Assert.That(report.CaptureConfig.Any(x => x.Name == "globalTimestampSeconds" && x.Value == "12"), Is.True);
+
+        var exportedCapture = report.Captures.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(exportedCapture.Id, Is.EqualTo("capture-1"));
+            Assert.That(exportedCapture.DiscoveredMarkers, Is.EqualTo(592));
+            Assert.That(exportedCapture.CapturedMarkers, Is.EqualTo(34));
+            Assert.That(exportedCapture.Batched, Is.True);
+            Assert.That(exportedCapture.Warnings.Single(), Is.EqualTo("diagnostic warning"));
+        });
 
         var system = report.Systems.Single();
         Assert.Multiple(() =>

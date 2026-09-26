@@ -8,13 +8,15 @@ namespace CS2RuntimeProfiler.Profiling
 {
     /// <summary>
     /// Drives DeepCaptureController only when a new global sample is available.
-    /// Keeps capture orchestration out of the UI system and restores Normal recorders after Deep Capture.
+    /// Deep Capture owns a dedicated recorder manager so normal-monitoring recorders remain continuous.
     /// </summary>
     public partial class CaptureRuntimeSystem : GameSystemBase
     {
         private const double DefaultPrebufferSeconds = 5d;
         private readonly MonitoringLifecycleGate _monitoringGate = new MonitoringLifecycleGate(initiallyEnabled: true);
         private GlobalMetricsCollector _global;
+        private DomainMetricsSystem _domains;
+        private RecorderManager _deepRecorders;
         private DeepCaptureStateMachine _stateMachine;
         private DeepCaptureController _controller;
         private ProfilerOverheadTracker _overhead;
@@ -28,15 +30,18 @@ namespace CS2RuntimeProfiler.Profiling
         public double LastOverheadShare => _lastOverheadShare;
         public int CurrentBatchSize => _controller?.CurrentBatchSize ?? 0;
         public int SamplingStride => _controller?.SamplingStride ?? 1;
+        public int DiscoveredMarkerCount => _deepRecorders?.Descriptors?.Count ?? 0;
 
         protected override void OnCreate()
         {
             base.OnCreate();
             _global = World.GetOrCreateSystemManaged<GlobalMetricsCollector>();
+            _domains = World.GetOrCreateSystemManaged<DomainMetricsSystem>();
+            _deepRecorders = new RecorderManager(new UnityRecorderBackend());
             _overhead = new ProfilerOverheadTracker();
             _stateMachine = DeepCaptureStateMachine.CreateDefault();
             _controller = new DeepCaptureController(
-                _global.Recorders,
+                _deepRecorders,
                 _stateMachine,
                 maxConcurrent: 150,
                 overheadCeiling: 0.08);
@@ -48,12 +53,10 @@ namespace CS2RuntimeProfiler.Profiling
                 var systems = new ProfilerCatalog().Discover();
                 _completionTiming = new CaptureCompletionTimingProcessor(
                     systems,
-                    () => _global?.Recorders?.Descriptors ?? Array.Empty<RecorderDescriptor>());
+                    () => _deepRecorders?.Descriptors ?? Array.Empty<RecorderDescriptor>());
             }
             catch (Exception ex)
             {
-                // Discovery is lifecycle-gated and fail-open. An unavailable catalog must not prevent
-                // global monitoring/capture from running; per-system timing simply remains unavailable.
                 Mod.Log.Error(ex, "System catalog discovery failed; per-system timing will be unavailable");
                 _completionTiming = null;
             }
@@ -80,11 +83,13 @@ namespace CS2RuntimeProfiler.Profiling
             if (latest == null || latest.TimestampSeconds <= _lastObservedTimestamp)
                 return;
 
-            var before = _controller.State;
             var prebuffer = _global.GetRecentHistory(GetPrebufferSeconds());
             _overhead.Measure(latest.TimestampSeconds, () =>
             {
                 _controller.Observe(latest.TimestampSeconds, latest, prebuffer);
+                _controller.CurrentSession?.SetRuntimeSnapshots(
+                    _domains?.Pathfinding?.Latest,
+                    _domains?.Entities?.Latest);
                 ProjectCompletedCaptureTiming();
             });
 
@@ -94,9 +99,6 @@ namespace CS2RuntimeProfiler.Profiling
                 _overhead.LastMilliseconds / (samplingPeriod * 1000d));
             _controller.CurrentSession?.ObserveProfilerOverheadShare(_lastOverheadShare);
             _controller.ReportProfilerOverheadShare(_lastOverheadShare);
-
-            if (before == CaptureState.DeepCapture && _controller.State != CaptureState.DeepCapture)
-                _global.RestoreNormalRecorders();
 
             _lastObservedTimestamp = latest.TimestampSeconds;
         }
@@ -110,6 +112,17 @@ namespace CS2RuntimeProfiler.Profiling
             var latest = _global?.Latest;
             var now = latest?.TimestampSeconds ?? Math.Max(0d, _lastObservedTimestamp);
             _controller?.RequestManualCapture(now, _global?.GetRecentHistory(GetPrebufferSeconds()));
+            _controller?.CurrentSession?.SetRuntimeSnapshots(
+                _domains?.Pathfinding?.Latest,
+                _domains?.Entities?.Latest);
+        }
+
+        protected override void OnDestroy()
+        {
+            _controller?.Dispose();
+            _controller = null;
+            _deepRecorders = null;
+            base.OnDestroy();
         }
 
         private double GetPrebufferSeconds()
@@ -150,8 +163,6 @@ namespace CS2RuntimeProfiler.Profiling
             {
                 _completionTiming.LastProcessedCapture?.AddWarning(
                     "System timing projection failed for this capture; per-system timing is unavailable.");
-
-                // Keep capture/global monitoring alive even if one timing projection fails.
                 Mod.Log.Error(ex, "System timing projection failed for a completed capture");
             }
         }

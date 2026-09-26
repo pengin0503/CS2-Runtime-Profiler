@@ -10,6 +10,15 @@ describe("repository issue regressions", () => {
     expect(source).toContain("-{attempt}");
   });
 
+  it("preserves Unity recorder handles until rediscovery succeeds", () => {
+    const source = readFileSync(path.resolve(process.cwd(), "../src/CS2RuntimeProfiler/Profiling/UnityRecorderBackend.cs"), "utf8");
+    const discoveryIndex = source.indexOf("ProfilerRecorderHandle.GetAvailable");
+    const clearIndex = source.indexOf("_handles.Clear()");
+
+    expect(discoveryIndex).toBeGreaterThanOrEqual(0);
+    expect(clearIndex).toBeGreaterThan(discoveryIndex);
+  });
+
   it("uses the current runtime clock for manual capture requests instead of the latest sampled timestamp", () => {
     const globalSource = readFileSync(path.resolve(process.cwd(), "../src/CS2RuntimeProfiler/Collectors/GlobalMetricsCollector.cs"), "utf8");
     const captureSource = readFileSync(path.resolve(process.cwd(), "../src/CS2RuntimeProfiler/Profiling/CaptureRuntimeSystem.cs"), "utf8");

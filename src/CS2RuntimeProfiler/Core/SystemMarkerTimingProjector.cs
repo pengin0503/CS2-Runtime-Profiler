@@ -4,6 +4,32 @@ using System.Linq;
 
 namespace CS2RuntimeProfiler.Core
 {
+    public sealed class SystemTimingProjectionDiagnostics
+    {
+        public SystemTimingProjectionDiagnostics(
+            int catalogSystemCount,
+            int profilerMarkerCount,
+            int timeMarkerCount,
+            int uniqueMatchCount,
+            int ambiguousMatchCount,
+            int uniqueMatchesWithoutSamples)
+        {
+            CatalogSystemCount = Math.Max(0, catalogSystemCount);
+            ProfilerMarkerCount = Math.Max(0, profilerMarkerCount);
+            TimeMarkerCount = Math.Max(0, timeMarkerCount);
+            UniqueMatchCount = Math.Max(0, uniqueMatchCount);
+            AmbiguousMatchCount = Math.Max(0, ambiguousMatchCount);
+            UniqueMatchesWithoutSamples = Math.Max(0, uniqueMatchesWithoutSamples);
+        }
+
+        public int CatalogSystemCount { get; }
+        public int ProfilerMarkerCount { get; }
+        public int TimeMarkerCount { get; }
+        public int UniqueMatchCount { get; }
+        public int AmbiguousMatchCount { get; }
+        public int UniqueMatchesWithoutSamples { get; }
+    }
+
     /// <summary>
     /// Projects captured Unity Entities profiler markers into per-system timing.
     /// Only uniquely matched full system type names with TimeNanoseconds units are accepted.
@@ -22,19 +48,12 @@ namespace CS2RuntimeProfiler.Core
             if (capture == null)
                 return result;
 
-            var systemList = (systems ?? Array.Empty<SystemDescriptor>())
-                .Where(system => system != null && !string.IsNullOrWhiteSpace(system.FullTypeName))
-                .ToArray();
-            var recorderList = (recorders ?? Array.Empty<RecorderDescriptor>())
-                .Where(recorder => recorder != null
-                    && string.Equals(recorder.UnitType, "TimeNanoseconds", StringComparison.Ordinal))
-                .ToArray();
+            var systemList = GetSystems(systems);
+            var recorderList = GetTimeRecorders(recorders);
 
             foreach (var system in systemList)
             {
-                var candidates = recorderList
-                    .Where(recorder => MatchesFullSystemName(recorder.Name, system.FullTypeName))
-                    .ToArray();
+                var candidates = FindCandidates(recorderList, system.FullTypeName);
 
                 // Ambiguous matches are left unattributed rather than guessed.
                 if (candidates.Length != 1)
@@ -68,6 +87,72 @@ namespace CS2RuntimeProfiler.Core
             }
 
             return result;
+        }
+
+        public static SystemTimingProjectionDiagnostics Diagnose(
+            IEnumerable<SystemDescriptor> systems,
+            IEnumerable<RecorderDescriptor> recorders,
+            CaptureSession capture)
+        {
+            var systemList = GetSystems(systems);
+            var allRecorders = (recorders ?? Array.Empty<RecorderDescriptor>())
+                .Where(recorder => recorder != null)
+                .ToArray();
+            var timeRecorders = GetTimeRecorders(allRecorders);
+            var uniqueMatches = 0;
+            var ambiguousMatches = 0;
+            var uniqueMatchesWithoutSamples = 0;
+
+            foreach (var system in systemList)
+            {
+                var candidates = FindCandidates(timeRecorders, system.FullTypeName);
+                if (candidates.Length == 1)
+                {
+                    uniqueMatches++;
+                    if (capture == null
+                        || !capture.TryGetMarkerSamples(candidates[0].Id, out var samples)
+                        || samples.Count == 0)
+                    {
+                        uniqueMatchesWithoutSamples++;
+                    }
+                }
+                else if (candidates.Length > 1)
+                {
+                    ambiguousMatches++;
+                }
+            }
+
+            return new SystemTimingProjectionDiagnostics(
+                systemList.Length,
+                allRecorders.Length,
+                timeRecorders.Length,
+                uniqueMatches,
+                ambiguousMatches,
+                uniqueMatchesWithoutSamples);
+        }
+
+        private static SystemDescriptor[] GetSystems(IEnumerable<SystemDescriptor> systems)
+        {
+            return (systems ?? Array.Empty<SystemDescriptor>())
+                .Where(system => system != null && !string.IsNullOrWhiteSpace(system.FullTypeName))
+                .ToArray();
+        }
+
+        private static RecorderDescriptor[] GetTimeRecorders(IEnumerable<RecorderDescriptor> recorders)
+        {
+            return (recorders ?? Array.Empty<RecorderDescriptor>())
+                .Where(recorder => recorder != null
+                    && string.Equals(recorder.UnitType, "TimeNanoseconds", StringComparison.Ordinal))
+                .ToArray();
+        }
+
+        private static RecorderDescriptor[] FindCandidates(
+            IEnumerable<RecorderDescriptor> recorders,
+            string fullTypeName)
+        {
+            return recorders
+                .Where(recorder => MatchesFullSystemName(recorder.Name, fullTypeName))
+                .ToArray();
         }
 
         private static int? SumCallCounts(IReadOnlyList<MetricSample> samples)

@@ -48,15 +48,38 @@ public class RecorderManagerTests
         Assert.That(manager.ActiveIds, Is.Empty);
     }
 
+    [Test]
+    public void Failed_rediscovery_preserves_previous_catalog()
+    {
+        var backend = new FakeBackend(new RecorderDescriptor("cpu", "CPU", "Main Thread", "TimeNanoseconds", "Int64"))
+        {
+            ThrowOnDiscoverAfterFirst = true
+        };
+        using var manager = new RecorderManager(backend);
+        manager.DiscoverAvailableMarkers();
+
+        Assert.Throws<InvalidOperationException>(() => manager.DiscoverAvailableMarkers());
+
+        Assert.That(manager.Descriptors.Select(x => x.Id), Is.EquivalentTo(new[] { "cpu" }));
+    }
+
     private sealed class FakeBackend : IRecorderBackend
     {
         private readonly IReadOnlyList<RecorderDescriptor> _descriptors;
 
         public FakeBackend(params RecorderDescriptor[] descriptors) => _descriptors = descriptors;
         public int StartCount { get; private set; }
+        public int DiscoverCount { get; private set; }
         public bool ThrowOnStart { get; set; }
+        public bool ThrowOnDiscoverAfterFirst { get; set; }
 
-        public IReadOnlyList<RecorderDescriptor> Discover() => _descriptors;
+        public IReadOnlyList<RecorderDescriptor> Discover()
+        {
+            DiscoverCount++;
+            if (ThrowOnDiscoverAfterFirst && DiscoverCount > 1)
+                throw new InvalidOperationException("discovery failed");
+            return _descriptors;
+        }
 
         public IActiveRecorder Start(RecorderDescriptor descriptor, int capacity)
         {

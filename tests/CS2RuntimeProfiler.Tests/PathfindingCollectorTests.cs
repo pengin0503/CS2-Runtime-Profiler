@@ -69,6 +69,16 @@ public class PathfindingCollectorTests
         }
     }
 
+    private sealed class LengthOnlyQueueSystem
+    {
+        private readonly FakeNativeArray m_ActionTypes;
+
+        public LengthOnlyQueueSystem(int actionTypes)
+        {
+            m_ActionTypes = new FakeNativeArray(actionTypes);
+        }
+    }
+
     [Test]
     public void Verified_queue_structure_exposes_pending_and_memory_metrics()
     {
@@ -92,6 +102,17 @@ public class PathfindingCollectorTests
         var pending = collector.Latest.Get("pendingPathfindActions");
         Assert.That(pending.Availability, Is.EqualTo(MetricAvailability.Available));
         Assert.That(pending.Value, Is.EqualTo(4));
+    }
+
+    [Test]
+    public void Length_only_runtime_queue_is_counted_without_requiring_icollection()
+    {
+        var collector = new PathfindingCollector(new LengthOnlyQueueSystem(actionTypes: 7));
+        collector.Sample(1);
+
+        var actionTypes = collector.Latest.Get("actionTypeQueue");
+        Assert.That(actionTypes.Availability, Is.EqualTo(MetricAvailability.Available));
+        Assert.That(actionTypes.Value, Is.EqualTo(7));
     }
 
     [Test]

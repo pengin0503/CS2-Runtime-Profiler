@@ -24,6 +24,8 @@ namespace CS2RuntimeProfiler.Export
 
     public sealed class ReportExporter
     {
+        private const int MaxCollisionRetries = 1000;
+
         public ReportExportResult Export(PerformanceReport report)
         {
             try
@@ -31,11 +33,31 @@ namespace CS2RuntimeProfiler.Export
                 var directory = Path.Combine(EnvPath.kUserDataPath, "ModsData", Mod.Id);
                 Directory.CreateDirectory(directory);
 
-                var filename = $"CS2Profiler-report-{DateTime.Now:yyyy-MM-dd_HHmmss}.json";
-                var path = Path.Combine(directory, filename);
+                var timestamp = DateTime.Now;
+                var stem = $"CS2Profiler-report-{timestamp:yyyy-MM-dd_HHmmss_fff}";
                 var json = PerformanceReportSerializer.Serialize(report);
-                File.WriteAllText(path, json, new UTF8Encoding(false));
-                return ReportExportResult.Succeeded(path);
+                var encoding = new UTF8Encoding(false);
+
+                for (var attempt = 0; attempt < MaxCollisionRetries; attempt++)
+                {
+                    var suffix = attempt == 0 ? string.Empty : $"-{attempt}";
+                    var path = Path.Combine(directory, stem + suffix + ".json");
+
+                    try
+                    {
+                        using (var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read))
+                        using (var writer = new StreamWriter(stream, encoding))
+                            writer.Write(json);
+
+                        return ReportExportResult.Succeeded(path);
+                    }
+                    catch (IOException) when (File.Exists(path))
+                    {
+                        // Another export already claimed this name. Retry with a numeric suffix.
+                    }
+                }
+
+                throw new IOException("Could not allocate a unique profiler report filename.");
             }
             catch (Exception ex)
             {

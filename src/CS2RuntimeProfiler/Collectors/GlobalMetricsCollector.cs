@@ -26,6 +26,7 @@ namespace CS2RuntimeProfiler.Collectors
         public ProfilerOverheadTracker Overhead => _overhead;
         public RecorderManager Recorders => _recorderManager;
         public double SamplingPeriodSeconds => Mod.Settings?.ResolvedSamplingPeriodSeconds ?? DefaultSamplingPeriodSeconds;
+        public double CurrentTimestampSeconds => _clock.Elapsed.TotalSeconds;
 
         protected override void OnCreate()
         {
@@ -53,7 +54,7 @@ namespace CS2RuntimeProfiler.Collectors
             if (transition == MonitoringTransition.Enabled)
                 RestoreNormalRecorders();
 
-            var now = _clock.Elapsed.TotalSeconds;
+            var now = CurrentTimestampSeconds;
             if (now < _nextSampleAt)
                 return;
 

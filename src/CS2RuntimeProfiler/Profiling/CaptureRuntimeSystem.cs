@@ -109,8 +109,7 @@ namespace CS2RuntimeProfiler.Profiling
                 return;
 
             ApplyRuntimeSettings();
-            var latest = _global?.Latest;
-            var now = latest?.TimestampSeconds ?? Math.Max(0d, _lastObservedTimestamp);
+            var now = _global?.CurrentTimestampSeconds ?? Math.Max(0d, _lastObservedTimestamp);
             _controller?.RequestManualCapture(now, _global?.GetRecentHistory(GetPrebufferSeconds()));
             _controller?.CurrentSession?.SetRuntimeSnapshots(
                 _domains?.Pathfinding?.Latest,

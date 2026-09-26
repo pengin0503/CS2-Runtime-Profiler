@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "cs2/ui";
 import {
   exportReport,
@@ -30,6 +30,21 @@ export function ProfilerRoot() {
   const exportResult = useExportResult();
   const uiScalePercent = useUiScalePercent();
   const [tab, setTab] = useState<ProfilerTab>("overview");
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        togglePanel();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [visible]);
 
   if (!visible) return null;
 

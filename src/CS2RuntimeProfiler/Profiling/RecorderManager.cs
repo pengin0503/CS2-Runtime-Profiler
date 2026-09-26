@@ -21,14 +21,19 @@ namespace CS2RuntimeProfiler.Profiling
 
         public IReadOnlyList<RecorderDescriptor> DiscoverAvailableMarkers()
         {
-            _discovered.Clear();
             var discovered = _backend.Discover() ?? Array.Empty<RecorderDescriptor>();
+            var replacement = new Dictionary<string, RecorderDescriptor>(StringComparer.Ordinal);
             foreach (var descriptor in discovered)
             {
                 if (descriptor == null || string.IsNullOrWhiteSpace(descriptor.Id))
                     continue;
-                _discovered[descriptor.Id] = descriptor;
+                replacement[descriptor.Id] = descriptor;
             }
+
+            _discovered.Clear();
+            foreach (var pair in replacement)
+                _discovered[pair.Key] = pair.Value;
+
             return _discovered.Values.ToArray();
         }
 

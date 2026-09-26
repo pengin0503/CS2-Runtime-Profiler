@@ -12,9 +12,10 @@ namespace CS2RuntimeProfiler.Profiling
 
         public IReadOnlyList<RecorderDescriptor> Discover()
         {
-            _handles.Clear();
             var handles = new List<ProfilerRecorderHandle>();
             ProfilerRecorderHandle.GetAvailable(handles);
+
+            var discoveredHandles = new Dictionary<string, ProfilerRecorderHandle>(StringComparer.Ordinal);
             var result = new List<RecorderDescriptor>(handles.Count);
 
             foreach (var handle in handles)
@@ -28,10 +29,10 @@ namespace CS2RuntimeProfiler.Profiling
                     var category = description.Category.Name ?? string.Empty;
                     var name = description.Name ?? string.Empty;
                     var id = category + "\u001f" + name;
-                    if (_handles.ContainsKey(id))
+                    if (discoveredHandles.ContainsKey(id))
                         continue;
 
-                    _handles[id] = handle;
+                    discoveredHandles[id] = handle;
                     result.Add(new RecorderDescriptor(
                         id,
                         category,
@@ -44,6 +45,10 @@ namespace CS2RuntimeProfiler.Profiling
                     // Unsupported/stripped marker: omit from the usable runtime catalog.
                 }
             }
+
+            _handles.Clear();
+            foreach (var pair in discoveredHandles)
+                _handles[pair.Key] = pair.Value;
 
             return result;
         }

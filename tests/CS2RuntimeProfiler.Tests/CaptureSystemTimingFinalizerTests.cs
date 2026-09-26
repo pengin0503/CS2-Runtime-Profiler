@@ -52,38 +52,43 @@ public class CaptureSystemTimingFinalizerTests
     }
 
     [Test]
-    public void Apply_explains_when_no_ecs_system_marker_can_be_projected()
+    public void Apply_explains_projection_stages_when_no_ecs_system_marker_can_be_projected()
     {
         var capture = new CaptureSession(
             "no-system-match",
             new CaptureTrigger(CaptureTriggerKind.Manual, 0d, null),
             maxSamplesPerSeries: 16);
         capture.SetMarkerCoverage(592, 34, true);
-        capture.AddMarkerSample("render-marker", new MetricSample(1d, 2_000_000d, MetricConfidence.Full));
+        capture.AddMarkerSample("unrelated-sample", new MetricSample(1d, 2_000_000d, MetricConfidence.Full));
 
         var systems = new[]
         {
-            new SystemDescriptor(
-                "Game.Pathfind.ExampleSystem",
-                "Game",
-                SystemSourceKind.Vanilla,
-                null,
-                MetricConfidence.Unavailable)
+            new SystemDescriptor("Game.Pathfind.UniqueSystem", "Game", SystemSourceKind.Vanilla, null, MetricConfidence.Unavailable),
+            new SystemDescriptor("Game.Pathfind.AmbiguousSystem", "Game", SystemSourceKind.Vanilla, null, MetricConfidence.Unavailable),
+            new SystemDescriptor("Game.Pathfind.NonTimeSystem", "Game", SystemSourceKind.Vanilla, null, MetricConfidence.Unavailable)
         };
         var recorders = new[]
         {
-            new RecorderDescriptor("render-marker", "Render", "GPU Frame Time", "TimeNanoseconds", "Int64")
+            new RecorderDescriptor("unique-no-sample", "Scripts", "Main World Game.Pathfind.UniqueSystem", "TimeNanoseconds", "Int64"),
+            new RecorderDescriptor("ambiguous-a", "Scripts", "Main World Game.Pathfind.AmbiguousSystem", "TimeNanoseconds", "Int64"),
+            new RecorderDescriptor("ambiguous-b", "Scripts", "Other World Game.Pathfind.AmbiguousSystem", "TimeNanoseconds", "Int64"),
+            new RecorderDescriptor("non-time", "Scripts", "Main World Game.Pathfind.NonTimeSystem", "Count", "Int64")
         };
 
         var timing = CaptureSystemTimingFinalizer.Apply(capture, systems, recorders);
 
+        var warning = capture.Warnings.Single();
         Assert.Multiple(() =>
         {
             Assert.That(timing.Systems, Is.Empty);
-            Assert.That(capture.Warnings.Count, Is.EqualTo(1));
-            Assert.That(capture.Warnings.Single(), Does.Contain("catalogSystems=1"));
-            Assert.That(capture.Warnings.Single(), Does.Contain("sampledMarkers=1"));
-            Assert.That(capture.Warnings.Single(), Does.Contain("capturedMarkers=34/592"));
+            Assert.That(warning, Does.Contain("catalogSystems=3"));
+            Assert.That(warning, Does.Contain("profilerMarkers=4"));
+            Assert.That(warning, Does.Contain("timeMarkers=3"));
+            Assert.That(warning, Does.Contain("uniqueMatches=1"));
+            Assert.That(warning, Does.Contain("ambiguousMatches=1"));
+            Assert.That(warning, Does.Contain("uniqueMatchesWithoutSamples=1"));
+            Assert.That(warning, Does.Contain("sampledMarkers=1"));
+            Assert.That(warning, Does.Contain("capturedMarkers=34/592"));
         });
     }
 }

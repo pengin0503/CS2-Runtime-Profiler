@@ -86,6 +86,11 @@ namespace CS2RuntimeProfiler.Core
         {
             if (sample == null)
                 return;
+
+            if (_globalSamples.Count > 0
+                && _globalSamples[_globalSamples.Count - 1].TimestampSeconds.Equals(sample.TimestampSeconds))
+                return;
+
             _globalSamples.Add(sample);
             var maxGlobalSamples = Math.Max(32, _maxSamplesPerSeries * 2);
             if (_globalSamples.Count > maxGlobalSamples)

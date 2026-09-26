@@ -97,17 +97,49 @@ namespace CS2RuntimeProfiler.Collectors
                 if (itemsField == null || nextIndexField == null)
                     return NamedMetricValue.Unavailable(id, "ActionList layout is not verified in this runtime build.");
 
-                if (!(itemsField.GetValue(actionList) is ICollection items))
-                    return NamedMetricValue.Unavailable(id, "ActionList m_Items is not a countable collection.");
+                var items = itemsField.GetValue(actionList);
+                if (items == null || !TryGetCollectionLength(items, out var capacity))
+                    return NamedMetricValue.Unavailable(id, "ActionList m_Items has no verified Count or Length property.");
 
                 var nextIndex = Convert.ToInt32(nextIndexField.GetValue(actionList));
-                var pending = Math.Max(0, items.Count - Math.Max(0, nextIndex));
-                return NamedMetricValue.Available(id, pending, MetricConfidence.Indirect);
+                // Game.dll's Enqueue increments m_NextIndex as it writes each queued item;
+                // Clear resets it. m_Items is fixed-capacity NativeArray storage in the
+                // supplied game build, so its Length is capacity, not the pending count.
+                if (nextIndex < 0 || nextIndex > capacity)
+                    return NamedMetricValue.Unavailable(id, "ActionList m_NextIndex is outside the verified m_Items bounds.");
+
+                return NamedMetricValue.Available(id, nextIndex, MetricConfidence.Indirect);
             }
             catch (Exception ex)
             {
                 return NamedMetricValue.Unavailable(id, $"Reading pathfind action queue failed: {RootMessage(ex)}");
             }
+        }
+
+        private static bool TryGetCollectionLength(object value, out int length)
+        {
+            if (value is ICollection collection)
+            {
+                length = collection.Count;
+                return length >= 0;
+            }
+
+            var property = value.GetType().GetProperty("Length", Flags);
+            if (property == null || property.PropertyType != typeof(int) || property.GetIndexParameters().Length != 0)
+            {
+                length = 0;
+                return false;
+            }
+
+            var rawLength = property.GetValue(value, null);
+            if (!(rawLength is int nativeLength))
+            {
+                length = 0;
+                return false;
+            }
+
+            length = nativeLength;
+            return length >= 0;
         }
 
         private NamedMetricValue TryReadCollectionCount(string id, FieldInfo field)

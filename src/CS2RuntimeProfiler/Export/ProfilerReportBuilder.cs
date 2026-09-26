@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using CS2RuntimeProfiler.UI;
@@ -140,12 +141,18 @@ namespace CS2RuntimeProfiler.Export
                 report.Systems.Count > 0 ? "available" : "unavailable"));
             report.Capabilities.Add(new ReportNamedValue(
                 "pathfinding",
-                report.Pathfinding.Count > 0 ? "available" : "unavailable"));
+                HasAvailableMetric(report.Pathfinding) ? "available" : "unavailable"));
             report.Capabilities.Add(new ReportNamedValue(
                 "domainMetrics",
-                report.DomainMetrics.Count > 0 ? "available" : "unavailable"));
+                HasAvailableMetric(report.DomainMetrics) ? "available" : "unavailable"));
 
             return report;
+        }
+
+        private static bool HasAvailableMetric(IEnumerable<ReportMetric> metrics)
+        {
+            return (metrics ?? Array.Empty<ReportMetric>()).Any(metric =>
+                metric != null && string.Equals(metric.Availability, "Available", StringComparison.Ordinal));
         }
 
         private static RuntimeReportMetadata ResolveRuntimeMetadata()

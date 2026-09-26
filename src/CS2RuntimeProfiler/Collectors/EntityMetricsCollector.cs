@@ -19,7 +19,8 @@ namespace CS2RuntimeProfiler.Collectors
                 ["touristHouseholds"] = "Game.Citizens.TouristHousehold",
                 ["vehicles"] = "Game.Vehicles.Vehicle",
                 ["publicTransportVehicles"] = "Game.Vehicles.PublicTransport",
-                ["cargoTransportVehicles"] = "Game.Vehicles.CargoTransport"
+                ["cargoTransportVehicles"] = "Game.Vehicles.CargoTransport",
+                ["serviceVehicles"] = "Game.Vehicles.ServiceVehicleUnion"
             };
 
         private readonly IEntityDomainCountSource _source;
@@ -47,10 +48,6 @@ namespace CS2RuntimeProfiler.Collectors
             var metrics = new List<NamedMetricValue>();
             foreach (var pair in VerifiedDomains)
                 metrics.Add(ReadCount(pair.Key, pair.Value));
-
-            metrics.Add(NamedMetricValue.Unavailable(
-                "serviceVehicles",
-                "unsupported: no verified generic service-vehicle component is available for this game build."));
 
             Latest = new NamedMetricSnapshot(timestampSeconds, metrics);
         }

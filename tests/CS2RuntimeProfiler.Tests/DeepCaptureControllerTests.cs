@@ -40,7 +40,7 @@ public class DeepCaptureControllerTests
         controller.Observe(2, trigger, new[] { before, trigger });
 
         Assert.That(
-            controller.CurrentSession!.GlobalSamples.Select(sample => sample.TimestampSeconds),
+            controller.CurrentSession!.GlobalSamples.Select(sample => sample.TimestampSeconds).ToArray(),
             Is.EqualTo(new[] { 0d, 2d }));
     }
 

@@ -37,4 +37,21 @@ describe("repository issue regressions", () => {
     expect(source).toContain('removeEventListener("keydown"');
     expect(source).toContain("togglePanel();");
   });
+
+  it("keeps review hardening wiring and export documentation aligned", () => {
+    const reportBuilder = readFileSync(path.resolve(process.cwd(), "../src/CS2RuntimeProfiler/Export/ProfilerReportBuilder.cs"), "utf8");
+    const domains = readFileSync(path.resolve(process.cwd(), "../src/CS2RuntimeProfiler/Collectors/DomainMetricsSystem.cs"), "utf8");
+    const timing = readFileSync(path.resolve(process.cwd(), "../src/CS2RuntimeProfiler/Core/CaptureSystemTimingFinalizer.cs"), "utf8");
+    const readme = readFileSync(path.resolve(process.cwd(), "../README.md"), "utf8");
+
+    expect(reportBuilder).toContain("HasAvailableMetric(report.Pathfinding)");
+    expect(reportBuilder).toContain("HasAvailableMetric(report.DomainMetrics)");
+    expect(domains).toContain('"Game.Vehicles.ServiceVehicleUnion"');
+    expect(domains).toContain("ComponentType.ReadOnly<Ambulance>()");
+    expect(domains).toContain("ComponentType.ReadOnly<PrisonerTransport>()");
+    expect(timing).toContain("timeMarkers={diagnostics.TimeMarkerCount}");
+    expect(timing).toContain("ambiguousMatches={diagnostics.AmbiguousMatchCount}");
+    expect(readme).toContain("CS2Profiler-report-YYYY-MM-DD_HHmmss_fff.json");
+    expect(readme).toContain("`-1`、`-2`");
+  });
 });

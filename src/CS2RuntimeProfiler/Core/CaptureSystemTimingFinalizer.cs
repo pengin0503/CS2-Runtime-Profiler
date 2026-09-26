@@ -25,9 +25,10 @@ namespace CS2RuntimeProfiler.Core
 
             if (timing.Systems.Count == 0)
             {
+                var diagnostics = SystemMarkerTimingProjector.Diagnose(systemArray, recorderArray, capture);
                 var sampledMarkers = capture.MarkerSamples.Count;
                 capture.AddWarning(
-                    $"System timing unavailable: catalogSystems={systemArray.Length}, profilerMarkers={recorderArray.Length}, sampledMarkers={sampledMarkers}, capturedMarkers={capture.MarkerCoverage.Captured}/{capture.MarkerCoverage.Discovered}. No uniquely matching TimeNanoseconds ECS system marker produced a usable sample.");
+                    $"System timing unavailable: catalogSystems={diagnostics.CatalogSystemCount}, profilerMarkers={diagnostics.ProfilerMarkerCount}, timeMarkers={diagnostics.TimeMarkerCount}, uniqueMatches={diagnostics.UniqueMatchCount}, ambiguousMatches={diagnostics.AmbiguousMatchCount}, uniqueMatchesWithoutSamples={diagnostics.UniqueMatchesWithoutSamples}, sampledMarkers={sampledMarkers}, capturedMarkers={capture.MarkerCoverage.Captured}/{capture.MarkerCoverage.Discovered}. No uniquely matching TimeNanoseconds ECS system marker produced a usable sample.");
             }
 
             return timing;

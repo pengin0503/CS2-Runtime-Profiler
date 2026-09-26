@@ -49,14 +49,29 @@ public class EntityMetricsCollectorTests
     }
 
     [Test]
+    public void Verified_service_vehicle_union_is_exposed_as_indirect_count()
+    {
+        var source = new FakeSource();
+        source.Counts["Game.Vehicles.ServiceVehicleUnion"] = 37;
+        var collector = new EntityMetricsCollector(source, samplePeriodSeconds: 2);
+
+        collector.Sample(0);
+
+        var service = collector.Latest.Get("serviceVehicles");
+        Assert.That(service.Availability, Is.EqualTo(MetricAvailability.Available));
+        Assert.That(service.Value, Is.EqualTo(37));
+        Assert.That(service.Confidence, Is.EqualTo(MetricConfidence.Indirect));
+    }
+
+    [Test]
     public void Unsupported_domain_remains_unavailable_not_zero()
     {
         var collector = new EntityMetricsCollector(new FakeSource(), samplePeriodSeconds: 2);
         collector.Sample(0);
 
-        var service = collector.Latest.Get("serviceVehicles");
-        Assert.That(service.Availability, Is.EqualTo(MetricAvailability.Unavailable));
-        Assert.That(service.Value, Is.Null);
-        Assert.That(service.Reason, Does.Contain("unsupported"));
+        var citizens = collector.Latest.Get("citizens");
+        Assert.That(citizens.Availability, Is.EqualTo(MetricAvailability.Unavailable));
+        Assert.That(citizens.Value, Is.Null);
+        Assert.That(citizens.Reason, Does.Contain("unsupported"));
     }
 }

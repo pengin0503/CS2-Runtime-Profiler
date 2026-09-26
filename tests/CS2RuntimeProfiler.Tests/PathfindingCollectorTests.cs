@@ -41,18 +41,57 @@ public class PathfindingCollectorTests
         }
     }
 
+    private readonly struct FakeNativeArray
+    {
+        public FakeNativeArray(int length) => Length = length;
+        public int Length { get; }
+    }
+
+    private sealed class NativeArrayActionList
+    {
+        public readonly FakeNativeArray m_Items;
+        public int m_NextIndex;
+
+        public NativeArrayActionList(int capacity, int nextIndex)
+        {
+            m_Items = new FakeNativeArray(capacity);
+            m_NextIndex = nextIndex;
+        }
+    }
+
+    private sealed class NativeArrayPathfindQueueSystem
+    {
+        private readonly NativeArrayActionList m_PathfindActions;
+
+        public NativeArrayPathfindQueueSystem(int capacity, int nextIndex)
+        {
+            m_PathfindActions = new NativeArrayActionList(capacity, nextIndex);
+        }
+    }
+
     [Test]
     public void Verified_queue_structure_exposes_pending_and_memory_metrics()
     {
         var collector = new PathfindingCollector(new FakePathfindQueueSystem(10, 4, 3, 2));
         collector.Sample(1);
 
-        Assert.That(collector.Latest.Get("pendingPathfindActions").Value, Is.EqualTo(6));
+        Assert.That(collector.Latest.Get("pendingPathfindActions").Value, Is.EqualTo(4));
         Assert.That(collector.Latest.Get("actionTypeQueue").Value, Is.EqualTo(3));
         Assert.That(collector.Latest.Get("workerActionQueue").Value, Is.EqualTo(2));
         Assert.That(collector.Latest.Get("graphSize").Value, Is.EqualTo(321));
         Assert.That(collector.Latest.Get("graphMemoryUsed").Value, Is.EqualTo(100));
         Assert.That(collector.Latest.Get("queryMemoryAllocated").Value, Is.EqualTo(80));
+    }
+
+    [Test]
+    public void Native_array_queue_uses_next_index_as_pending_count()
+    {
+        var collector = new PathfindingCollector(new NativeArrayPathfindQueueSystem(capacity: 10, nextIndex: 4));
+        collector.Sample(1);
+
+        var pending = collector.Latest.Get("pendingPathfindActions");
+        Assert.That(pending.Availability, Is.EqualTo(MetricAvailability.Available));
+        Assert.That(pending.Value, Is.EqualTo(4));
     }
 
     [Test]

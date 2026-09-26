@@ -37,6 +37,21 @@ namespace CS2RuntimeProfiler.Collectors
             _queries["Game.Vehicles.Vehicle"] = CreateReadOnlyQuery<Vehicle>();
             _queries["Game.Vehicles.PublicTransport"] = CreateReadOnlyQuery<PublicTransport>();
             _queries["Game.Vehicles.CargoTransport"] = CreateReadOnlyQuery<CargoTransport>();
+            _queries["Game.Vehicles.ServiceVehicleUnion"] = GetEntityQuery(new EntityQueryDesc
+            {
+                Any = new[]
+                {
+                    ComponentType.ReadOnly<Ambulance>(),
+                    ComponentType.ReadOnly<Hearse>(),
+                    ComponentType.ReadOnly<MaintenanceVehicle>(),
+                    ComponentType.ReadOnly<FireEngine>(),
+                    ComponentType.ReadOnly<GarbageTruck>(),
+                    ComponentType.ReadOnly<PoliceCar>(),
+                    ComponentType.ReadOnly<PostVan>(),
+                    ComponentType.ReadOnly<PrisonerTransport>()
+                },
+                None = new[] { ComponentType.ReadOnly<Deleted>(), ComponentType.ReadOnly<Game.Tools.Temp>() }
+            });
 
             _entities = new EntityMetricsCollector(this, samplePeriodSeconds: 2d);
             var queueSystem = World.GetOrCreateSystemManaged<PathfindQueueSystem>();

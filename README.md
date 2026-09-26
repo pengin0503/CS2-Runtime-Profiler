@@ -1,58 +1,106 @@
 # CS2 Runtime Profiler
 
-CS2 Runtime Profiler is a read-mostly diagnostic mod for Cities: Skylines II. It is designed to make runtime performance evidence visible without automatically changing gameplay systems, disabling mods, or claiming unsupported causal relationships.
+CS2 Runtime Profiler は、Cities: Skylines II 向けの**読み取り主体の診断用MOD**です。ゲームプレイシステムを自動的に変更したり、MODを無効化したり、十分な根拠のない因果関係を断定したりすることなく、実行時のパフォーマンスに関する根拠を可視化することを目的としています。
 
-## What it measures
+## 計測内容
 
-The profiler combines low-overhead global monitoring with bounded Deep Capture sessions:
+このプロファイラーは、低オーバーヘッドの常時計測と、時間を限定した **Deep Capture（詳細計測）** を組み合わせています。
 
-- **Normal Monitoring** keeps global and domain-level metrics available continuously while monitoring is enabled.
-- **Deep Capture** temporarily enables a broader set of safe profiler markers, records marker coverage, and preserves pre/deep/post capture context.
-- **Systems** shows per-system timing when a captured ECS profiler marker can be matched uniquely to a full system type name.
-- **Mods** groups only directly owned systems by assembly/mod metadata. A patched vanilla system remains attributed to its vanilla system; patch owners are shown as metadata rather than inheriting the vanilla system's cost.
-- **Timeline / Captures / Diagnostics** expose the capture window, selected metrics, coverage, warnings, batching and profiler self-overhead information.
+- **Normal Monitoring（通常監視）**  
+  監視が有効になっている間、ゲーム全体および各ドメイン単位のメトリクスを継続的に取得します。
 
-Completed captures project captured `TimeNanoseconds` ECS markers into milliseconds and retain current, mean, median, P95, P99, max, total and call-count statistics where data is available.
+- **Deep Capture（詳細計測）**  
+  安全に利用できる、より広範なプロファイラーマーカーを一時的に有効化します。マーカーのカバレッジを記録するとともに、詳細計測の前・計測中・計測後の状況を保持します。
 
-## Confidence and missing data
+- **Systems（システム）**  
+  取得されたECSプロファイラーマーカーを、システムの完全修飾型名と一意に対応付けられる場合に、システムごとの処理時間を表示します。
 
-Timing rows carry a confidence label. The important rule is that **Unavailable does not mean zero**.
+- **Mods（MOD）**  
+  各システムを直接所有しているアセンブリ／MODのメタデータに基づいてグループ化します。  
+  MODによってパッチされたバニラシステムについては、その処理コストをパッチしたMOD側へ移すことはせず、引き続きバニラシステムとして扱います。パッチを適用したMODは、所有者ではなくメタデータとして表示されます。
 
-- **Full**: directly measured from a matching profiler marker.
-- **Managed**: measured through a safe managed-only fallback where implemented; it may exclude Burst/Job work.
-- **Indirect**: inferred from a less direct observable and should be interpreted accordingly.
-- **Unavailable**: the profiler cannot support that measurement from the available evidence.
+- **Timeline / Captures / Diagnostics（タイムライン／キャプチャ／診断）**  
+  キャプチャ期間、選択されたメトリクス、計測カバレッジ、警告、バッチ処理、およびプロファイラー自身のオーバーヘッドに関する情報を表示します。
 
-The profiler does not force Job completion to manufacture timing data. Burst/Job work that cannot be safely and directly attributed remains unattributed or unavailable.
+完了したキャプチャでは、取得された `TimeNanoseconds` のECSマーカーをミリ秒へ変換します。また、データが取得できる場合には、以下の統計情報を保持します。
 
-## Capture trigger defaults
+- 現在値
+- 平均値
+- 中央値
+- P95（95パーセンタイル）
+- P99（99パーセンタイル）
+- 最大値
+- 合計値
+- 呼び出し回数
 
-The current default automatic trigger uses simulation efficiency (`actual speed / selected speed`):
+## 信頼度と欠損データ
 
-- efficiency threshold: **0.80**
-- sustained below-threshold duration: **2 seconds**
-- Deep Capture duration: **10 seconds**
-- post-buffer duration: **5 seconds**
-- cooldown: **30 seconds**
+各タイミング行には、計測結果の**信頼度ラベル**が付与されます。
 
-Manual capture can be requested while Monitoring or Cooldown is active. These are implementation defaults, not performance guarantees.
+特に重要なのは、**「Unavailable（取得不可）」は「0」を意味しない**という点です。
 
-## Export and privacy
+- **Full（完全）**  
+  対応するプロファイラーマーカーから直接計測された値です。
 
-JSON reports are written under the Cities: Skylines II user-data directory at:
+- **Managed（マネージド）**  
+  実装されている場合に、安全なマネージドコードのみのフォールバック方式で計測された値です。BurstやJobによる処理が含まれない可能性があります。
+
+- **Indirect（間接）**  
+  より間接的な観測可能データから推定された値です。その点を考慮して解釈する必要があります。
+
+- **Unavailable（取得不可）**  
+  利用可能な根拠からは、その項目を適切に計測できない状態です。
+
+このプロファイラーは、タイミングデータを無理に取得するためにJobの完了を強制することはありません。
+
+安全かつ直接的に処理元へ帰属させることのできないBurst／Jobの処理については、特定のシステムへ帰属させず、または取得不可として扱います。
+
+## キャプチャトリガーのデフォルト設定
+
+現在の自動キャプチャトリガーでは、**シミュレーション効率（実際の速度 ÷ 選択された速度）**を使用します。
+
+デフォルト値は以下のとおりです。
+
+- 効率しきい値：**0.80**
+- しきい値を下回ってからキャプチャを開始するまでの継続時間：**2秒**
+- Deep Capture時間：**10秒**
+- キャプチャ後のバッファ時間：**5秒**
+- クールダウン：**30秒**
+
+Monitoring（監視中）またはCooldown（クールダウン中）の状態では、手動でキャプチャを要求することもできます。
+
+これらはあくまで**実装上のデフォルト値**であり、パフォーマンスを保証するものではありません。
+
+## エクスポートとプライバシー
+
+JSONレポートは、Cities: Skylines II のユーザーデータディレクトリ内にある以下の場所へ保存されます。
 
 `ModsData/CS2RuntimeProfiler/CS2Profiler-report-YYYY-MM-DD_HHmmss.json`
 
-The exporter applies a privacy sanitizer intended to replace Windows/macOS/Linux user-home paths and the current account name when detected. Treat this as defense in depth: inspect an exported report before sharing it, and complete the export/privacy scenario in the runtime validation matrix for each release candidate.
+エクスポーターにはプライバシー保護用のサニタイザーが実装されており、検出された場合には以下の情報を置換するよう設計されています。
 
-## Non-goals and limitations
+- Windowsのユーザーホームパス
+- macOSのユーザーホームパス
+- Linuxのユーザーホームパス
+- 現在のアカウント名
 
-- This project is a diagnostic profiler, not an automatic optimizer or mod disabler.
-- It does not rank mods as "good" or "bad" and does not turn correlation into a causal claim.
-- Per-system timing is emitted only when the captured marker evidence can be matched conservatively. Ambiguous matches are not guessed.
-- Managed system timing does not imply complete Burst/Job attribution.
-- Some runtime discovery depends on the current game/runtime version and may become unavailable after upstream changes.
-- Profiler overhead limits in the design are validation targets, not claims until measured on a real game session.
+ただし、これは**多層防御（Defense in Depth）の一環**として扱ってください。
+
+エクスポートしたレポートを他者と共有する前に内容を確認してください。また、各リリース候補版（RC）では、ランタイム検証マトリクスに含まれる**エクスポート／プライバシーの検証シナリオ**を完了してください。
+
+## 対象外の機能と制限事項
+
+- このプロジェクトは**診断用プロファイラー**であり、自動最適化ツールやMOD自動無効化ツールではありません。
+
+- MODを「良い」「悪い」と評価・順位付けすることはありません。また、単なる相関関係を因果関係として扱うこともありません。
+
+- システムごとの処理時間は、取得したマーカーの根拠とシステムを保守的な方法で対応付けられる場合にのみ出力されます。対応関係が曖昧な場合に推測することはありません。
+
+- マネージドシステムのタイミングが取得できたとしても、Burst／Jobによる処理まで完全に計測・帰属できていることを意味するものではありません。
+
+- 一部のランタイム情報の検出処理は、現在のゲームおよびランタイムのバージョンに依存しています。そのため、ゲーム側のアップデートによって利用できなくなる可能性があります。
+
+- 設計上定められているプロファイラーのオーバーヘッド上限は**検証目標値**であり、実際のゲームセッションで測定・確認されるまでは、達成済みの性能値として扱うことはできません。
 
 ## Windows / PowerShell でゲームへ導入する
 

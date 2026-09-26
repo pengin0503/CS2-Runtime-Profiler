@@ -149,9 +149,10 @@ namespace CS2RuntimeProfiler.Collectors
 
             try
             {
-                if (field.GetValue(_queueSystem) is ICollection collection)
-                    return NamedMetricValue.Available(id, collection.Count, MetricConfidence.Indirect);
-                return NamedMetricValue.Unavailable(id, $"Runtime field for '{id}' is not a countable collection.");
+                var value = field.GetValue(_queueSystem);
+                if (value != null && TryGetCollectionLength(value, out var count))
+                    return NamedMetricValue.Available(id, count, MetricConfidence.Indirect);
+                return NamedMetricValue.Unavailable(id, $"Runtime field for '{id}' has no verified Count or Length property.");
             }
             catch (Exception ex)
             {

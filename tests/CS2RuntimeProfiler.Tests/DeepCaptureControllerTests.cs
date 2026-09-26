@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CS2RuntimeProfiler.Core;
 using CS2RuntimeProfiler.Profiling;
 using NUnit.Framework;
@@ -26,6 +27,21 @@ public class DeepCaptureControllerTests
             Assert.That(controller.CurrentSession, Is.Null);
             Assert.That(controller.CompletedSessions.Count, Is.EqualTo(1));
         });
+    }
+
+    [Test]
+    public void Automatic_capture_does_not_duplicate_trigger_sample_from_prebuffer()
+    {
+        using var controller = CreateController(maxConcurrent: 8);
+        var before = CreateGlobalSample(0);
+        var trigger = CreateGlobalSample(2);
+
+        controller.Observe(0, before, new[] { before });
+        controller.Observe(2, trigger, new[] { before, trigger });
+
+        Assert.That(
+            controller.CurrentSession!.GlobalSamples.Select(sample => sample.TimestampSeconds),
+            Is.EqualTo(new[] { 0d, 2d }));
     }
 
     [Test]
@@ -182,6 +198,9 @@ public class DeepCaptureControllerTests
         deepSeconds: 1,
         postSeconds: 1,
         cooldownSeconds: 100);
+
+    private static GlobalMetricsSnapshot CreateGlobalSample(double timestampSeconds)
+        => new(timestampSeconds, 4d, 1d, new Dictionary<string, RecorderReading>());
 
     private sealed class FakeBackend : IRecorderBackend
     {

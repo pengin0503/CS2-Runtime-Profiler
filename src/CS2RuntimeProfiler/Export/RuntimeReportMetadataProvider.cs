@@ -50,29 +50,123 @@ namespace CS2RuntimeProfiler.Export
             try
             {
                 var gameManager = GameManager.instance;
-                if (gameManager == null)
-                    return names.ToArray();
-
-                var modManager = ReadMember(gameManager, "modManager") ?? ReadMember(gameManager, "m_ModManager");
-                if (modManager == null)
-                    return names.ToArray();
-
-                var method = modManager.GetType().GetMethod(
-                    "GetActiveMods",
-                    InstanceFlags,
-                    binder: null,
-                    types: Type.EmptyTypes,
-                    modifiers: null);
-                var activeMods = method?.Invoke(modManager, null);
-                foreach (var item in Enumerate(activeMods))
-                    CollectModNames(item, names, depth: 0);
+                if (gameManager != null)
+                {
+                    var modManager = ReadMember(gameManager, "modManager") ?? ReadMember(gameManager, "m_ModManager");
+                    if (modManager != null)
+                    {
+                        CollectFromActiveModApi(modManager, names);
+                        if (names.Count == 0)
+                            CollectFromKnownActiveCollections(modManager, names);
+                    }
+                }
             }
             catch
             {
-                // Metadata is best-effort and must never make report export fail.
+                // Continue into the loaded-code-mod fallback below.
             }
 
+            // Some current game builds expose a ModManager but not a parameterless GetActiveMods API
+            // compatible with older builds. Loaded IMod implementations are a conservative fallback:
+            // they identify code mods that actually reached the runtime without guessing asset-only mods.
+            if (names.Count == 0)
+                CollectLoadedCodeMods(names);
+
             return names.ToArray();
+        }
+
+        private static void CollectFromActiveModApi(object modManager, ISet<string> names)
+        {
+            if (modManager == null)
+                return;
+
+            try
+            {
+                var methods = modManager.GetType()
+                    .GetMethods(InstanceFlags)
+                    .Where(method => string.Equals(method.Name, "GetActiveMods", StringComparison.Ordinal))
+                    .OrderBy(method => method.GetParameters().Length)
+                    .ToArray();
+
+                foreach (var method in methods)
+                {
+                    var parameters = method.GetParameters();
+                    if (parameters.Length != 0)
+                        continue;
+
+                    object activeMods;
+                    try
+                    {
+                        activeMods = method.Invoke(modManager, null);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    foreach (var item in Enumerate(activeMods))
+                        CollectModNames(item, names, depth: 0);
+
+                    if (names.Count > 0)
+                        return;
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private static void CollectFromKnownActiveCollections(object modManager, ISet<string> names)
+        {
+            foreach (var memberName in new[]
+            {
+                "activeMods", "ActiveMods", "m_ActiveMods",
+                "enabledMods", "EnabledMods", "m_EnabledMods",
+                "mods", "Mods", "m_Mods"
+            })
+            {
+                var value = ReadMember(modManager, memberName);
+                foreach (var item in Enumerate(value))
+                    CollectModNames(item, names, depth: 0);
+
+                if (names.Count > 0)
+                    return;
+            }
+        }
+
+        private static void CollectLoadedCodeMods(ISet<string> names)
+        {
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (assembly == null || assembly.IsDynamic)
+                    continue;
+
+                Type[] types;
+                try
+                {
+                    types = assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    types = ex.Types.Where(type => type != null).ToArray();
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (!types.Any(type => type != null
+                    && type != typeof(IMod)
+                    && !type.IsAbstract
+                    && typeof(IMod).IsAssignableFrom(type)))
+                {
+                    continue;
+                }
+
+                var assemblyName = assembly.GetName().Name;
+                if (IsSafeLabel(assemblyName))
+                    names.Add(assemblyName);
+            }
         }
 
         private static IEnumerable<object> Enumerate(object value)
@@ -95,7 +189,7 @@ namespace CS2RuntimeProfiler.Export
 
         private static void CollectModNames(object value, ISet<string> names, int depth)
         {
-            if (value == null || depth > 2)
+            if (value == null || depth > 3)
                 return;
 
             if (value is IMod mod)
@@ -123,7 +217,7 @@ namespace CS2RuntimeProfiler.Export
                 }
             }
 
-            foreach (var nestedName in new[] { "mod", "Mod", "instance", "Instance", "value", "Value", "key", "Key" })
+            foreach (var nestedName in new[] { "mod", "Mod", "instance", "Instance", "value", "Value", "key", "Key", "entry", "Entry" })
             {
                 var nested = ReadMember(value, nestedName);
                 if (nested != null && !ReferenceEquals(nested, value))
@@ -167,8 +261,6 @@ namespace CS2RuntimeProfiler.Export
             if (trimmed.Length > 160)
                 return false;
 
-            // Avoid exporting values that look like local file paths. The serializer also sanitizes output,
-            // but rejecting path-shaped labels here keeps enabledMods semantically clean.
             return trimmed.IndexOf('\\') < 0
                 && trimmed.IndexOf('/') < 0
                 && trimmed.IndexOf(":\\", StringComparison.Ordinal) < 0;

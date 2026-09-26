@@ -10,7 +10,7 @@ public class PerformanceReportSerializerTests
     {
         var json = PerformanceReportSerializer.Serialize(PerformanceReport.CreateForTest());
 
-        Assert.That(json, Does.Contain("\"schemaVersion\":1"));
+        Assert.That(json, Does.Contain("\"schemaVersion\":2"));
         Assert.That(json, Does.Contain("\"globalMetrics\""));
         Assert.That(json, Does.Contain("\"systems\""));
         Assert.That(json, Does.Contain("\"modAttribution\""));
@@ -18,6 +18,7 @@ public class PerformanceReportSerializerTests
         Assert.That(json, Does.Contain("\"domainMetrics\""));
         Assert.That(json, Does.Contain("\"timeline\""));
         Assert.That(json, Does.Contain("\"profilerOverhead\""));
+        Assert.That(json, Does.Contain("\"captures\""));
         Assert.That(json, Does.Not.Contain("\"cityName\""));
     }
 

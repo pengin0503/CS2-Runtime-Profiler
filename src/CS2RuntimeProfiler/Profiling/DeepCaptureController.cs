@@ -41,6 +41,8 @@ namespace CS2RuntimeProfiler.Profiling
             _lastState = _stateMachine.State;
         }
 
+        public event Action<CaptureSession> CaptureCompleted;
+
         public CaptureState State => _stateMachine.State;
         public CaptureSession CurrentSession { get; private set; }
         public IReadOnlyList<CaptureSession> CompletedSessions => _completed;
@@ -241,12 +243,17 @@ namespace CS2RuntimeProfiler.Profiling
 
         private void FinalizeCapture()
         {
+            var completed = CurrentSession;
+            if (completed == null)
+                return;
+
             UpdateMarkerCoverage();
-            _completed.Add(CurrentSession);
+            _completed.Add(completed);
             while (_completed.Count > _maxCompletedSessions) _completed.RemoveAt(0);
             CurrentSession = null;
             _consecutiveOverheadBreaches = 0;
             _profilerMemoryGrowthHandled = false;
+            CaptureCompleted?.Invoke(completed);
         }
     }
 }

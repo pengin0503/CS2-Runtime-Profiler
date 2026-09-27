@@ -120,4 +120,31 @@ public class SystemMarkerTimingProjectorTests
         Assert.That(timing.Systems.Single().Milliseconds, Is.EqualTo(3d).Within(0.0001));
         Assert.That(diagnostics.UniqueMatchCount, Is.EqualTo(1));
     }
+
+    [Test]
+    public void Runtime_descriptor_without_verified_marker_identity_does_not_fall_back_to_clr_name()
+    {
+        var descriptor = new SystemDescriptor(
+            "Game.Simulation.NotLiveSystem",
+            "Game",
+            SystemSourceKind.Vanilla,
+            null,
+            MetricConfidence.Unavailable,
+            profilerMarkerName: null,
+            allowLegacyProfilerMarkerMatching: false);
+        var recorder = new RecorderDescriptor(
+            "CPU\u001fSimulation Game.Simulation.NotLiveSystem",
+            "CPU",
+            "Simulation Game.Simulation.NotLiveSystem",
+            "TimeNanoseconds",
+            "Int64");
+        var capture = new CaptureSession("capture-non-live", new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null), 16);
+        capture.AddMarkerSample(recorder.Id, new MetricSample(1d, 5_000_000d, MetricConfidence.Full));
+
+        var timing = SystemMarkerTimingProjector.Project(new[] { descriptor }, new[] { recorder }, capture);
+        var diagnostics = SystemMarkerTimingProjector.Diagnose(new[] { descriptor }, new[] { recorder }, capture);
+
+        Assert.That(timing.Systems, Is.Empty);
+        Assert.That(diagnostics.UniqueMatchCount, Is.Zero);
+    }
 }

@@ -53,7 +53,7 @@
 - [x] Validate HTML structure, local assets, workflow YAML, page copy, and responsive/keyboard affordances.
 - [x] Commit the completed static site and workflow directly to `main`.
 - [x] Set Pages to use GitHub Actions as the publishing source.
-- [ ] Verify the deployment URL after the main commit.
+- [x] Verify the deployment URL after the main commit.
 
 **Verification:**
 - Parse `site/index.html` with Python's standard-library HTML parser; verify one `main`, a page title, `lang="ja"`, and that all local asset paths exist.

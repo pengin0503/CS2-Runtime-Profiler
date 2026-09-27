@@ -152,7 +152,7 @@ namespace CS2RuntimeProfiler.Profiling
                 return;
 
             var type = __instance.GetType();
-            if (__instance is ComponentSystemGroup || type.Assembly == ProfilerAssembly)
+            if (type.Assembly == ProfilerAssembly)
                 return;
 
             __state = Stopwatch.GetTimestamp();

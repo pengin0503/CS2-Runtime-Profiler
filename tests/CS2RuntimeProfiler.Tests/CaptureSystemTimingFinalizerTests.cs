@@ -52,6 +52,32 @@ public class CaptureSystemTimingFinalizerTests
     }
 
     [Test]
+    public void Apply_uses_managed_fallback_when_profiler_markers_have_no_system_samples()
+    {
+        var capture = new CaptureSession(
+            "managed-fallback",
+            new CaptureTrigger(CaptureTriggerKind.Manual, 0d, null),
+            maxSamplesPerSeries: 16);
+        capture.SetMarkerCoverage(617, 617, 617, 38, true);
+
+        var systems = new[]
+        {
+            new SystemDescriptor("Game.Simulation.ManagedSystem", "Game", SystemSourceKind.Vanilla, null, MetricConfidence.Unavailable)
+        };
+        var managed = new SystemTimingSnapshot();
+        managed.AddSystem("Game.Simulation.ManagedSystem", 1.25, MetricConfidence.Managed, "Game", sourceKind: SystemSourceKind.Vanilla);
+
+        var timing = CaptureSystemTimingFinalizer.Apply(capture, systems, System.Array.Empty<RecorderDescriptor>(), managed);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(timing.Systems.Single().Confidence, Is.EqualTo(MetricConfidence.Managed));
+            Assert.That(capture.Warnings, Has.Some.Contains("managed synchronous"));
+            Assert.That(capture.Warnings, Has.None.Contains("System timing unavailable"));
+        });
+    }
+
+    [Test]
     public void Apply_explains_projection_stages_when_no_ecs_system_marker_can_be_projected()
     {
         var capture = new CaptureSession(

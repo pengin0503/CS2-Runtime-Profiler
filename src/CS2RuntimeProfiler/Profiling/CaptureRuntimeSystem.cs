@@ -23,7 +23,7 @@ namespace CS2RuntimeProfiler.Profiling
         private DeepCaptureStateMachine _stateMachine;
         private DeepCaptureController _controller;
         private ProfilerOverheadTracker _overhead;
-        private ManagedSystemTimingHarmonyInstrumentation _managedInstrumentation;
+        private ManagedSystemTimingCaptureLifecycle _managedTimingLifecycle;
         private SystemCatalogCache _systemCatalog;
         private string _managedInstrumentationUnavailableReason;
         private double _lastObservedTimestamp = double.NegativeInfinity;
@@ -63,13 +63,9 @@ namespace CS2RuntimeProfiler.Profiling
                     + (catalogError ?? "unknown reason"));
             }
 
-            _managedInstrumentation = new ManagedSystemTimingHarmonyInstrumentation();
-            if (!_managedInstrumentation.TryInstall(out _managedInstrumentationUnavailableReason))
-            {
-                Mod.Log.Info(
-                    "Managed SystemBase timing fallback unavailable: "
-                    + (_managedInstrumentationUnavailableReason ?? "unknown reason"));
-            }
+            _managedTimingLifecycle = new ManagedSystemTimingCaptureLifecycle(
+                new ManagedSystemTimingInstrumentationAdapter(),
+                new ManagedSystemTimingBridgeAdapter());
 
             _controller.CaptureCompleted += HandleCaptureCompleted;
         }
@@ -83,9 +79,10 @@ namespace CS2RuntimeProfiler.Profiling
 
             if (transition == MonitoringTransition.Disabled)
             {
+                FinishManagedTimingForCapture(_controller?.CurrentSession);
                 _controller?.InterruptActiveCapture(
                     "Monitoring was disabled; the active capture was finalized early and recorder activity was stopped.");
-                ManagedSystemTimingBridge.AbortCapture();
+                _managedTimingLifecycle?.Abort();
             }
 
             if (!monitoringEnabled)
@@ -112,15 +109,14 @@ namespace CS2RuntimeProfiler.Profiling
                 if (beforeSession == null && afterSession != null && afterState == CaptureState.DeepCapture)
                 {
                     RefreshSystemCatalogForCapture(afterSession);
-                    ManagedSystemTimingBridge.BeginCapture();
+                    StartManagedTimingForCapture(afterSession);
                 }
 
                 if (afterSession != null
                     && beforeState == CaptureState.DeepCapture
-                    && afterState != CaptureState.DeepCapture
-                    && ManagedSystemTimingBridge.IsActive)
+                    && afterState != CaptureState.DeepCapture)
                 {
-                    _managedTimingByCapture[afterSession] = ManagedSystemTimingBridge.EndCapture(Systems);
+                    FinishManagedTimingForCapture(afterSession);
                 }
 
                 _controller.CurrentSession?.SetConfiguration(captureConfiguration);
@@ -152,7 +148,7 @@ namespace CS2RuntimeProfiler.Profiling
             if (before == null && _controller?.CurrentSession != null && _controller.State == CaptureState.DeepCapture)
             {
                 RefreshSystemCatalogForCapture(_controller.CurrentSession);
-                ManagedSystemTimingBridge.BeginCapture();
+                StartManagedTimingForCapture(_controller.CurrentSession);
             }
             _controller?.CurrentSession?.SetConfiguration(captureConfiguration);
             _controller?.CurrentSession?.SetRuntimeSnapshots(
@@ -164,10 +160,9 @@ namespace CS2RuntimeProfiler.Profiling
         {
             if (_controller != null)
                 _controller.CaptureCompleted -= HandleCaptureCompleted;
-            ManagedSystemTimingBridge.AbortCapture();
+            _managedTimingLifecycle?.Abort();
+            _managedTimingLifecycle = null;
             _managedTimingByCapture.Clear();
-            _managedInstrumentation?.Dispose();
-            _managedInstrumentation = null;
             _controller?.Dispose();
             _controller = null;
             _deepRecorders = null;
@@ -212,6 +207,40 @@ namespace CS2RuntimeProfiler.Profiling
             Mod.Log.Info(warning);
         }
 
+        private void StartManagedTimingForCapture(CaptureSession capture)
+        {
+            if (_managedTimingLifecycle == null)
+                return;
+
+            if (_managedTimingLifecycle.TryStart(out var reason))
+            {
+                _managedInstrumentationUnavailableReason = null;
+                return;
+            }
+
+            _managedInstrumentationUnavailableReason = reason ?? "unknown reason";
+            Mod.Log.Info(
+                "Managed SystemBase timing fallback unavailable for this capture: "
+                + _managedInstrumentationUnavailableReason);
+        }
+
+        private void FinishManagedTimingForCapture(CaptureSession capture)
+        {
+            if (capture == null || _managedTimingLifecycle?.IsActive != true)
+                return;
+
+            try
+            {
+                _managedTimingByCapture[capture] = _managedTimingLifecycle.Finish(Systems);
+            }
+            catch (Exception ex)
+            {
+                capture.AddWarning(
+                    "Managed SystemBase timing finalization failed; marker timing remains available.");
+                Mod.Log.Error(ex, "Managed SystemBase timing finalization failed");
+            }
+        }
+
         private void HandleCaptureCompleted(CaptureSession capture)
         {
             if (capture == null)
@@ -221,9 +250,9 @@ namespace CS2RuntimeProfiler.Profiling
             {
                 if (!_managedTimingByCapture.TryGetValue(capture, out var managedTiming))
                 {
-                    managedTiming = ManagedSystemTimingBridge.IsActive
-                        ? ManagedSystemTimingBridge.EndCapture(Systems)
-                        : new SystemTimingSnapshot();
+                    FinishManagedTimingForCapture(capture);
+                    if (!_managedTimingByCapture.TryGetValue(capture, out managedTiming))
+                        managedTiming = new SystemTimingSnapshot();
                 }
                 _managedTimingByCapture.Remove(capture);
 

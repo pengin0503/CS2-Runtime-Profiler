@@ -90,10 +90,8 @@ namespace CS2RuntimeProfiler.Collectors
                 return;
 
             _recorderManager.DeactivateAll();
-            ActivatePreferred(8, "Main Thread");
-            ActivatePreferred(8, "Render Thread");
-            ActivatePreferred(8, "GPU Frame Time", "GPU Time");
-            ActivatePreferred(8, "Total Used Memory", "System Used Memory");
+            foreach (var names in NormalMonitoringRecorderPolicy.GetPreferredRecorderNameGroups())
+                ActivatePreferred(8, names);
         }
 
         protected override void OnDestroy()

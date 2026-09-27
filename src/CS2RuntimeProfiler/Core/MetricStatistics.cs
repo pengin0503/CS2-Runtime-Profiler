@@ -53,6 +53,31 @@ namespace CS2RuntimeProfiler.Core
                 count: original.Length);
         }
 
+        internal static MetricStatistics FromSummary(
+            double current,
+            double mean,
+            IReadOnlyCollection<double> distributionValues,
+            double max,
+            double total,
+            int count)
+        {
+            if (distributionValues == null)
+                throw new ArgumentNullException(nameof(distributionValues));
+            if (count <= 0 || distributionValues.Count == 0)
+                return default;
+
+            var distribution = From(distributionValues);
+            return new MetricStatistics(
+                current: current,
+                mean: mean,
+                median: distribution.Median,
+                p95: distribution.P95,
+                p99: distribution.P99,
+                max: max,
+                total: total,
+                count: count);
+        }
+
         private static double NearestRank(IReadOnlyList<double> sorted, double percentile)
         {
             var rank = (int)Math.Ceiling(percentile * sorted.Count);

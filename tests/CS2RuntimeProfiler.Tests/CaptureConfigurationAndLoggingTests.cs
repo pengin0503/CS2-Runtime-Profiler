@@ -16,20 +16,7 @@ public class CaptureConfigurationAndLoggingTests
         capture.ObserveProfilerMemory(200 * MiB);
         capture.ObserveProfilerMemory(350 * MiB);
         var snapshot = UiSnapshotBuilder.Build(new UiSnapshotInput { Captures = new[] { capture } });
-        var config = new CaptureConfigurationSnapshot
-        {
-            SamplingPeriodSeconds = 0.5,
-            AutomaticCaptureEnabled = true,
-            EfficiencyThreshold = 0.8,
-            LowEfficiencySustainSeconds = 2,
-            PrebufferSeconds = 5,
-            DeepCaptureSeconds = 10,
-            PostbufferSeconds = 5,
-            CooldownSeconds = 30,
-            MaxConcurrentMarkers = 150,
-            ProfilerOverheadLimit = 0.08,
-            MaxCompletedCaptures = 20
-        };
+        var config = Configuration(samplingPeriodSeconds: 0.5, efficiencyThreshold: 0.8);
 
         var report = ProfilerReportBuilder.Build(snapshot, captureConfiguration: config);
         var values = report.CaptureConfig.ToDictionary(item => item.Name, item => item.Value);
@@ -55,6 +42,29 @@ public class CaptureConfigurationAndLoggingTests
     }
 
     [Test]
+    public void Historical_export_uses_capture_start_configuration_instead_of_current_runtime_configuration()
+    {
+        var capture = new CaptureSession("historical-config", new CaptureTrigger(CaptureTriggerKind.Manual, 10d, null), 16);
+        capture.SetConfiguration(Configuration(samplingPeriodSeconds: 0.5, efficiencyThreshold: 0.8));
+
+        var snapshot = UiSnapshotBuilder.BuildForExport(new UiSnapshotInput
+        {
+            Captures = new[] { capture },
+            SelectedCaptureId = capture.Id
+        });
+        var currentRuntimeConfig = Configuration(samplingPeriodSeconds: 2.0, efficiencyThreshold: 0.6);
+
+        var report = ProfilerReportBuilder.Build(snapshot, captureConfiguration: currentRuntimeConfig);
+        var values = report.CaptureConfig.ToDictionary(item => item.Name, item => item.Value);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(values["samplingPeriodSeconds"], Is.EqualTo("0.5"));
+            Assert.That(values["efficiencyThreshold"], Is.EqualTo("0.8"));
+        });
+    }
+
+    [Test]
     public void Completion_log_formatter_summarizes_capture_once_ready_for_runtime_logging()
     {
         var capture = new CaptureSession("capture-log", new CaptureTrigger(CaptureTriggerKind.AutomaticLowEfficiency, 12d, 0.5d), 16);
@@ -72,4 +82,20 @@ public class CaptureConfigurationAndLoggingTests
         Assert.That(message, Is.EqualTo(
             "capture=capture-log trigger=AutomaticLowEfficiency markers(sampled/activated/attempted/discovered)=25/70/80/100 systems=1 overhead=1.23% profilerMemoryDeltaMiB=150 warnings=1"));
     }
+
+    private static CaptureConfigurationSnapshot Configuration(double samplingPeriodSeconds, double efficiencyThreshold)
+        => new()
+        {
+            SamplingPeriodSeconds = samplingPeriodSeconds,
+            AutomaticCaptureEnabled = true,
+            EfficiencyThreshold = efficiencyThreshold,
+            LowEfficiencySustainSeconds = 2,
+            PrebufferSeconds = 5,
+            DeepCaptureSeconds = 10,
+            PostbufferSeconds = 5,
+            CooldownSeconds = 30,
+            MaxConcurrentMarkers = 150,
+            ProfilerOverheadLimit = 0.08,
+            MaxCompletedCaptures = 20
+        };
 }

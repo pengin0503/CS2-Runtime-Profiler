@@ -89,7 +89,11 @@ namespace CS2RuntimeProfiler.Profiling
             var captureConfiguration = RuntimeCaptureConfigurationProvider.Capture();
             _overhead.Measure(latest.TimestampSeconds, () =>
             {
-                _controller.Observe(latest.TimestampSeconds, latest, prebuffer);
+                _controller.Observe(
+                    latest.TimestampSeconds,
+                    latest,
+                    RuntimeGameStateProbe.IsAutomaticCaptureAllowed(),
+                    prebuffer);
                 _controller.CurrentSession?.SetConfiguration(captureConfiguration);
                 _controller.CurrentSession?.SetRuntimeSnapshots(
                     _domains?.Pathfinding?.Latest,

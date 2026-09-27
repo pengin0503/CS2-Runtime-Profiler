@@ -37,4 +37,25 @@ public class SystemAggregationTests
         Assert.That(snapshot.GetDirectAssemblyTotal("Example.Mod"), Is.EqualTo(2.0));
         Assert.That(snapshot.GetDirectAssemblyTotal("Game"), Is.EqualTo(5.0));
     }
+
+    [Test]
+    public void Direct_mod_total_excludes_container_systems_that_include_child_updates()
+    {
+        var snapshot = new SystemTimingSnapshot();
+        snapshot.AddSystem(
+            "Example.Mod.CustomGroup",
+            6.0,
+            MetricConfidence.Managed,
+            ownerAssembly: "Example.Mod",
+            sourceKind: SystemSourceKind.Mod,
+            isAggregateContainer: true);
+        snapshot.AddSystem(
+            "Example.Mod.ChildSystem",
+            2.0,
+            MetricConfidence.Managed,
+            ownerAssembly: "Example.Mod",
+            sourceKind: SystemSourceKind.Mod);
+
+        Assert.That(snapshot.GetDirectAssemblyTotal("Example.Mod"), Is.EqualTo(2.0));
+    }
 }

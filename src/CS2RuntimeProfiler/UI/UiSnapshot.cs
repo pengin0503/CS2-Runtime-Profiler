@@ -100,6 +100,9 @@ namespace CS2RuntimeProfiler.UI
         public double? ActivatedRatio { get; set; }
         public double? SampledRatio { get; set; }
         public double? CoverageRatio { get; set; }
+        public double? ProfilerMemoryBaselineBytes { get; set; }
+        public double? ProfilerMemoryPeakBytes { get; set; }
+        public double? ProfilerMemoryDeltaBytes { get; set; }
         public int WarningCount { get; set; }
         public double ProfilerOverheadShare { get; set; }
         public IReadOnlyList<string> Warnings { get; set; } = Array.Empty<string>();

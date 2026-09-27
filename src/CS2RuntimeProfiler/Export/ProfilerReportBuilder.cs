@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using CS2RuntimeProfiler.Core;
 using CS2RuntimeProfiler.UI;
 
 namespace CS2RuntimeProfiler.Export
@@ -10,7 +11,12 @@ namespace CS2RuntimeProfiler.Export
     {
         public static Func<RuntimeReportMetadata> RuntimeMetadataProvider { get; set; }
 
-        public static PerformanceReport Build(UiSnapshot snapshot, string gameVersion = null, string profilerVersion = null, RuntimeReportMetadata metadata = null)
+        public static PerformanceReport Build(
+            UiSnapshot snapshot,
+            string gameVersion = null,
+            string profilerVersion = null,
+            RuntimeReportMetadata metadata = null,
+            CaptureConfigurationSnapshot captureConfiguration = null)
         {
             snapshot = snapshot ?? new UiSnapshot();
             metadata = metadata ?? ResolveRuntimeMetadata();
@@ -18,6 +24,7 @@ namespace CS2RuntimeProfiler.Export
             foreach (var mod in metadata?.EnabledMods ?? Array.Empty<string>()) if (!string.IsNullOrWhiteSpace(mod)) report.EnabledMods.Add(mod.Trim());
             report.EnabledMods = report.EnabledMods.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
             AddCaptureScope(report, snapshot);
+            AddCaptureConfiguration(report, captureConfiguration);
             AddGlobal(report, snapshot.Global);
 
             foreach (var capture in snapshot.Captures ?? Array.Empty<CaptureSummaryUi>())
@@ -31,6 +38,8 @@ namespace CS2RuntimeProfiler.Export
                     ActivatedMarkers = capture.ActivatedMarkers, SampledMarkers = capture.SampledMarkers, CapturedMarkers = capture.CapturedMarkers,
                     AttemptedRatio = capture.AttemptedRatio, ActivatedRatio = capture.ActivatedRatio, SampledRatio = capture.SampledRatio,
                     CoverageRatio = capture.CoverageRatio, Batched = capture.Batched, ProfilerOverheadShare = capture.ProfilerOverheadShare,
+                    ProfilerMemoryBaselineBytes = capture.ProfilerMemoryBaselineBytes, ProfilerMemoryPeakBytes = capture.ProfilerMemoryPeakBytes,
+                    ProfilerMemoryDeltaBytes = capture.ProfilerMemoryDeltaBytes,
                     Warnings = (capture.Warnings ?? Array.Empty<string>()).ToList()
                 });
             }
@@ -62,6 +71,7 @@ namespace CS2RuntimeProfiler.Export
 
         private static bool HasAvailableMetric(IEnumerable<ReportMetric> metrics) => (metrics ?? Array.Empty<ReportMetric>()).Any(metric => metric != null && string.Equals(metric.Availability, "Available", StringComparison.Ordinal));
         private static RuntimeReportMetadata ResolveRuntimeMetadata() { var provider = RuntimeMetadataProvider; if (provider == null) return null; try { return provider(); } catch { return null; } }
+
         private static void AddCaptureScope(PerformanceReport report, UiSnapshot snapshot)
         {
             var capture = snapshot.Capture ?? new CaptureUiState();
@@ -69,6 +79,25 @@ namespace CS2RuntimeProfiler.Export
             report.CaptureConfig.Add(new ReportNamedValue("detailScope", string.IsNullOrWhiteSpace(capture.DetailScope) ? "live" : capture.DetailScope));
             if (snapshot.Global?.Available == true) report.CaptureConfig.Add(new ReportNamedValue("globalTimestampSeconds", snapshot.Global.TimestampSeconds.ToString("R", CultureInfo.InvariantCulture)));
         }
+
+        private static void AddCaptureConfiguration(PerformanceReport report, CaptureConfigurationSnapshot config)
+        {
+            if (config == null) return;
+            report.CaptureConfig.Add(new ReportNamedValue("samplingPeriodSeconds", Number(config.SamplingPeriodSeconds)));
+            report.CaptureConfig.Add(new ReportNamedValue("automaticCaptureEnabled", config.AutomaticCaptureEnabled ? "true" : "false"));
+            report.CaptureConfig.Add(new ReportNamedValue("efficiencyThreshold", Number(config.EfficiencyThreshold)));
+            report.CaptureConfig.Add(new ReportNamedValue("lowEfficiencySustainSeconds", Number(config.LowEfficiencySustainSeconds)));
+            report.CaptureConfig.Add(new ReportNamedValue("prebufferSeconds", Number(config.PrebufferSeconds)));
+            report.CaptureConfig.Add(new ReportNamedValue("deepCaptureSeconds", Number(config.DeepCaptureSeconds)));
+            report.CaptureConfig.Add(new ReportNamedValue("postbufferSeconds", Number(config.PostbufferSeconds)));
+            report.CaptureConfig.Add(new ReportNamedValue("cooldownSeconds", Number(config.CooldownSeconds)));
+            report.CaptureConfig.Add(new ReportNamedValue("maxConcurrentMarkers", config.MaxConcurrentMarkers.ToString(CultureInfo.InvariantCulture)));
+            report.CaptureConfig.Add(new ReportNamedValue("profilerOverheadLimit", Number(config.ProfilerOverheadLimit)));
+            report.CaptureConfig.Add(new ReportNamedValue("maxCompletedCaptures", config.MaxCompletedCaptures.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        private static string Number(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+
         private static void AddGlobal(PerformanceReport report, GlobalUiMetrics global)
         {
             if (global == null || !global.Available) return;

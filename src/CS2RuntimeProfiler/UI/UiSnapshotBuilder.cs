@@ -142,6 +142,8 @@ namespace CS2RuntimeProfiler.UI
                 ActivatedMarkers = capture.MarkerCoverage.Activated, SampledMarkers = capture.MarkerCoverage.Sampled, CapturedMarkers = capture.MarkerCoverage.Captured,
                 Batched = capture.MarkerCoverage.IsBatched, AttemptedRatio = capture.MarkerCoverage.AttemptedRatio,
                 ActivatedRatio = capture.MarkerCoverage.ActivatedRatio, SampledRatio = capture.MarkerCoverage.SampledRatio, CoverageRatio = capture.MarkerCoverage.Ratio,
+                ProfilerMemoryBaselineBytes = capture.ProfilerMemoryBaselineBytes, ProfilerMemoryPeakBytes = capture.ProfilerMemoryPeakBytes,
+                ProfilerMemoryDeltaBytes = capture.ProfilerMemoryDeltaBytes,
                 WarningCount = capture.Warnings.Count, ProfilerOverheadShare = capture.MaxProfilerOverheadShare, Warnings = capture.Warnings.ToArray(),
                 CorrelatedChanges = BuildCorrelatedChanges(capture)
             };

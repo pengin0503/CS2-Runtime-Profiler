@@ -8,6 +8,9 @@ namespace CS2RuntimeProfiler.Profiling
     public sealed class DeepCaptureController : IDisposable
     {
         private const int ConsecutiveOverheadBreachesBeforeDegrade = 3;
+        private const double ProfilerMemoryGrowthThresholdBytes = 128d * 1024d * 1024d;
+        private const string ProfilerUsedMemoryRecorderId = "Memory\u001fProfiler Used Memory";
+
         private readonly RecorderManager _recorders;
         private readonly DeepCaptureStateMachine _stateMachine;
         private readonly List<CaptureSession> _completed = new List<CaptureSession>();
@@ -23,6 +26,7 @@ namespace CS2RuntimeProfiler.Profiling
         private int _sampleCounter;
         private int _consecutiveOverheadBreaches;
         private double _batchStartedAt;
+        private bool _profilerMemoryGrowthHandled;
         private CaptureState _lastState;
         private MarkerBatchPlan _plan;
 
@@ -74,13 +78,20 @@ namespace CS2RuntimeProfiler.Profiling
             var before = _stateMachine.State;
             _stateMachine.Observe(nowSeconds, global?.SelectedSpeed ?? 0, global?.ActualSpeed ?? 0);
             var after = _stateMachine.State;
+
             if (before != CaptureState.DeepCapture && after == CaptureState.DeepCapture)
                 BeginCapture(nowSeconds, global, prebuffer);
+
             if (after == CaptureState.DeepCapture && CurrentSession != null)
             {
-                if (global != null) CurrentSession.AddGlobalSample(global);
+                if (global != null)
+                {
+                    CurrentSession.AddGlobalSample(global);
+                    ObserveProfilerMemory(global);
+                }
                 CaptureDeepSample(nowSeconds);
             }
+
             if (before == CaptureState.DeepCapture && after != CaptureState.DeepCapture) _recorders.DeactivateAll();
             if (after == CaptureState.PostBuffer && CurrentSession != null && global != null) CurrentSession.AddGlobalSample(global);
             if (CurrentSession != null && after != CaptureState.DeepCapture && after != CaptureState.PostBuffer) FinalizeCapture();
@@ -96,6 +107,7 @@ namespace CS2RuntimeProfiler.Profiling
             _currentBatchIndex = -1;
             _sampleCounter = 0;
             _consecutiveOverheadBreaches = 0;
+            _profilerMemoryGrowthHandled = false;
             _lastState = _stateMachine.State;
         }
 
@@ -106,17 +118,9 @@ namespace CS2RuntimeProfiler.Profiling
             _consecutiveOverheadBreaches++;
             if (_consecutiveOverheadBreaches < ConsecutiveOverheadBreachesBeforeDegrade) return;
             _consecutiveOverheadBreaches = 0;
-            if (_maxConcurrent > 1)
-            {
-                _maxConcurrent = Math.Max(1, _maxConcurrent / 2);
-                _plan = MarkerBatchPlanner.Create(_recorders.Descriptors.Select(d => d.Id), _maxConcurrent);
-                CurrentSession.AddWarning($"Profiler overhead exceeded {_overheadCeiling:P0} repeatedly; marker batching reduced to {_maxConcurrent} concurrent recorders.");
-            }
-            else
-            {
-                _sampleStride = Math.Min(16, _sampleStride * 2);
-                CurrentSession.AddWarning($"Profiler overhead remains high; sampling stride increased to {_sampleStride}.");
-            }
+            DegradeCaptureLoad(
+                $"Profiler overhead exceeded {_overheadCeiling:P0} repeatedly; marker batching reduced to {{0}} concurrent recorders.",
+                "Profiler overhead remains high; sampling stride increased to {0}.");
         }
 
         public void Dispose() => _recorders.Dispose();
@@ -130,15 +134,55 @@ namespace CS2RuntimeProfiler.Profiling
             _maxConcurrent = _configuredMaxConcurrent;
             _sampleStride = 1;
             _consecutiveOverheadBreaches = 0;
+            _profilerMemoryGrowthHandled = false;
             _plan = MarkerBatchPlanner.Create(_recorders.Descriptors.Select(d => d.Id), _maxConcurrent);
             CurrentSession = new CaptureSession($"capture-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}", _stateMachine.LastTrigger ?? new CaptureTrigger(CaptureTriggerKind.Manual, nowSeconds, null), 4096);
             CurrentSession.SetTriggerSnapshot(triggerSample);
+            if (triggerSample != null) ObserveProfilerMemory(triggerSample);
             if (!string.IsNullOrWhiteSpace(discoveryWarning)) CurrentSession.AddWarning(discoveryWarning);
             if (prebuffer != null) foreach (var sample in prebuffer) CurrentSession.AddGlobalSample(sample);
             ResetMarkerCoverageTracking();
             _currentBatchIndex = -1;
             _sampleCounter = 0;
             ActivateNextBatch(nowSeconds);
+        }
+
+        private void ObserveProfilerMemory(GlobalMetricsSnapshot global)
+        {
+            if (CurrentSession == null || global == null
+                || !global.RecorderReadings.TryGetValue(ProfilerUsedMemoryRecorderId, out var reading)
+                || reading.Count <= 0
+                || double.IsNaN(reading.Value)
+                || double.IsInfinity(reading.Value)
+                || reading.Value < 0d)
+                return;
+
+            CurrentSession.ObserveProfilerMemory(reading.Value);
+            var delta = CurrentSession.ProfilerMemoryDeltaBytes;
+            if (_profilerMemoryGrowthHandled || !delta.HasValue || delta.Value < ProfilerMemoryGrowthThresholdBytes)
+                return;
+
+            _profilerMemoryGrowthHandled = true;
+            var deltaMiB = delta.Value / (1024d * 1024d);
+            DegradeCaptureLoad(
+                $"Profiler memory grew by {deltaMiB:0.#} MiB during this capture; marker batching reduced to {{0}} concurrent recorders.",
+                $"Profiler memory grew by {deltaMiB:0.#} MiB during this capture; sampling stride increased to {{0}}.");
+        }
+
+        private void DegradeCaptureLoad(string batchWarningFormat, string strideWarningFormat)
+        {
+            if (CurrentSession == null) return;
+            if (_maxConcurrent > 1)
+            {
+                _maxConcurrent = Math.Max(1, _maxConcurrent / 2);
+                _plan = MarkerBatchPlanner.Create(_recorders.Descriptors.Select(d => d.Id), _maxConcurrent);
+                CurrentSession.AddWarning(string.Format(batchWarningFormat, _maxConcurrent));
+            }
+            else
+            {
+                _sampleStride = Math.Min(16, _sampleStride * 2);
+                CurrentSession.AddWarning(string.Format(strideWarningFormat, _sampleStride));
+            }
         }
 
         private static GlobalMetricsSnapshot FindLatestSample(IEnumerable<GlobalMetricsSnapshot> samples, double nowSeconds)
@@ -189,6 +233,7 @@ namespace CS2RuntimeProfiler.Profiling
             while (_completed.Count > _maxCompletedSessions) _completed.RemoveAt(0);
             CurrentSession = null;
             _consecutiveOverheadBreaches = 0;
+            _profilerMemoryGrowthHandled = false;
         }
     }
 }

@@ -57,6 +57,11 @@ namespace CS2RuntimeProfiler.Core
         public double? TriggerSelectedSpeed { get; private set; }
         public double? TriggerActualSpeed { get; private set; }
         public double? TriggerEfficiency { get; private set; }
+        public double? ProfilerMemoryBaselineBytes { get; private set; }
+        public double? ProfilerMemoryPeakBytes { get; private set; }
+        public double? ProfilerMemoryDeltaBytes => ProfilerMemoryBaselineBytes.HasValue && ProfilerMemoryPeakBytes.HasValue
+            ? Math.Max(0d, ProfilerMemoryPeakBytes.Value - ProfilerMemoryBaselineBytes.Value)
+            : (double?)null;
         public IReadOnlyList<string> Warnings => _warnings;
         public IReadOnlyList<GlobalMetricsSnapshot> GlobalSamples => _globalSamples;
         public IReadOnlyDictionary<string, IReadOnlyList<MetricSample>> MarkerSamples =>
@@ -85,6 +90,18 @@ namespace CS2RuntimeProfiler.Core
             TriggerSelectedSpeed = sample.SelectedSpeed;
             TriggerActualSpeed = sample.ActualSpeed;
             TriggerEfficiency = sample.Efficiency;
+        }
+
+        public void ObserveProfilerMemory(double bytes)
+        {
+            if (double.IsNaN(bytes) || double.IsInfinity(bytes) || bytes < 0d) return;
+            if (!ProfilerMemoryBaselineBytes.HasValue)
+            {
+                ProfilerMemoryBaselineBytes = bytes;
+                ProfilerMemoryPeakBytes = bytes;
+                return;
+            }
+            ProfilerMemoryPeakBytes = Math.Max(ProfilerMemoryPeakBytes ?? bytes, bytes);
         }
 
         public void SetSystemTiming(SystemTimingSnapshot snapshot) => SystemTiming = snapshot;

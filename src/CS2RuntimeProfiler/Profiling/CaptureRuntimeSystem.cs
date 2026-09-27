@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CS2RuntimeProfiler.Collectors;
 using CS2RuntimeProfiler.Core;
+using CS2RuntimeProfiler.Export;
 using Game;
 
 namespace CS2RuntimeProfiler.Profiling
@@ -85,9 +86,11 @@ namespace CS2RuntimeProfiler.Profiling
                 return;
 
             var prebuffer = _global.GetRecentHistory(GetPrebufferSeconds());
+            var captureConfiguration = RuntimeCaptureConfigurationProvider.Capture();
             _overhead.Measure(latest.TimestampSeconds, () =>
             {
                 _controller.Observe(latest.TimestampSeconds, latest, prebuffer);
+                _controller.CurrentSession?.SetConfiguration(captureConfiguration);
                 _controller.CurrentSession?.SetRuntimeSnapshots(
                     _domains?.Pathfinding?.Latest,
                     _domains?.Entities?.Latest);
@@ -110,8 +113,10 @@ namespace CS2RuntimeProfiler.Profiling
                 return;
 
             ApplyRuntimeSettings();
+            var captureConfiguration = RuntimeCaptureConfigurationProvider.Capture();
             var now = _global?.CurrentTimestampSeconds ?? Math.Max(0d, _lastObservedTimestamp);
             _controller?.RequestManualCapture(now, _global?.GetRecentHistory(GetPrebufferSeconds()));
+            _controller?.CurrentSession?.SetConfiguration(captureConfiguration);
             _controller?.CurrentSession?.SetRuntimeSnapshots(
                 _domains?.Pathfinding?.Latest,
                 _domains?.Entities?.Latest);

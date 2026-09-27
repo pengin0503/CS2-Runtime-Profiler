@@ -18,6 +18,7 @@ namespace CS2RuntimeProfiler.Export
         {
             return new RuntimeReportMetadata
             {
+                BuildId = BuildIdentityProvider.Current,
                 HardwareSummary = BuildHardwareSummary(),
                 EnabledMods = GetEnabledMods()
             };

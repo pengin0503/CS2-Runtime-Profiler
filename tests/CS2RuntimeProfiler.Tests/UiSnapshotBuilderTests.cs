@@ -94,6 +94,35 @@ public class UiSnapshotBuilderTests
     }
 
     [Test]
+    public void Mods_projection_keeps_container_system_visible_but_excludes_its_inclusive_time_from_direct_totals()
+    {
+        var systems = new SystemTimingSnapshot();
+        systems.AddSystem(
+            "Example.Mod.CustomGroup",
+            6.0,
+            MetricConfidence.Managed,
+            ownerAssembly: "Example.Mod",
+            sourceKind: SystemSourceKind.Mod,
+            isAggregateContainer: true);
+        systems.AddSystem(
+            "Example.Mod.ChildSystem",
+            2.0,
+            MetricConfidence.Managed,
+            ownerAssembly: "Example.Mod",
+            sourceKind: SystemSourceKind.Mod);
+
+        var snapshot = UiSnapshotBuilder.Build(new UiSnapshotInput { Systems = systems });
+        var mod = snapshot.Mods.Single(row => row.AssemblyName == "Example.Mod");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Systems.Single(row => row.Id == "Example.Mod.CustomGroup").IsAggregateContainer, Is.True);
+            Assert.That(mod.DirectSystemMilliseconds, Is.EqualTo(2.0));
+            Assert.That(mod.DirectSystemCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public void Global_recorder_metrics_expose_unit_metadata_for_ui_formatting()
     {
         Assert.That(typeof(GlobalMetricsSnapshot).GetProperty("RecorderUnits"), Is.Not.Null);

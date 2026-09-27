@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Reflection;
 using CS2RuntimeProfiler.Profiling;
 using NUnit.Framework;
@@ -46,6 +47,29 @@ namespace CS2RuntimeProfiler.Tests
             {
                 Assert.That(resolved, Is.SameAs(expected));
                 Assert.That(requested?.Name, Is.EqualTo("0Harmony"));
+            });
+        }
+
+        [Test]
+        public void Resolve_falls_back_to_0Harmony_beside_the_mod_assembly()
+        {
+            var expected = typeof(HarmonyLib.Harmony).Assembly;
+            string requestedPath = null;
+
+            var resolved = HarmonyRuntimeResolver.Resolve(
+                Array.Empty<Assembly>(),
+                _ => throw new InvalidOperationException("not on default probe path"),
+                path =>
+                {
+                    requestedPath = path;
+                    return expected;
+                },
+                "/mods/CS2RuntimeProfiler");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(resolved, Is.SameAs(expected));
+                Assert.That(requestedPath, Is.EqualTo(Path.Combine("/mods/CS2RuntimeProfiler", "0Harmony.dll")));
             });
         }
 

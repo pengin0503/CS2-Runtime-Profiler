@@ -66,6 +66,32 @@ public class DeepCaptureControllerTests
     }
 
     [Test]
+    public void Coverage_distinguishes_attempted_activated_and_sampled_markers()
+    {
+        var active = new RecorderDescriptor("active", "CPU", "Active", "TimeNanoseconds", "Int64");
+        var failing = new RecorderDescriptor("failing", "CPU", "Failing", "TimeNanoseconds", "Int64");
+        using var manager = new RecorderManager(new SelectiveBackend(active, failing));
+        using var controller = new DeepCaptureController(manager, CreateStateMachine(), maxConcurrent: 8);
+        controller.Initialize();
+
+        controller.RequestManualCapture(0);
+        controller.Observe(0.5, global: null);
+
+        var coverage = controller.CurrentSession!.MarkerCoverage;
+        Assert.Multiple(() =>
+        {
+            Assert.That(coverage.Discovered, Is.EqualTo(2));
+            Assert.That(coverage.Attempted, Is.EqualTo(2));
+            Assert.That(coverage.Activated, Is.EqualTo(1));
+            Assert.That(coverage.Sampled, Is.EqualTo(1));
+            Assert.That(coverage.Captured, Is.EqualTo(1));
+            Assert.That(coverage.AttemptedRatio, Is.EqualTo(1d));
+            Assert.That(coverage.ActivatedRatio, Is.EqualTo(0.5d));
+            Assert.That(coverage.SampledRatio, Is.EqualTo(0.5d));
+        });
+    }
+
+    [Test]
     public void Interrupt_active_capture_finalizes_partial_session_and_returns_to_monitoring()
     {
         var descriptor = new RecorderDescriptor("cpu", "CPU", "Simulation Example.System", "TimeNanoseconds", "Int64");
@@ -221,6 +247,27 @@ public class DeepCaptureControllerTests
         public IReadOnlyList<RecorderDescriptor> Discover() => _descriptors;
 
         public IActiveRecorder Start(RecorderDescriptor descriptor, int capacity) => new FakeRecorder(descriptor.Id, _reading);
+    }
+
+    private sealed class SelectiveBackend : IRecorderBackend
+    {
+        private readonly RecorderDescriptor _active;
+        private readonly RecorderDescriptor _failing;
+
+        public SelectiveBackend(RecorderDescriptor active, RecorderDescriptor failing)
+        {
+            _active = active;
+            _failing = failing;
+        }
+
+        public IReadOnlyList<RecorderDescriptor> Discover() => new[] { _active, _failing };
+
+        public IActiveRecorder Start(RecorderDescriptor descriptor, int capacity)
+        {
+            if (descriptor.Id == _failing.Id)
+                throw new InvalidOperationException("activation failed");
+            return new FakeRecorder(descriptor.Id, new RecorderReading(1d, 1));
+        }
     }
 
     private sealed class FakeRecorder : IActiveRecorder

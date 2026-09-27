@@ -19,7 +19,8 @@ namespace CS2RuntimeProfiler
 
         public void OnLoad(UpdateSystem updateSystem)
         {
-            Log.Info(nameof(OnLoad));
+            var version = typeof(Mod).Assembly.GetName().Version?.ToString() ?? "unknown";
+            Log.Info($"{nameof(OnLoad)} version={version} build={BuildIdentityProvider.Current}");
 
             Settings = new Setting(this);
             ProfilerReportBuilder.RuntimeMetadataProvider = RuntimeReportMetadataProvider.Capture;

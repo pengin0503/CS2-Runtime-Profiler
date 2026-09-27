@@ -39,6 +39,7 @@ namespace CS2RuntimeProfiler.UI
         public string Id { get; set; } = string.Empty;
         public string OwnerAssembly { get; set; } = string.Empty;
         public string SourceKind { get; set; } = SystemSourceKind.Unknown.ToString();
+        public bool IsAggregateContainer { get; set; }
         public double CurrentMilliseconds { get; set; }
         public double? MeanMilliseconds { get; set; }
         public double? MedianMilliseconds { get; set; }

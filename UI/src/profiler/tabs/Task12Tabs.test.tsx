@@ -66,6 +66,7 @@ describe("Task 12 profiler tabs", () => {
     expect(html).toContain("自動（低効率）");
     expect(html).toContain("12.0 秒");
     expect(html).toContain("90.0%");
+    expect(html).toContain("サンプル取得率");
     expect(html).toContain("分割計測");
     expect(html).toContain("4.5%");
     expect(html).toContain("相関変化が大きい項目");
@@ -73,18 +74,19 @@ describe("Task 12 profiler tabs", () => {
     expect(html).not.toContain("Profiler overhead remains high");
   });
 
-  it("captures render unavailable marker coverage as a dash instead of one hundred percent", () => {
+  it("captures render unavailable sampled marker rate as a dash instead of one hundred percent", () => {
     const unavailable = [{ ...snapshot.captures[0], discoveredMarkers: 0, capturedMarkers: 0, coverageRatio: null }];
     const html = renderToStaticMarkup(<CapturesTab captures={unavailable} />);
-    expect(html).toContain("カバレッジ —");
-    expect(html).not.toContain("カバレッジ 100.0%");
+    expect(html).toContain("サンプル取得率 —");
+    expect(html).not.toContain("サンプル取得率 100.0%");
   });
 
-  it("diagnostics surfaces coverage sampling and self-overhead state", () => {
+  it("diagnostics surfaces sampled marker rate, sampling and self-overhead state", () => {
     const html = renderToStaticMarkup(<DiagnosticsTab diagnostics={snapshot.diagnostics} captures={snapshot.captures} />);
     expect(html).toContain("1.6.2f1");
     expect(html).toContain("200");
     expect(html).toContain("75");
+    expect(html).toContain("サンプル取得率");
     expect(html).toContain("runtime build unverified");
   });
 

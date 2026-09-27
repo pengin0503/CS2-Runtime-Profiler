@@ -34,6 +34,22 @@ public class DeepCaptureStateMachineTests
     }
 
     [Test]
+    public void Suppressed_automatic_trigger_does_not_accumulate_loading_time()
+    {
+        var machine = DeepCaptureStateMachine.CreateDefault();
+
+        machine.Observe(0, 1, 0, automaticTriggerAllowed: false);
+        machine.Observe(10, 1, 0, automaticTriggerAllowed: false);
+        machine.Observe(10.1, 1, 0, automaticTriggerAllowed: true);
+        machine.Observe(12.0, 1, 0, automaticTriggerAllowed: true);
+
+        Assert.That(machine.State, Is.EqualTo(CaptureState.Monitoring));
+
+        machine.Observe(12.1, 1, 0, automaticTriggerAllowed: true);
+        Assert.That(machine.State, Is.EqualTo(CaptureState.DeepCapture));
+    }
+
+    [Test]
     public void Manual_request_enters_deep_capture_immediately()
     {
         var machine = DeepCaptureStateMachine.CreateDefault();

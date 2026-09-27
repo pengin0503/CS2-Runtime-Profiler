@@ -45,5 +45,31 @@ namespace CS2RuntimeProfiler.Core
             var values = milliseconds.Where(value => value >= 0 && !double.IsNaN(value) && !double.IsInfinity(value)).ToArray();
             return new SystemMetricAggregate(systemId, MetricStatistics.From(values), confidence, calls);
         }
+
+        internal static SystemMetricAggregate FromStreamingSummary(
+            string systemId,
+            IReadOnlyCollection<double> distributionMilliseconds,
+            double currentMilliseconds,
+            double meanMilliseconds,
+            double maxMilliseconds,
+            double totalMilliseconds,
+            int calls,
+            MetricConfidence confidence)
+        {
+            if (distributionMilliseconds == null)
+                throw new ArgumentNullException(nameof(distributionMilliseconds));
+
+            var values = distributionMilliseconds
+                .Where(value => value >= 0d && !double.IsNaN(value) && !double.IsInfinity(value))
+                .ToArray();
+            var statistics = MetricStatistics.FromSummary(
+                currentMilliseconds,
+                meanMilliseconds,
+                values,
+                maxMilliseconds,
+                totalMilliseconds,
+                calls);
+            return new SystemMetricAggregate(systemId, statistics, confidence, calls);
+        }
     }
 }

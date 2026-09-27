@@ -32,7 +32,8 @@ namespace CS2RuntimeProfiler.Core
 
     /// <summary>
     /// Projects captured Unity Entities profiler markers into per-system timing.
-    /// Only uniquely matched full system type names with TimeNanoseconds units are accepted.
+    /// Runtime descriptors use the exact marker name reported by Unity Entities when available.
+    /// Legacy descriptors without that identity retain strict full-type-name matching only.
     /// Short-name guessing and unknown units are intentionally rejected.
     /// </summary>
     public static class SystemMarkerTimingProjector
@@ -53,7 +54,7 @@ namespace CS2RuntimeProfiler.Core
 
             foreach (var system in systemList)
             {
-                var candidates = FindCandidates(recorderList, system.FullTypeName);
+                var candidates = FindCandidates(recorderList, system);
 
                 // Ambiguous matches are left unattributed rather than guessed.
                 if (candidates.Length != 1)
@@ -105,7 +106,7 @@ namespace CS2RuntimeProfiler.Core
 
             foreach (var system in systemList)
             {
-                var candidates = FindCandidates(timeRecorders, system.FullTypeName);
+                var candidates = FindCandidates(timeRecorders, system);
                 if (candidates.Length == 1)
                 {
                     uniqueMatches++;
@@ -148,10 +149,10 @@ namespace CS2RuntimeProfiler.Core
 
         private static RecorderDescriptor[] FindCandidates(
             IEnumerable<RecorderDescriptor> recorders,
-            string fullTypeName)
+            SystemDescriptor system)
         {
             return recorders
-                .Where(recorder => MatchesFullSystemName(recorder.Name, fullTypeName))
+                .Where(recorder => MatchesSystemMarker(recorder.Name, system))
                 .ToArray();
         }
 
@@ -172,7 +173,18 @@ namespace CS2RuntimeProfiler.Core
             return (int)total;
         }
 
-        private static bool MatchesFullSystemName(string markerName, string fullTypeName)
+        private static bool MatchesSystemMarker(string markerName, SystemDescriptor system)
+        {
+            if (string.IsNullOrWhiteSpace(markerName) || system == null)
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(system.ProfilerMarkerName))
+                return string.Equals(markerName, system.ProfilerMarkerName, StringComparison.Ordinal);
+
+            return MatchesLegacyFullSystemName(markerName, system.FullTypeName);
+        }
+
+        private static bool MatchesLegacyFullSystemName(string markerName, string fullTypeName)
         {
             if (string.IsNullOrWhiteSpace(markerName) || string.IsNullOrWhiteSpace(fullTypeName))
                 return false;
@@ -180,7 +192,7 @@ namespace CS2RuntimeProfiler.Core
             if (string.Equals(markerName, fullTypeName, StringComparison.Ordinal))
                 return true;
 
-            // Unity Entities creates the system marker as "<World name> <full system name>".
+            // Legacy compatibility for descriptors created without a runtime marker identity.
             return markerName.EndsWith(" " + fullTypeName, StringComparison.Ordinal);
         }
     }

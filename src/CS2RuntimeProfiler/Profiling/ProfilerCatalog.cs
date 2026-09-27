@@ -11,11 +11,16 @@ namespace CS2RuntimeProfiler.Profiling
     {
         private readonly HarmonyPatchInspector _patchInspector;
         private readonly ModAttributor _modAttributor;
+        private readonly World _world;
 
-        public ProfilerCatalog(ModAttributor modAttributor = null, HarmonyPatchInspector patchInspector = null)
+        public ProfilerCatalog(
+            ModAttributor modAttributor = null,
+            HarmonyPatchInspector patchInspector = null,
+            World world = null)
         {
             _modAttributor = modAttributor ?? new ModAttributor(null);
             _patchInspector = patchInspector ?? HarmonyPatchInspector.TryCreate();
+            _world = world;
         }
 
         public IReadOnlyList<SystemDescriptor> Discover()
@@ -49,7 +54,30 @@ namespace CS2RuntimeProfiler.Profiling
                 sourceKind,
                 modName,
                 MetricConfidence.Unavailable,
-                patchOwners);
+                patchOwners,
+                TryGetProfilerMarkerName(type));
+        }
+
+        private string TryGetProfilerMarkerName(Type type)
+        {
+            if (_world == null || !_world.IsCreated || type == null)
+                return null;
+
+            try
+            {
+                var system = _world.GetExistingSystemManaged(type);
+                if (system == null)
+                    return null;
+
+                return EntityManager.EntityManagerDebug.GetSystemProfilerMarkerName(
+                    _world,
+                    system.SystemHandle);
+            }
+            catch
+            {
+                // A catalogued type may not be instantiated in this World. Do not guess its marker name.
+                return null;
+            }
         }
     }
 }

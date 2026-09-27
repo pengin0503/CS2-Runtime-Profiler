@@ -50,7 +50,7 @@ namespace CS2RuntimeProfiler.Profiling
 
             try
             {
-                var systems = new ProfilerCatalog().Discover();
+                var systems = new ProfilerCatalog(world: World).Discover();
                 _completionTiming = new CaptureCompletionTimingProcessor(
                     systems,
                     () => _deepRecorders?.Descriptors ?? Array.Empty<RecorderDescriptor>());

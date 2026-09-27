@@ -22,7 +22,8 @@ namespace CS2RuntimeProfiler.Core
             SystemSourceKind sourceKind,
             string modName,
             MetricConfidence confidence,
-            IEnumerable<PatchOwnerInfo> patchOwners = null)
+            IEnumerable<PatchOwnerInfo> patchOwners = null,
+            string profilerMarkerName = null)
         {
             FullTypeName = fullTypeName ?? string.Empty;
             AssemblyName = assemblyName ?? string.Empty;
@@ -30,6 +31,7 @@ namespace CS2RuntimeProfiler.Core
             ModName = modName;
             Confidence = confidence;
             PatchOwners = (patchOwners ?? Array.Empty<PatchOwnerInfo>()).ToArray();
+            ProfilerMarkerName = profilerMarkerName ?? string.Empty;
         }
 
         public string FullTypeName { get; }
@@ -38,5 +40,6 @@ namespace CS2RuntimeProfiler.Core
         public string ModName { get; }
         public MetricConfidence Confidence { get; }
         public IReadOnlyList<PatchOwnerInfo> PatchOwners { get; }
+        public string ProfilerMarkerName { get; }
     }
 }

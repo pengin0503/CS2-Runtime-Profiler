@@ -84,7 +84,8 @@ namespace CS2RuntimeProfiler.Core
                     aggregate,
                     system.AssemblyName,
                     system.PatchOwners.Select(owner => owner.OwnerId),
-                    system.SourceKind);
+                    system.SourceKind,
+                    system.IsAggregateContainer);
             }
 
             return result;

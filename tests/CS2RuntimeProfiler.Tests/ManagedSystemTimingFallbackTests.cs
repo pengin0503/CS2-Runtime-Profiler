@@ -48,7 +48,7 @@ public class ManagedSystemTimingFallbackTests
             Array.Empty<PatchOwnerInfo>());
         var accumulator = new ManagedSystemTimingAccumulator(maxSamplesPerSystem: 3);
 
-        accumulator.Record(descriptor.FullTypeName, 1.0);
+        accumulator.Record(descriptor.FullTypeName, 10.0);
         accumulator.Record(descriptor.FullTypeName, 2.0);
         accumulator.Record(descriptor.FullTypeName, 3.0);
         accumulator.Record(descriptor.FullTypeName, 4.0);
@@ -58,10 +58,13 @@ public class ManagedSystemTimingFallbackTests
         Assert.Multiple(() =>
         {
             Assert.That(system.Calls, Is.EqualTo(4), "bounded percentile storage must not truncate whole-capture call count");
-            Assert.That(system.TotalMilliseconds, Is.EqualTo(10.0).Within(0.0001), "whole-capture total must include evicted distribution samples");
-            Assert.That(system.MeanMilliseconds, Is.EqualTo(2.5).Within(0.0001), "whole-capture mean must use exact count and total");
-            Assert.That(system.MaxMilliseconds, Is.EqualTo(4.0).Within(0.0001));
-            Assert.That(system.Milliseconds, Is.EqualTo(4.0).Within(0.0001));
+            Assert.That(system.TotalMilliseconds, Is.EqualTo(19.0).Within(0.0001), "whole-capture total must include evicted distribution samples");
+            Assert.That(system.MeanMilliseconds, Is.EqualTo(4.75).Within(0.0001), "whole-capture mean must use exact count and total");
+            Assert.That(system.MaxMilliseconds, Is.EqualTo(10.0).Within(0.0001), "the evicted maximum must remain exact");
+            Assert.That(system.Milliseconds, Is.EqualTo(4.0).Within(0.0001), "current must be the last recorded call");
+            Assert.That(system.MedianMilliseconds, Is.EqualTo(3.0).Within(0.0001), "median uses only retained values 2, 3, and 4");
+            Assert.That(system.P95Milliseconds, Is.EqualTo(4.0).Within(0.0001), "P95 uses only retained values 2, 3, and 4");
+            Assert.That(system.P99Milliseconds, Is.EqualTo(4.0).Within(0.0001), "P99 uses only retained values 2, 3, and 4");
         });
     }
 

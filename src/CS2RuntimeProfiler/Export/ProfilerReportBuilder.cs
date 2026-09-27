@@ -21,7 +21,9 @@ namespace CS2RuntimeProfiler.Export
         {
             snapshot = snapshot ?? new UiSnapshot();
             metadata = metadata ?? ResolveRuntimeMetadata();
-            captureConfiguration = captureConfiguration ?? ResolveCaptureConfiguration();
+            captureConfiguration = snapshot.Capture?.DetailConfiguration?.Clone()
+                ?? captureConfiguration
+                ?? ResolveCaptureConfiguration();
             var report = new PerformanceReport { GameVersion = gameVersion, ProfilerVersion = profilerVersion, HardwareSummary = string.IsNullOrWhiteSpace(metadata?.HardwareSummary) ? null : metadata.HardwareSummary, CityName = null };
             foreach (var mod in metadata?.EnabledMods ?? Array.Empty<string>()) if (!string.IsNullOrWhiteSpace(mod)) report.EnabledMods.Add(mod.Trim());
             report.EnabledMods = report.EnabledMods.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();

@@ -98,7 +98,8 @@ namespace CS2RuntimeProfiler.Core
                     aggregate,
                     descriptor?.AssemblyName ?? string.Empty,
                     descriptor?.PatchOwners?.Select(owner => owner.OwnerId) ?? Array.Empty<string>(),
-                    descriptor?.SourceKind ?? SystemSourceKind.Unknown);
+                    descriptor?.SourceKind ?? SystemSourceKind.Unknown,
+                    descriptor?.IsAggregateContainer ?? false);
             }
 
             return snapshot;

@@ -24,7 +24,14 @@ namespace CS2RuntimeProfiler.Export
             captureConfiguration = snapshot.Capture?.DetailConfiguration?.Clone()
                 ?? captureConfiguration
                 ?? ResolveCaptureConfiguration();
-            var report = new PerformanceReport { GameVersion = gameVersion, ProfilerVersion = profilerVersion, HardwareSummary = string.IsNullOrWhiteSpace(metadata?.HardwareSummary) ? null : metadata.HardwareSummary, CityName = null };
+            var report = new PerformanceReport
+            {
+                GameVersion = gameVersion,
+                ProfilerVersion = profilerVersion,
+                BuildId = string.IsNullOrWhiteSpace(metadata?.BuildId) ? null : metadata.BuildId,
+                HardwareSummary = string.IsNullOrWhiteSpace(metadata?.HardwareSummary) ? null : metadata.HardwareSummary,
+                CityName = null
+            };
             foreach (var mod in metadata?.EnabledMods ?? Array.Empty<string>()) if (!string.IsNullOrWhiteSpace(mod)) report.EnabledMods.Add(mod.Trim());
             report.EnabledMods = report.EnabledMods.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
             AddCaptureScope(report, snapshot);

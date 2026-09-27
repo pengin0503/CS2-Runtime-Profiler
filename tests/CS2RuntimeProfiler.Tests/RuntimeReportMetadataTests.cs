@@ -13,10 +13,11 @@ public class RuntimeReportMetadataTests
     }
 
     [Test]
-    public void Builder_includes_runtime_hardware_and_enabled_mods()
+    public void Builder_includes_runtime_hardware_enabled_mods_and_build_id()
     {
         var metadata = new RuntimeReportMetadata
         {
+            BuildId = "abcdef123456",
             HardwareSummary = "CPU=Example CPU; RAM=32768 MB; GPU=Example GPU",
             EnabledMods = new[] { "Traffic.Mod", "Asset.Mod", "Traffic.Mod", "" }
         };
@@ -29,6 +30,7 @@ public class RuntimeReportMetadataTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(report.BuildId, Is.EqualTo("abcdef123456"));
             Assert.That(report.HardwareSummary, Is.EqualTo(metadata.HardwareSummary));
             Assert.That(report.EnabledMods, Is.EqualTo(new[] { "Asset.Mod", "Traffic.Mod" }));
         });
@@ -39,6 +41,7 @@ public class RuntimeReportMetadataTests
     {
         ProfilerReportBuilder.RuntimeMetadataProvider = () => new RuntimeReportMetadata
         {
+            BuildId = "runtime-build",
             HardwareSummary = "CPU=Runtime CPU",
             EnabledMods = new[] { "Runtime.Mod" }
         };
@@ -47,6 +50,7 @@ public class RuntimeReportMetadataTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(report.BuildId, Is.EqualTo("runtime-build"));
             Assert.That(report.HardwareSummary, Is.EqualTo("CPU=Runtime CPU"));
             Assert.That(report.EnabledMods, Is.EqualTo(new[] { "Runtime.Mod" }));
         });

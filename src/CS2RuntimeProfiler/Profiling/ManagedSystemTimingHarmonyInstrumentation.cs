@@ -23,11 +23,12 @@ namespace CS2RuntimeProfiler.Profiling
 
             try
             {
-                var harmonyAssembly = AppDomain.CurrentDomain.GetAssemblies()
-                    .FirstOrDefault(assembly => assembly?.GetType("HarmonyLib.Harmony", throwOnError: false) != null);
+                var harmonyAssembly = HarmonyRuntimeResolver.Resolve(
+                    AppDomain.CurrentDomain.GetAssemblies(),
+                    Assembly.Load);
                 if (harmonyAssembly == null)
                 {
-                    reason = "Harmony runtime is not loaded.";
+                    reason = "Harmony runtime is unavailable.";
                     return false;
                 }
 

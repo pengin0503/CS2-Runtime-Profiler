@@ -5,8 +5,9 @@ using System.Linq;
 namespace CS2RuntimeProfiler.Core
 {
     /// <summary>
-    /// Finalizes per-system timing for a completed capture from already captured profiler markers.
-    /// Keeps the projection pure so the runtime system only coordinates lifecycle boundaries.
+    /// Finalizes per-system timing for a completed capture. Verified profiler-marker timing remains
+    /// authoritative; managed synchronous timing may fill systems that have no usable marker sample.
+    /// Job/Burst worker time is never inferred from the managed fallback.
     /// </summary>
     public static class CaptureSystemTimingFinalizer
     {
@@ -15,20 +16,42 @@ namespace CS2RuntimeProfiler.Core
             IEnumerable<SystemDescriptor> systems,
             IEnumerable<RecorderDescriptor> recorders)
         {
+            return Apply(capture, systems, recorders, managedFallback: null);
+        }
+
+        public static SystemTimingSnapshot Apply(
+            CaptureSession capture,
+            IEnumerable<SystemDescriptor> systems,
+            IEnumerable<RecorderDescriptor> recorders,
+            SystemTimingSnapshot managedFallback)
+        {
             if (capture == null)
                 throw new ArgumentNullException(nameof(capture));
 
             var systemArray = (systems ?? Array.Empty<SystemDescriptor>()).Where(x => x != null).ToArray();
             var recorderArray = (recorders ?? Array.Empty<RecorderDescriptor>()).Where(x => x != null).ToArray();
-            var timing = SystemMarkerTimingProjector.Project(systemArray, recorderArray, capture);
+            var markerTiming = SystemMarkerTimingProjector.Project(systemArray, recorderArray, capture);
+            var timing = SystemTimingSnapshotMerger.Merge(markerTiming, managedFallback);
             capture.SetSystemTiming(timing);
 
-            if (timing.Systems.Count == 0)
+            if (markerTiming.Systems.Count == 0)
             {
                 var diagnostics = SystemMarkerTimingProjector.Diagnose(systemArray, recorderArray, capture);
                 var sampledMarkers = capture.MarkerSamples.Count;
-                capture.AddWarning(
-                    $"System timing unavailable: catalogSystems={diagnostics.CatalogSystemCount}, profilerMarkers={diagnostics.ProfilerMarkerCount}, timeMarkers={diagnostics.TimeMarkerCount}, uniqueMatches={diagnostics.UniqueMatchCount}, ambiguousMatches={diagnostics.AmbiguousMatchCount}, uniqueMatchesWithoutSamples={diagnostics.UniqueMatchesWithoutSamples}, sampledMarkers={sampledMarkers}, capturedMarkers={capture.MarkerCoverage.Captured}/{capture.MarkerCoverage.Discovered}. No uniquely matching TimeNanoseconds ECS system marker produced a usable sample.");
+                var detail = $"catalogSystems={diagnostics.CatalogSystemCount}, profilerMarkers={diagnostics.ProfilerMarkerCount}, timeMarkers={diagnostics.TimeMarkerCount}, uniqueMatches={diagnostics.UniqueMatchCount}, ambiguousMatches={diagnostics.AmbiguousMatchCount}, uniqueMatchesWithoutSamples={diagnostics.UniqueMatchesWithoutSamples}, sampledMarkers={sampledMarkers}, capturedMarkers={capture.MarkerCoverage.Captured}/{capture.MarkerCoverage.Discovered}.";
+
+                if (managedFallback?.Systems?.Count > 0)
+                {
+                    capture.AddWarning(
+                        "ECS profiler markers produced no usable per-system samples; using managed synchronous SystemBase timing fallback. "
+                        + "Job/Burst worker time remains unattributed. " + detail);
+                }
+                else
+                {
+                    capture.AddWarning(
+                        "System timing unavailable: " + detail
+                        + " No uniquely matching TimeNanoseconds ECS system marker produced a usable sample, and no managed synchronous fallback sample was available.");
+                }
             }
 
             return timing;

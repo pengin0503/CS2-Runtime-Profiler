@@ -17,7 +17,7 @@ namespace CS2RuntimeProfiler.Core
             var memoryDelta = capture.ProfilerMemoryDeltaBytes.HasValue
                 ? (capture.ProfilerMemoryDeltaBytes.Value / BytesPerMiB).ToString("0.#", CultureInfo.InvariantCulture)
                 : "unavailable";
-            var overhead = capture.MaxProfilerOverheadShare.ToString("P2", CultureInfo.InvariantCulture);
+            var overhead = (capture.MaxProfilerOverheadShare * 100d).ToString("0.00", CultureInfo.InvariantCulture) + "%";
 
             return string.Format(
                 CultureInfo.InvariantCulture,

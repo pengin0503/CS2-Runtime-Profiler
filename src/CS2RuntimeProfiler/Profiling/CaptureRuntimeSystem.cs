@@ -14,6 +14,7 @@ namespace CS2RuntimeProfiler.Profiling
     {
         private const double DefaultPrebufferSeconds = 5d;
         private readonly MonitoringLifecycleGate _monitoringGate = new MonitoringLifecycleGate(initiallyEnabled: true);
+        private readonly HashSet<CaptureSession> _loggedCompletedCaptures = new HashSet<CaptureSession>();
         private GlobalMetricsCollector _global;
         private DomainMetricsSystem _domains;
         private RecorderManager _deepRecorders;
@@ -121,6 +122,7 @@ namespace CS2RuntimeProfiler.Profiling
             _controller?.Dispose();
             _controller = null;
             _deepRecorders = null;
+            _loggedCompletedCaptures.Clear();
             base.OnDestroy();
         }
 
@@ -151,18 +153,40 @@ namespace CS2RuntimeProfiler.Profiling
 
         private void ProjectCompletedCaptureTiming()
         {
-            if (_completionTiming == null || _controller == null)
+            if (_controller == null)
                 return;
 
-            try
+            if (_completionTiming != null)
             {
-                _completionTiming.ProcessNew(_controller.CompletedSessions);
+                try
+                {
+                    _completionTiming.ProcessNew(_controller.CompletedSessions);
+                }
+                catch (Exception ex)
+                {
+                    _completionTiming.LastProcessedCapture?.AddWarning(
+                        "System timing projection failed for this capture; per-system timing is unavailable.");
+                    Mod.Log.Error(ex, "System timing projection failed for a completed capture");
+                }
             }
-            catch (Exception ex)
+
+            LogCompletedCaptures();
+        }
+
+        private void LogCompletedCaptures()
+        {
+            if (_controller == null)
+                return;
+
+            var retained = new HashSet<CaptureSession>(_controller.CompletedSessions);
+            _loggedCompletedCaptures.RemoveWhere(capture => !retained.Contains(capture));
+
+            foreach (var capture in _controller.CompletedSessions)
             {
-                _completionTiming.LastProcessedCapture?.AddWarning(
-                    "System timing projection failed for this capture; per-system timing is unavailable.");
-                Mod.Log.Error(ex, "System timing projection failed for a completed capture");
+                if (capture == null || !_loggedCompletedCaptures.Add(capture))
+                    continue;
+
+                Mod.Log.Info(CaptureCompletionLogFormatter.Format(capture));
             }
         }
     }

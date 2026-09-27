@@ -23,6 +23,7 @@ namespace CS2RuntimeProfiler
 
             Settings = new Setting(this);
             ProfilerReportBuilder.RuntimeMetadataProvider = RuntimeReportMetadataProvider.Capture;
+            ProfilerReportBuilder.CaptureConfigurationProvider = RuntimeCaptureConfigurationProvider.Capture;
 
             var localizationManager = GameManager.instance?.localizationManager;
             if (localizationManager != null)
@@ -46,6 +47,7 @@ namespace CS2RuntimeProfiler
         {
             Log.Info(nameof(OnDispose));
             ProfilerReportBuilder.RuntimeMetadataProvider = null;
+            ProfilerReportBuilder.CaptureConfigurationProvider = null;
             Settings?.UnregisterInOptionsUI();
             Settings = null;
         }

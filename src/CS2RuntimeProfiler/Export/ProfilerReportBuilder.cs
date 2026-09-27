@@ -10,6 +10,7 @@ namespace CS2RuntimeProfiler.Export
     public static class ProfilerReportBuilder
     {
         public static Func<RuntimeReportMetadata> RuntimeMetadataProvider { get; set; }
+        public static Func<CaptureConfigurationSnapshot> CaptureConfigurationProvider { get; set; }
 
         public static PerformanceReport Build(
             UiSnapshot snapshot,
@@ -20,6 +21,7 @@ namespace CS2RuntimeProfiler.Export
         {
             snapshot = snapshot ?? new UiSnapshot();
             metadata = metadata ?? ResolveRuntimeMetadata();
+            captureConfiguration = captureConfiguration ?? ResolveCaptureConfiguration();
             var report = new PerformanceReport { GameVersion = gameVersion, ProfilerVersion = profilerVersion, HardwareSummary = string.IsNullOrWhiteSpace(metadata?.HardwareSummary) ? null : metadata.HardwareSummary, CityName = null };
             foreach (var mod in metadata?.EnabledMods ?? Array.Empty<string>()) if (!string.IsNullOrWhiteSpace(mod)) report.EnabledMods.Add(mod.Trim());
             report.EnabledMods = report.EnabledMods.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
@@ -71,6 +73,7 @@ namespace CS2RuntimeProfiler.Export
 
         private static bool HasAvailableMetric(IEnumerable<ReportMetric> metrics) => (metrics ?? Array.Empty<ReportMetric>()).Any(metric => metric != null && string.Equals(metric.Availability, "Available", StringComparison.Ordinal));
         private static RuntimeReportMetadata ResolveRuntimeMetadata() { var provider = RuntimeMetadataProvider; if (provider == null) return null; try { return provider(); } catch { return null; } }
+        private static CaptureConfigurationSnapshot ResolveCaptureConfiguration() { var provider = CaptureConfigurationProvider; if (provider == null) return null; try { return provider(); } catch { return null; } }
 
         private static void AddCaptureScope(PerformanceReport report, UiSnapshot snapshot)
         {

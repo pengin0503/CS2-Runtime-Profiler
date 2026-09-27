@@ -15,7 +15,6 @@ namespace CS2RuntimeProfiler.Profiling
     {
         private const double DefaultPrebufferSeconds = 5d;
         private readonly MonitoringLifecycleGate _monitoringGate = new MonitoringLifecycleGate(initiallyEnabled: true);
-        private readonly HashSet<CaptureSession> _loggedCompletedCaptures = new HashSet<CaptureSession>();
         private GlobalMetricsCollector _global;
         private DomainMetricsSystem _domains;
         private RecorderManager _deepRecorders;
@@ -62,6 +61,8 @@ namespace CS2RuntimeProfiler.Profiling
                 Mod.Log.Error(ex, "System catalog discovery failed; per-system timing will be unavailable");
                 _completionTiming = null;
             }
+
+            _controller.CaptureCompleted += HandleCaptureCompleted;
         }
 
         protected override void OnUpdate()
@@ -75,7 +76,6 @@ namespace CS2RuntimeProfiler.Profiling
             {
                 _controller?.InterruptActiveCapture(
                     "Monitoring was disabled; the active capture was finalized early and recorder activity was stopped.");
-                ProjectCompletedCaptureTiming();
             }
 
             if (!monitoringEnabled)
@@ -98,7 +98,6 @@ namespace CS2RuntimeProfiler.Profiling
                 _controller.CurrentSession?.SetRuntimeSnapshots(
                     _domains?.Pathfinding?.Latest,
                     _domains?.Entities?.Latest);
-                ProjectCompletedCaptureTiming();
             });
 
             var samplingPeriod = Math.Max(0.001d, _global?.SamplingPeriodSeconds ?? GlobalMetricsCollector.DefaultSamplingPeriodSeconds);
@@ -128,10 +127,11 @@ namespace CS2RuntimeProfiler.Profiling
 
         protected override void OnDestroy()
         {
+            if (_controller != null)
+                _controller.CaptureCompleted -= HandleCaptureCompleted;
             _controller?.Dispose();
             _controller = null;
             _deepRecorders = null;
-            _loggedCompletedCaptures.Clear();
             base.OnDestroy();
         }
 
@@ -160,12 +160,12 @@ namespace CS2RuntimeProfiler.Profiling
                 settings.ResolvedMaxCompletedCaptures);
         }
 
-        private void ProjectCompletedCaptureTiming()
+        private void HandleCaptureCompleted(CaptureSession capture)
         {
-            if (_controller == null)
+            if (capture == null)
                 return;
 
-            if (_completionTiming != null)
+            if (_completionTiming != null && _controller != null)
             {
                 try
                 {
@@ -173,29 +173,19 @@ namespace CS2RuntimeProfiler.Profiling
                 }
                 catch (Exception ex)
                 {
-                    _completionTiming.LastProcessedCapture?.AddWarning(
+                    capture.AddWarning(
                         "System timing projection failed for this capture; per-system timing is unavailable.");
                     Mod.Log.Error(ex, "System timing projection failed for a completed capture");
                 }
             }
 
-            LogCompletedCaptures();
-        }
-
-        private void LogCompletedCaptures()
-        {
-            if (_controller == null)
-                return;
-
-            var retained = new HashSet<CaptureSession>(_controller.CompletedSessions);
-            _loggedCompletedCaptures.RemoveWhere(capture => !retained.Contains(capture));
-
-            foreach (var capture in _controller.CompletedSessions)
+            try
             {
-                if (capture == null || !_loggedCompletedCaptures.Add(capture))
-                    continue;
-
                 Mod.Log.Info(CaptureCompletionLogFormatter.Format(capture));
+            }
+            catch (Exception ex)
+            {
+                Mod.Log.Error(ex, "Capture completion diagnostic logging failed");
             }
         }
     }

@@ -44,7 +44,8 @@ namespace CS2RuntimeProfiler.Export
         [DataMember(Name = "totalMilliseconds", Order = 11, EmitDefaultValue = false)] public double? TotalMilliseconds { get; set; }
         [DataMember(Name = "calls", Order = 12, EmitDefaultValue = false)] public int? Calls { get; set; }
         [DataMember(Name = "patchOwners", Order = 13)] public List<string> PatchOwners { get; set; }
-        internal ReportSystem SanitizedCopy() => new ReportSystem { SystemId = PrivacySanitizer.Sanitize(SystemId), OwnerAssembly = PrivacySanitizer.Sanitize(OwnerAssembly), ModName = PrivacySanitizer.Sanitize(ModName), Confidence = PrivacySanitizer.Sanitize(Confidence), CurrentMilliseconds = CurrentMilliseconds, MeanMilliseconds = MeanMilliseconds, MedianMilliseconds = MedianMilliseconds, P95Milliseconds = P95Milliseconds, P99Milliseconds = P99Milliseconds, MaxMilliseconds = MaxMilliseconds, TotalMilliseconds = TotalMilliseconds, Calls = Calls, PatchOwners = (PatchOwners ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList() };
+        [DataMember(Name = "isAggregateContainer", Order = 14, EmitDefaultValue = false)] public bool IsAggregateContainer { get; set; }
+        internal ReportSystem SanitizedCopy() => new ReportSystem { SystemId = PrivacySanitizer.Sanitize(SystemId), OwnerAssembly = PrivacySanitizer.Sanitize(OwnerAssembly), ModName = PrivacySanitizer.Sanitize(ModName), Confidence = PrivacySanitizer.Sanitize(Confidence), CurrentMilliseconds = CurrentMilliseconds, MeanMilliseconds = MeanMilliseconds, MedianMilliseconds = MedianMilliseconds, P95Milliseconds = P95Milliseconds, P99Milliseconds = P99Milliseconds, MaxMilliseconds = MaxMilliseconds, TotalMilliseconds = TotalMilliseconds, Calls = Calls, PatchOwners = (PatchOwners ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), IsAggregateContainer = IsAggregateContainer };
     }
 
     [DataContract]

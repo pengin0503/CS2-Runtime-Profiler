@@ -7,16 +7,11 @@ namespace CS2RuntimeProfiler.Profiling
     internal static class ManagedSystemTimingBridge
     {
         private static readonly object Gate = new object();
-        private static ManagedSystemTimingAccumulator _active;
+        private static volatile ManagedSystemTimingAccumulator _active;
 
-        public static bool IsActive
-        {
-            get
-            {
-                lock (Gate)
-                    return _active != null;
-            }
-        }
+        // This check runs from the Harmony prefix of every managed SystemBase.Update call.
+        // Keep the normal-monitoring path lock-free; locking is limited to active Deep Capture.
+        public static bool IsActive => _active != null;
 
         public static void BeginCapture()
         {
@@ -26,8 +21,15 @@ namespace CS2RuntimeProfiler.Profiling
 
         public static void Record(string systemId, double milliseconds)
         {
+            var active = _active;
+            if (active == null)
+                return;
+
             lock (Gate)
-                _active?.Record(systemId, milliseconds);
+            {
+                if (ReferenceEquals(_active, active))
+                    active.Record(systemId, milliseconds);
+            }
         }
 
         public static SystemTimingSnapshot EndCapture(IEnumerable<SystemDescriptor> systems)

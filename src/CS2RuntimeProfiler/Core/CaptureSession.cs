@@ -37,6 +37,7 @@ namespace CS2RuntimeProfiler.Core
         private readonly Dictionary<string, RollingMetricSeries> _markerSamples = new Dictionary<string, RollingMetricSeries>(StringComparer.Ordinal);
         private readonly List<string> _warnings = new List<string>();
         private readonly List<GlobalMetricsSnapshot> _globalSamples = new List<GlobalMetricsSnapshot>();
+        private CaptureConfigurationSnapshot _configuration;
 
         public CaptureSession(string id, CaptureTrigger trigger, int maxSamplesPerSeries)
         {
@@ -53,6 +54,7 @@ namespace CS2RuntimeProfiler.Core
         public SystemTimingSnapshot SystemTiming { get; private set; }
         public NamedMetricSnapshot PathfindingSnapshot { get; private set; }
         public NamedMetricSnapshot DomainMetricsSnapshot { get; private set; }
+        public CaptureConfigurationSnapshot Configuration => _configuration?.Clone();
         public double MaxProfilerOverheadShare { get; private set; }
         public double? TriggerSelectedSpeed { get; private set; }
         public double? TriggerActualSpeed { get; private set; }
@@ -83,6 +85,13 @@ namespace CS2RuntimeProfiler.Core
 
         public void SetMarkerCoverage(int discovered, int attempted, int activated, int sampled, bool isBatched) =>
             MarkerCoverage = new MarkerCoverageInfo(discovered, attempted, activated, sampled, isBatched);
+
+        public void SetConfiguration(CaptureConfigurationSnapshot configuration)
+        {
+            if (_configuration != null || configuration == null)
+                return;
+            _configuration = configuration.Clone();
+        }
 
         public void SetTriggerSnapshot(GlobalMetricsSnapshot sample)
         {

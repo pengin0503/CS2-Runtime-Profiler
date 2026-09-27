@@ -6,10 +6,15 @@
     <Configurations>Debug;Release</Configurations>
     <RootNamespace>CS2RuntimeProfiler</RootNamespace>
     <AssemblyName>CS2RuntimeProfiler</AssemblyName>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <Import Project="$(CSII_TOOLPATH)\Mod.props" />
   <Import Project="$(CSII_TOOLPATH)\Mod.targets" />
+
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.2.2" PrivateAssets="all" />
+  </ItemGroup>
 
   <ItemGroup>
     <Reference Include="Game"><Private>false</Private></Reference>
@@ -31,6 +36,11 @@
   <ItemGroup>
     <Reference Update="System.Runtime.Serialization"><Private>false</Private></Reference>
   </ItemGroup>
+
+  <Target Name="VerifyHarmonyRuntimeWasCopied" AfterTargets="Build">
+    <Error Condition="!Exists('$(TargetDir)0Harmony.dll')"
+           Text="The required private 0Harmony.dll runtime was not copied to the mod output." />
+  </Target>
 
   <Target Name="BuildUI" AfterTargets="AfterBuild" Condition="Exists('$(SolutionDir)UI\package.json')">
     <Exec Command="npm run build" WorkingDirectory="$(SolutionDir)UI" />

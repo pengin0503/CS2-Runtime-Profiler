@@ -23,17 +23,24 @@ namespace CS2RuntimeProfiler.Profiling
             _world = world;
         }
 
-        public IReadOnlyList<SystemDescriptor> Discover()
+        public SystemCatalogDiscoveryResult Discover()
         {
-            var types = RuntimeTypeDiscovery.Enumerate(AppDomain.CurrentDomain.GetAssemblies());
+            var types = RuntimeTypeDiscovery.EnumerateWithStatus(
+                AppDomain.CurrentDomain.GetAssemblies(),
+                out var isComplete,
+                out var error);
             var systemBase = typeof(ComponentSystemBase);
 
-            return types
+            var systems = types
                 .Where(type => type != null && !type.IsAbstract && systemBase.IsAssignableFrom(type))
                 .Select(CreateDescriptor)
                 .OrderBy(descriptor => descriptor.AssemblyName, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(descriptor => descriptor.FullTypeName, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
+
+            return isComplete
+                ? SystemCatalogDiscoveryResult.Complete(systems)
+                : SystemCatalogDiscoveryResult.Incomplete(systems, error);
         }
 
         private SystemDescriptor CreateDescriptor(Type type)

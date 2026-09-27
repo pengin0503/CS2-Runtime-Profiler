@@ -19,7 +19,8 @@ namespace CS2RuntimeProfiler.Core
             double? maxMilliseconds = null,
             double? totalMilliseconds = null,
             int? calls = null,
-            SystemSourceKind sourceKind = SystemSourceKind.Unknown)
+            SystemSourceKind sourceKind = SystemSourceKind.Unknown,
+            bool isAggregateContainer = false)
         {
             SystemId = systemId ?? string.Empty;
             Milliseconds = Math.Max(0d, milliseconds);
@@ -34,6 +35,7 @@ namespace CS2RuntimeProfiler.Core
             TotalMilliseconds = Normalize(totalMilliseconds);
             Calls = calls.HasValue ? Math.Max(0, calls.Value) : (int?)null;
             SourceKind = sourceKind;
+            IsAggregateContainer = isAggregateContainer;
         }
 
         public string SystemId { get; }
@@ -49,6 +51,7 @@ namespace CS2RuntimeProfiler.Core
         public double? TotalMilliseconds { get; }
         public int? Calls { get; }
         public SystemSourceKind SourceKind { get; }
+        public bool IsAggregateContainer { get; }
 
         private static double? Normalize(double? value)
         {
@@ -71,7 +74,8 @@ namespace CS2RuntimeProfiler.Core
             MetricConfidence confidence,
             string ownerAssembly = "",
             IEnumerable<string> patchOwners = null,
-            SystemSourceKind sourceKind = SystemSourceKind.Unknown)
+            SystemSourceKind sourceKind = SystemSourceKind.Unknown,
+            bool isAggregateContainer = false)
         {
             _systems.Add(new SystemTimingEntry(
                 systemId,
@@ -79,14 +83,16 @@ namespace CS2RuntimeProfiler.Core
                 confidence,
                 ownerAssembly,
                 patchOwners,
-                sourceKind: sourceKind));
+                sourceKind: sourceKind,
+                isAggregateContainer: isAggregateContainer));
         }
 
         public void AddSystemAggregate(
             SystemMetricAggregate aggregate,
             string ownerAssembly = "",
             IEnumerable<string> patchOwners = null,
-            SystemSourceKind sourceKind = SystemSourceKind.Unknown)
+            SystemSourceKind sourceKind = SystemSourceKind.Unknown,
+            bool isAggregateContainer = false)
         {
             if (aggregate == null)
                 return;
@@ -104,7 +110,8 @@ namespace CS2RuntimeProfiler.Core
                 aggregate.MaxMilliseconds,
                 aggregate.TotalMilliseconds,
                 aggregate.Calls,
-                sourceKind));
+                sourceKind,
+                isAggregateContainer));
         }
 
         public void AddEntry(SystemTimingEntry entry)
@@ -125,7 +132,8 @@ namespace CS2RuntimeProfiler.Core
                 entry.MaxMilliseconds,
                 entry.TotalMilliseconds,
                 entry.Calls,
-                entry.SourceKind));
+                entry.SourceKind,
+                entry.IsAggregateContainer));
         }
 
         public void SetUnattributedJobsMilliseconds(double milliseconds)
@@ -138,7 +146,8 @@ namespace CS2RuntimeProfiler.Core
             if (string.IsNullOrWhiteSpace(assemblyName))
                 return 0d;
             return _systems
-                .Where(system => string.Equals(system.OwnerAssembly, assemblyName, StringComparison.Ordinal))
+                .Where(system => !system.IsAggregateContainer
+                    && string.Equals(system.OwnerAssembly, assemblyName, StringComparison.Ordinal))
                 .Sum(system => system.Milliseconds);
         }
     }

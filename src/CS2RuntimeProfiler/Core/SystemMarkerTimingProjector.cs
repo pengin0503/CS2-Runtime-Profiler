@@ -33,7 +33,7 @@ namespace CS2RuntimeProfiler.Core
     /// <summary>
     /// Projects captured Unity Entities profiler markers into per-system timing.
     /// Runtime descriptors use the exact marker name reported by Unity Entities when available.
-    /// Legacy descriptors without that identity retain strict full-type-name matching only.
+    /// Legacy descriptors may retain strict full-type-name matching only when explicitly allowed.
     /// Short-name guessing and unknown units are intentionally rejected.
     /// </summary>
     public static class SystemMarkerTimingProjector
@@ -181,6 +181,9 @@ namespace CS2RuntimeProfiler.Core
             if (!string.IsNullOrWhiteSpace(system.ProfilerMarkerName))
                 return string.Equals(markerName, system.ProfilerMarkerName, StringComparison.Ordinal);
 
+            if (!system.AllowLegacyProfilerMarkerMatching)
+                return false;
+
             return MatchesLegacyFullSystemName(markerName, system.FullTypeName);
         }
 
@@ -192,7 +195,7 @@ namespace CS2RuntimeProfiler.Core
             if (string.Equals(markerName, fullTypeName, StringComparison.Ordinal))
                 return true;
 
-            // Legacy compatibility for descriptors created without a runtime marker identity.
+            // Legacy compatibility for descriptors explicitly created without a runtime marker identity.
             return markerName.EndsWith(" " + fullTypeName, StringComparison.Ordinal);
         }
     }

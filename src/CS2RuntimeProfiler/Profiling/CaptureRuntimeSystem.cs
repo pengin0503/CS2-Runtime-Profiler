@@ -15,13 +15,17 @@ namespace CS2RuntimeProfiler.Profiling
     {
         private const double DefaultPrebufferSeconds = 5d;
         private readonly MonitoringLifecycleGate _monitoringGate = new MonitoringLifecycleGate(initiallyEnabled: true);
+        private readonly Dictionary<CaptureSession, SystemTimingSnapshot> _managedTimingByCapture =
+            new Dictionary<CaptureSession, SystemTimingSnapshot>();
         private GlobalMetricsCollector _global;
         private DomainMetricsSystem _domains;
         private RecorderManager _deepRecorders;
         private DeepCaptureStateMachine _stateMachine;
         private DeepCaptureController _controller;
         private ProfilerOverheadTracker _overhead;
-        private CaptureCompletionTimingProcessor _completionTiming;
+        private ManagedSystemTimingHarmonyInstrumentation _managedInstrumentation;
+        private IReadOnlyList<SystemDescriptor> _systems = Array.Empty<SystemDescriptor>();
+        private string _managedInstrumentationUnavailableReason;
         private double _lastObservedTimestamp = double.NegativeInfinity;
         private double _lastOverheadShare;
 
@@ -51,15 +55,20 @@ namespace CS2RuntimeProfiler.Profiling
 
             try
             {
-                var systems = new ProfilerCatalog(world: World).Discover();
-                _completionTiming = new CaptureCompletionTimingProcessor(
-                    systems,
-                    () => _deepRecorders?.Descriptors ?? Array.Empty<RecorderDescriptor>());
+                _systems = new ProfilerCatalog(world: World).Discover();
             }
             catch (Exception ex)
             {
                 Mod.Log.Error(ex, "System catalog discovery failed; per-system timing will be unavailable");
-                _completionTiming = null;
+                _systems = Array.Empty<SystemDescriptor>();
+            }
+
+            _managedInstrumentation = new ManagedSystemTimingHarmonyInstrumentation();
+            if (!_managedInstrumentation.TryInstall(out _managedInstrumentationUnavailableReason))
+            {
+                Mod.Log.Info(
+                    "Managed SystemBase timing fallback unavailable: "
+                    + (_managedInstrumentationUnavailableReason ?? "unknown reason"));
             }
 
             _controller.CaptureCompleted += HandleCaptureCompleted;
@@ -76,6 +85,7 @@ namespace CS2RuntimeProfiler.Profiling
             {
                 _controller?.InterruptActiveCapture(
                     "Monitoring was disabled; the active capture was finalized early and recorder activity was stopped.");
+                ManagedSystemTimingBridge.AbortCapture();
             }
 
             if (!monitoringEnabled)
@@ -89,11 +99,27 @@ namespace CS2RuntimeProfiler.Profiling
             var captureConfiguration = RuntimeCaptureConfigurationProvider.Capture();
             _overhead.Measure(latest.TimestampSeconds, () =>
             {
+                var beforeSession = _controller.CurrentSession;
+                var beforeState = _controller.State;
                 _controller.Observe(
                     latest.TimestampSeconds,
                     latest,
                     RuntimeGameStateProbe.IsAutomaticCaptureAllowed(),
                     prebuffer);
+                var afterSession = _controller.CurrentSession;
+                var afterState = _controller.State;
+
+                if (beforeSession == null && afterSession != null && afterState == CaptureState.DeepCapture)
+                    ManagedSystemTimingBridge.BeginCapture();
+
+                if (afterSession != null
+                    && beforeState == CaptureState.DeepCapture
+                    && afterState != CaptureState.DeepCapture
+                    && ManagedSystemTimingBridge.IsActive)
+                {
+                    _managedTimingByCapture[afterSession] = ManagedSystemTimingBridge.EndCapture(_systems);
+                }
+
                 _controller.CurrentSession?.SetConfiguration(captureConfiguration);
                 _controller.CurrentSession?.SetRuntimeSnapshots(
                     _domains?.Pathfinding?.Latest,
@@ -118,7 +144,10 @@ namespace CS2RuntimeProfiler.Profiling
             ApplyRuntimeSettings();
             var captureConfiguration = RuntimeCaptureConfigurationProvider.Capture();
             var now = _global?.CurrentTimestampSeconds ?? Math.Max(0d, _lastObservedTimestamp);
+            var before = _controller?.CurrentSession;
             _controller?.RequestManualCapture(now, _global?.GetRecentHistory(GetPrebufferSeconds()));
+            if (before == null && _controller?.CurrentSession != null && _controller.State == CaptureState.DeepCapture)
+                ManagedSystemTimingBridge.BeginCapture();
             _controller?.CurrentSession?.SetConfiguration(captureConfiguration);
             _controller?.CurrentSession?.SetRuntimeSnapshots(
                 _domains?.Pathfinding?.Latest,
@@ -129,6 +158,10 @@ namespace CS2RuntimeProfiler.Profiling
         {
             if (_controller != null)
                 _controller.CaptureCompleted -= HandleCaptureCompleted;
+            ManagedSystemTimingBridge.AbortCapture();
+            _managedTimingByCapture.Clear();
+            _managedInstrumentation?.Dispose();
+            _managedInstrumentation = null;
             _controller?.Dispose();
             _controller = null;
             _deepRecorders = null;
@@ -165,18 +198,35 @@ namespace CS2RuntimeProfiler.Profiling
             if (capture == null)
                 return;
 
-            if (_completionTiming != null && _controller != null)
+            try
             {
-                try
+                if (!_managedTimingByCapture.TryGetValue(capture, out var managedTiming))
                 {
-                    _completionTiming.ProcessNew(_controller.CompletedSessions);
+                    managedTiming = ManagedSystemTimingBridge.IsActive
+                        ? ManagedSystemTimingBridge.EndCapture(_systems)
+                        : new SystemTimingSnapshot();
                 }
-                catch (Exception ex)
+                _managedTimingByCapture.Remove(capture);
+
+                CaptureSystemTimingFinalizer.Apply(
+                    capture,
+                    _systems,
+                    _deepRecorders?.Descriptors ?? Array.Empty<RecorderDescriptor>(),
+                    managedTiming);
+
+                if (capture.SystemTiming?.Systems?.Count == 0
+                    && !string.IsNullOrWhiteSpace(_managedInstrumentationUnavailableReason))
                 {
                     capture.AddWarning(
-                        "System timing projection failed for this capture; per-system timing is unavailable.");
-                    Mod.Log.Error(ex, "System timing projection failed for a completed capture");
+                        "Managed SystemBase timing fallback unavailable: "
+                        + _managedInstrumentationUnavailableReason);
                 }
+            }
+            catch (Exception ex)
+            {
+                capture.AddWarning(
+                    "System timing projection failed for this capture; per-system timing is unavailable.");
+                Mod.Log.Error(ex, "System timing projection failed for a completed capture");
             }
 
             try

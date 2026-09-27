@@ -24,10 +24,12 @@ namespace CS2RuntimeProfiler.Profiling
         private DeepCaptureController _controller;
         private ProfilerOverheadTracker _overhead;
         private ManagedSystemTimingHarmonyInstrumentation _managedInstrumentation;
-        private IReadOnlyList<SystemDescriptor> _systems = Array.Empty<SystemDescriptor>();
+        private SystemCatalogCache _systemCatalog;
         private string _managedInstrumentationUnavailableReason;
         private double _lastObservedTimestamp = double.NegativeInfinity;
         private double _lastOverheadShare;
+
+        private IReadOnlyList<SystemDescriptor> Systems => _systemCatalog?.Snapshot ?? Array.Empty<SystemDescriptor>();
 
         public CaptureState State => _controller?.State ?? CaptureState.Monitoring;
         public CaptureSession CurrentSession => _controller?.CurrentSession;
@@ -53,14 +55,12 @@ namespace CS2RuntimeProfiler.Profiling
             _controller.Initialize();
             ApplyRuntimeSettings();
 
-            try
+            _systemCatalog = new SystemCatalogCache(() => new ProfilerCatalog(world: World).Discover());
+            if (!_systemCatalog.TryRefresh(out var catalogError))
             {
-                _systems = new ProfilerCatalog(world: World).Discover();
-            }
-            catch (Exception ex)
-            {
-                Mod.Log.Error(ex, "System catalog discovery failed; per-system timing will be unavailable");
-                _systems = Array.Empty<SystemDescriptor>();
+                Mod.Log.Info(
+                    "Initial system catalog discovery failed; per-system timing will use the last known good catalog: "
+                    + (catalogError ?? "unknown reason"));
             }
 
             _managedInstrumentation = new ManagedSystemTimingHarmonyInstrumentation();
@@ -110,14 +110,17 @@ namespace CS2RuntimeProfiler.Profiling
                 var afterState = _controller.State;
 
                 if (beforeSession == null && afterSession != null && afterState == CaptureState.DeepCapture)
+                {
+                    RefreshSystemCatalogForCapture(afterSession);
                     ManagedSystemTimingBridge.BeginCapture();
+                }
 
                 if (afterSession != null
                     && beforeState == CaptureState.DeepCapture
                     && afterState != CaptureState.DeepCapture
                     && ManagedSystemTimingBridge.IsActive)
                 {
-                    _managedTimingByCapture[afterSession] = ManagedSystemTimingBridge.EndCapture(_systems);
+                    _managedTimingByCapture[afterSession] = ManagedSystemTimingBridge.EndCapture(Systems);
                 }
 
                 _controller.CurrentSession?.SetConfiguration(captureConfiguration);
@@ -147,7 +150,10 @@ namespace CS2RuntimeProfiler.Profiling
             var before = _controller?.CurrentSession;
             _controller?.RequestManualCapture(now, _global?.GetRecentHistory(GetPrebufferSeconds()));
             if (before == null && _controller?.CurrentSession != null && _controller.State == CaptureState.DeepCapture)
+            {
+                RefreshSystemCatalogForCapture(_controller.CurrentSession);
                 ManagedSystemTimingBridge.BeginCapture();
+            }
             _controller?.CurrentSession?.SetConfiguration(captureConfiguration);
             _controller?.CurrentSession?.SetRuntimeSnapshots(
                 _domains?.Pathfinding?.Latest,
@@ -165,6 +171,7 @@ namespace CS2RuntimeProfiler.Profiling
             _controller?.Dispose();
             _controller = null;
             _deepRecorders = null;
+            _systemCatalog = null;
             base.OnDestroy();
         }
 
@@ -193,6 +200,18 @@ namespace CS2RuntimeProfiler.Profiling
                 settings.ResolvedMaxCompletedCaptures);
         }
 
+        private void RefreshSystemCatalogForCapture(CaptureSession capture)
+        {
+            if (_systemCatalog == null || _systemCatalog.TryRefresh(out var error))
+                return;
+
+            var warning =
+                "System catalog refresh failed at capture start; using the last known good catalog: "
+                + (error ?? "unknown reason");
+            capture?.AddWarning(warning);
+            Mod.Log.Info(warning);
+        }
+
         private void HandleCaptureCompleted(CaptureSession capture)
         {
             if (capture == null)
@@ -203,14 +222,14 @@ namespace CS2RuntimeProfiler.Profiling
                 if (!_managedTimingByCapture.TryGetValue(capture, out var managedTiming))
                 {
                     managedTiming = ManagedSystemTimingBridge.IsActive
-                        ? ManagedSystemTimingBridge.EndCapture(_systems)
+                        ? ManagedSystemTimingBridge.EndCapture(Systems)
                         : new SystemTimingSnapshot();
                 }
                 _managedTimingByCapture.Remove(capture);
 
                 CaptureSystemTimingFinalizer.Apply(
                     capture,
-                    _systems,
+                    Systems,
                     _deepRecorders?.Descriptors ?? Array.Empty<RecorderDescriptor>(),
                     managedTiming);
 

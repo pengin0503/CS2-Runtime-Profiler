@@ -40,22 +40,22 @@
 **Interfaces:**
 - Produces: managed `SystemMetricAggregate` whose current/mean/max/total/calls represent the full capture while median/P95/P99 use bounded retained samples.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
   - Add a test recording more than `maxSamplesPerSystem` values and assert exact `Calls`, `TotalMilliseconds`, `MeanMilliseconds`, `MaxMilliseconds`, and latest current value across all calls.
   - Assert bounded sample eviction does not change exact counters.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
   - Run `dotnet test tests/CS2RuntimeProfiler.Tests/CS2RuntimeProfiler.Tests.csproj -v minimal`.
   - Expected: new exact-counter assertions fail because current implementation derives all statistics from retained samples.
 
-- [ ] **Step 3: Implement minimal streaming summary support**
+- [x] **Step 3: Implement minimal streaming summary support**
   - Track exact per-system count, total, max, current alongside the bounded queue.
   - Add the minimal statistics/aggregate factory needed to combine exact counters with bounded percentile samples.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
   - Run the full pure test suite; expected 0 failures.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   - Commit Task 1 changes to `main`.
 
 ### Task 2: Last-known-good System Catalog refresh
@@ -70,23 +70,23 @@
 - Produces: `SystemCatalogCache` with current snapshot and explicit refresh operation that replaces data only after a successful provider call.
 - Consumes: `ProfilerCatalog(world: World).Discover()` as runtime provider.
 
-- [ ] **Step 1: Write failing cache tests**
+- [x] **Step 1: Write failing cache tests**
   - Successful refresh publishes a new snapshot.
   - Provider exception leaves prior snapshot unchanged and returns failure information.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
   - Run full pure tests; expected compile failure because `SystemCatalogCache` does not exist.
 
-- [ ] **Step 3: Implement cache and runtime refresh boundary**
+- [x] **Step 3: Implement cache and runtime refresh boundary**
   - Add cache class with last-known-good semantics.
   - Initialize it in `OnCreate()`.
   - Refresh once whenever a capture newly enters Deep Capture, before managed accumulation begins.
   - Add capture warning on refresh failure while retaining previous snapshot.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
   - Run full pure tests; expected 0 failures.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   - Commit Task 2 changes to `main`.
 
 ### Task 3: Capture-scoped managed instrumentation lifecycle
@@ -102,27 +102,27 @@
 - Produces: capture-scoped lifecycle with start, finish, and abort operations.
 - Consumes: instrumentation install/dispose and `ManagedSystemTimingBridge.BeginCapture/EndCapture/AbortCapture`.
 
-- [ ] **Step 1: Write failing lifecycle tests**
+- [x] **Step 1: Write failing lifecycle tests**
   - Inactive lifecycle has no installed instrumentation.
   - Start installs instrumentation before beginning accumulation.
   - Finish returns a managed snapshot and disposes instrumentation.
   - Abort clears accumulation and disposes instrumentation.
   - Repeated start/finish cycles are supported.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
   - Run full pure tests; expected compile failure because lifecycle type does not exist.
 
-- [ ] **Step 3: Implement lifecycle and wire runtime**
+- [x] **Step 3: Implement lifecycle and wire runtime**
   - Remove unconditional Harmony install from `CaptureRuntimeSystem.OnCreate()`.
   - Start managed lifecycle only when entering Deep Capture.
   - Finish it when leaving Deep Capture and retain the snapshot for capture finalization.
   - Abort it when monitoring is disabled or system is destroyed.
   - Keep marker capture and capture finalization fail-open if managed instrumentation cannot start.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
   - Run full pure tests; expected 0 failures.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   - Commit Task 3 changes to `main`.
 
 ### Task 4: Whole-change review and verification
@@ -131,18 +131,18 @@
 - Review all files changed by Tasks 1–3.
 - Modify only Critical/Important findings discovered in this review, each with RED→GREEN tests.
 
-- [ ] **Step 1: Re-read the design and inspect the final diff**
+- [x] **Step 1: Re-read the design and inspect the final diff**
   - Confirm normal monitoring no longer installs the SystemBase Harmony patch.
   - Confirm capture-time catalog refresh uses last-known-good semantics.
   - Confirm exact whole-capture managed totals cannot be truncated by percentile sample capacity.
 
-- [ ] **Step 2: Run full pure suite**
+- [x] **Step 2: Run full pure suite**
   - `dotnet test tests/CS2RuntimeProfiler.Tests/CS2RuntimeProfiler.Tests.csproj -v minimal`
   - Expected: 0 failures.
 
-- [ ] **Step 3: Check GitHub Actions for final HEAD**
+- [x] **Step 3: Check GitHub Actions for final HEAD**
   - Pure Core Tests must complete successfully.
   - Existing unrelated warnings are reported but not fixed.
 
-- [ ] **Step 4: Report runtime-validation boundary**
+- [x] **Step 4: Report runtime-validation boundary**
   - State clearly that actual CS2 runtime validation still requires a new in-game log/report after installing the new build.

@@ -105,16 +105,4 @@ namespace CS2RuntimeProfiler.Profiling
 
         public void Dispose() => Abort();
     }
-
-    internal sealed class ManagedSystemTimingBridgeAdapter : IManagedSystemTimingBridge
-    {
-        public bool IsActive => ManagedSystemTimingBridge.IsActive;
-
-        public void BeginCapture() => ManagedSystemTimingBridge.BeginCapture();
-
-        public SystemTimingSnapshot EndCapture(IEnumerable<SystemDescriptor> systems) =>
-            ManagedSystemTimingBridge.EndCapture(systems);
-
-        public void AbortCapture() => ManagedSystemTimingBridge.AbortCapture();
-    }
 }

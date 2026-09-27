@@ -73,15 +73,59 @@ public class ManagedSystemTimingCaptureLifecycleTests
         });
     }
 
+    [Test]
+    public void Failed_install_disposes_partial_instrumentation_without_starting_accumulation()
+    {
+        var instrumentation = new FakeInstrumentation { InstallSucceeds = false };
+        var bridge = new FakeBridge();
+        var lifecycle = new ManagedSystemTimingCaptureLifecycle(instrumentation, bridge);
+
+        Assert.That(lifecycle.TryStart(out var reason), Is.False);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(reason, Is.EqualTo("unavailable"));
+            Assert.That(instrumentation.DisposeCalls, Is.EqualTo(1));
+            Assert.That(bridge.BeginCalls, Is.Zero);
+            Assert.That(bridge.IsActive, Is.False);
+            Assert.That(lifecycle.IsActive, Is.False);
+        });
+    }
+
+    [Test]
+    public void Install_exception_is_fail_open_and_disposes_instrumentation()
+    {
+        var instrumentation = new FakeInstrumentation
+        {
+            InstallException = new InvalidOperationException("install failed")
+        };
+        var bridge = new FakeBridge();
+        var lifecycle = new ManagedSystemTimingCaptureLifecycle(instrumentation, bridge);
+
+        Assert.That(lifecycle.TryStart(out var reason), Is.False);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(reason, Is.EqualTo("install failed"));
+            Assert.That(instrumentation.DisposeCalls, Is.EqualTo(1));
+            Assert.That(bridge.BeginCalls, Is.Zero);
+            Assert.That(bridge.IsActive, Is.False);
+            Assert.That(lifecycle.IsActive, Is.False);
+        });
+    }
+
     private sealed class FakeInstrumentation : IManagedSystemTimingInstrumentation
     {
         public int InstallCalls { get; private set; }
         public int DisposeCalls { get; private set; }
         public bool InstallSucceeds { get; set; } = true;
+        public Exception InstallException { get; set; }
 
         public bool TryInstall(out string reason)
         {
             InstallCalls++;
+            if (InstallException != null)
+                throw InstallException;
             reason = InstallSucceeds ? null : "unavailable";
             return InstallSucceeds;
         }

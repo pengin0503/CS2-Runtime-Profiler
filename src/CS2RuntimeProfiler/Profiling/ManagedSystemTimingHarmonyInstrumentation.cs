@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Unity.Entities;
@@ -25,7 +26,9 @@ namespace CS2RuntimeProfiler.Profiling
             {
                 var harmonyAssembly = HarmonyRuntimeResolver.Resolve(
                     AppDomain.CurrentDomain.GetAssemblies(),
-                    Assembly.Load);
+                    Assembly.Load,
+                    Assembly.LoadFrom,
+                    GetProfilerAssemblyDirectory());
                 if (harmonyAssembly == null)
                 {
                     reason = "Harmony runtime is unavailable.";
@@ -113,6 +116,19 @@ namespace CS2RuntimeProfiler.Profiling
             _installed = false;
             _harmony = null;
             _harmonyType = null;
+        }
+
+        private static string GetProfilerAssemblyDirectory()
+        {
+            try
+            {
+                var location = ProfilerAssembly.Location;
+                return string.IsNullOrWhiteSpace(location) ? null : Path.GetDirectoryName(location);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private void SafeUnpatch()

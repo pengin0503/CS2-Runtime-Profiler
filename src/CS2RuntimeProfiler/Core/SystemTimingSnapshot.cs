@@ -107,6 +107,27 @@ namespace CS2RuntimeProfiler.Core
                 sourceKind));
         }
 
+        public void AddEntry(SystemTimingEntry entry)
+        {
+            if (entry == null)
+                return;
+
+            _systems.Add(new SystemTimingEntry(
+                entry.SystemId,
+                entry.Milliseconds,
+                entry.Confidence,
+                entry.OwnerAssembly,
+                entry.PatchOwners,
+                entry.MeanMilliseconds,
+                entry.MedianMilliseconds,
+                entry.P95Milliseconds,
+                entry.P99Milliseconds,
+                entry.MaxMilliseconds,
+                entry.TotalMilliseconds,
+                entry.Calls,
+                entry.SourceKind));
+        }
+
         public void SetUnattributedJobsMilliseconds(double milliseconds)
         {
             UnattributedJobsMilliseconds = Math.Max(0d, milliseconds);

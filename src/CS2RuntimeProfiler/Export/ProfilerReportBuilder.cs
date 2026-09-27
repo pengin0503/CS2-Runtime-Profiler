@@ -58,7 +58,7 @@ namespace CS2RuntimeProfiler.Export
             foreach (var system in snapshot.Systems ?? Array.Empty<SystemUiRow>())
             {
                 if (system == null) continue;
-                report.Systems.Add(new ReportSystem { SystemId = system.Id, OwnerAssembly = system.OwnerAssembly, Confidence = system.Confidence, CurrentMilliseconds = system.CurrentMilliseconds, MeanMilliseconds = system.MeanMilliseconds, MedianMilliseconds = system.MedianMilliseconds, P95Milliseconds = system.P95Milliseconds, P99Milliseconds = system.P99Milliseconds, MaxMilliseconds = system.MaxMilliseconds, TotalMilliseconds = system.TotalMilliseconds, Calls = system.Calls, PatchOwners = (system.PatchOwners ?? Array.Empty<string>()).ToList() });
+                report.Systems.Add(new ReportSystem { SystemId = system.Id, OwnerAssembly = system.OwnerAssembly, Confidence = system.Confidence, CurrentMilliseconds = system.CurrentMilliseconds, MeanMilliseconds = system.MeanMilliseconds, MedianMilliseconds = system.MedianMilliseconds, P95Milliseconds = system.P95Milliseconds, P99Milliseconds = system.P99Milliseconds, MaxMilliseconds = system.MaxMilliseconds, TotalMilliseconds = system.TotalMilliseconds, Calls = system.Calls, PatchOwners = (system.PatchOwners ?? Array.Empty<string>()).ToList(), IsAggregateContainer = system.IsAggregateContainer });
             }
 
             foreach (var mod in snapshot.Mods ?? Array.Empty<ModUiRow>())

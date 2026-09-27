@@ -2,6 +2,8 @@
 
 CS2 Runtime Profiler は、Cities: Skylines II 向けの**読み取り主体の診断用MOD**です。ゲームプレイシステムを自動的に変更したり、MODを無効化したり、十分な根拠のない因果関係を断定したりすることなく、実行時のパフォーマンスに関する根拠を可視化することを目的としています。
 
+プロジェクト概要: [GitHub Pages](https://pengin0503.github.io/CS2-Runtime-Profiler/)
+
 ## 計測内容
 
 このプロファイラーは、低オーバーヘッドの常時計測と、時間を限定した **Deep Capture（詳細計測）** を組み合わせています。

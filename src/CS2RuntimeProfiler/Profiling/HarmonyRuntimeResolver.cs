@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -9,10 +10,13 @@ namespace CS2RuntimeProfiler.Profiling
     {
         private const string HarmonyTypeName = "HarmonyLib.Harmony";
         private const string HarmonyAssemblyName = "0Harmony";
+        private const string HarmonyFileName = "0Harmony.dll";
 
         public static Assembly Resolve(
             IEnumerable<Assembly> loadedAssemblies,
-            Func<AssemblyName, Assembly> loader)
+            Func<AssemblyName, Assembly> loader,
+            Func<string, Assembly> pathLoader = null,
+            string baseDirectory = null)
         {
             try
             {
@@ -21,20 +25,32 @@ namespace CS2RuntimeProfiler.Profiling
                 if (loaded != null)
                     return loaded;
 
-                if (loader == null)
+                if (loader != null)
+                {
+                    try
+                    {
+                        var byName = loader(new AssemblyName(HarmonyAssemblyName));
+                        if (HasHarmonyType(byName))
+                            return byName;
+                    }
+                    catch
+                    {
+                        // Fall through to the explicit sibling-path load below.
+                    }
+                }
+
+                if (pathLoader == null || string.IsNullOrWhiteSpace(baseDirectory))
                     return null;
 
-                Assembly bundled;
                 try
                 {
-                    bundled = loader(new AssemblyName(HarmonyAssemblyName));
+                    var byPath = pathLoader(Path.Combine(baseDirectory, HarmonyFileName));
+                    return HasHarmonyType(byPath) ? byPath : null;
                 }
                 catch
                 {
                     return null;
                 }
-
-                return HasHarmonyType(bundled) ? bundled : null;
             }
             catch
             {

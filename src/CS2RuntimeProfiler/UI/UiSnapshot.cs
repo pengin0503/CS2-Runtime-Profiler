@@ -21,6 +21,7 @@ namespace CS2RuntimeProfiler.UI
         public int CompletedCount { get; set; }
         public string DetailCaptureId { get; set; } = string.Empty;
         public string DetailScope { get; set; } = "live";
+        public CaptureConfigurationSnapshot DetailConfiguration { get; set; }
     }
 
     public sealed class UiMetricRow

@@ -38,7 +38,8 @@ namespace CS2RuntimeProfiler.UI
                 {
                     State = input.CaptureState.ToString(), IsDeepCapture = input.CaptureState == CaptureState.DeepCapture,
                     CompletedCount = captures.Length, DetailCaptureId = detailCapture?.Id ?? string.Empty,
-                    DetailScope = ResolveDetailScope(detailCapture, detailIsCurrent, historicalExport)
+                    DetailScope = ResolveDetailScope(detailCapture, detailIsCurrent, historicalExport),
+                    DetailConfiguration = detailCapture?.Configuration
                 },
                 Systems = systems, Mods = BuildMods(systems),
                 Pathfinding = new PathfindingUiMetrics { Metrics = BuildMetrics(pathfinding) }, DomainMetrics = BuildMetrics(domains),

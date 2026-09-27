@@ -75,8 +75,21 @@ namespace CS2RuntimeProfiler.Profiling
 
         public void Observe(double nowSeconds, GlobalMetricsSnapshot global, IEnumerable<GlobalMetricsSnapshot> prebuffer = null)
         {
+            Observe(nowSeconds, global, automaticTriggerAllowed: true, prebuffer);
+        }
+
+        public void Observe(
+            double nowSeconds,
+            GlobalMetricsSnapshot global,
+            bool automaticTriggerAllowed,
+            IEnumerable<GlobalMetricsSnapshot> prebuffer = null)
+        {
             var before = _stateMachine.State;
-            _stateMachine.Observe(nowSeconds, global?.SelectedSpeed ?? 0, global?.ActualSpeed ?? 0);
+            _stateMachine.Observe(
+                nowSeconds,
+                global?.SelectedSpeed ?? 0,
+                global?.ActualSpeed ?? 0,
+                automaticTriggerAllowed);
             var after = _stateMachine.State;
 
             if (before != CaptureState.DeepCapture && after == CaptureState.DeepCapture)

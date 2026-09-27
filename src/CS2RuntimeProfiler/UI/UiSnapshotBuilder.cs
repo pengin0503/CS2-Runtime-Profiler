@@ -108,7 +108,7 @@ namespace CS2RuntimeProfiler.UI
             if (snapshot == null) return Array.Empty<SystemUiRow>();
             return snapshot.Systems.Select(system => new SystemUiRow
             {
-                Id = system.SystemId, OwnerAssembly = system.OwnerAssembly, SourceKind = system.SourceKind.ToString(),
+                Id = system.SystemId, OwnerAssembly = system.OwnerAssembly, SourceKind = system.SourceKind.ToString(), IsAggregateContainer = system.IsAggregateContainer,
                 CurrentMilliseconds = system.Milliseconds, MeanMilliseconds = system.MeanMilliseconds, MedianMilliseconds = system.MedianMilliseconds,
                 P95Milliseconds = system.P95Milliseconds, P99Milliseconds = system.P99Milliseconds, MaxMilliseconds = system.MaxMilliseconds,
                 TotalMilliseconds = system.TotalMilliseconds, Calls = system.Calls, Confidence = system.Confidence.ToString(), PatchOwners = system.PatchOwners.ToArray()
@@ -118,7 +118,7 @@ namespace CS2RuntimeProfiler.UI
         private static IReadOnlyList<ModUiRow> BuildMods(IReadOnlyList<SystemUiRow> systems)
         {
             if (systems == null || systems.Count == 0) return Array.Empty<ModUiRow>();
-            var direct = systems.Where(system => string.Equals(system.SourceKind, SystemSourceKind.Mod.ToString(), StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(system.OwnerAssembly))
+            var direct = systems.Where(system => !system.IsAggregateContainer && string.Equals(system.SourceKind, SystemSourceKind.Mod.ToString(), StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(system.OwnerAssembly))
                 .GroupBy(system => system.OwnerAssembly, StringComparer.Ordinal)
                 .ToDictionary(group => group.Key, group => new ModUiRow { AssemblyName = group.Key, DirectSystemMilliseconds = group.Sum(system => system.CurrentMilliseconds), DirectSystemCount = group.Count() }, StringComparer.Ordinal);
             foreach (var system in systems)

@@ -24,7 +24,8 @@ namespace CS2RuntimeProfiler.Core
             MetricConfidence confidence,
             IEnumerable<PatchOwnerInfo> patchOwners = null,
             string profilerMarkerName = null,
-            bool allowLegacyProfilerMarkerMatching = true)
+            bool allowLegacyProfilerMarkerMatching = true,
+            bool isAggregateContainer = false)
         {
             FullTypeName = fullTypeName ?? string.Empty;
             AssemblyName = assemblyName ?? string.Empty;
@@ -34,6 +35,7 @@ namespace CS2RuntimeProfiler.Core
             PatchOwners = (patchOwners ?? Array.Empty<PatchOwnerInfo>()).ToArray();
             ProfilerMarkerName = profilerMarkerName ?? string.Empty;
             AllowLegacyProfilerMarkerMatching = allowLegacyProfilerMarkerMatching;
+            IsAggregateContainer = isAggregateContainer;
         }
 
         public string FullTypeName { get; }
@@ -44,5 +46,6 @@ namespace CS2RuntimeProfiler.Core
         public IReadOnlyList<PatchOwnerInfo> PatchOwners { get; }
         public string ProfilerMarkerName { get; }
         public bool AllowLegacyProfilerMarkerMatching { get; }
+        public bool IsAggregateContainer { get; }
     }
 }

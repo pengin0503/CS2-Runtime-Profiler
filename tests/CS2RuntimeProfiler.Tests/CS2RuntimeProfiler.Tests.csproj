@@ -16,6 +16,7 @@
     <Compile Include="../../src/CS2RuntimeProfiler/Profiling/IRecorderBackend.cs" Link="Profiling/IRecorderBackend.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Profiling/RecorderManager.cs" Link="Profiling/RecorderManager.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Profiling/DeepCaptureController.cs" Link="Profiling/DeepCaptureController.cs" />
+    <Compile Include="../../src/CS2RuntimeProfiler/Profiling/HarmonyRuntimeResolver.cs" Link="Profiling/HarmonyRuntimeResolver.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Collectors/IMetricCollector.cs" Link="Collectors/IMetricCollector.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Collectors/ReflectionMetricAccessor.cs" Link="Collectors/ReflectionMetricAccessor.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Collectors/PathfindingCollector.cs" Link="Collectors/PathfindingCollector.cs" />

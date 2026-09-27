@@ -58,7 +58,10 @@ namespace CS2RuntimeProfiler.Profiling
                 profilerMarkerName: TryGetProfilerMarkerName(type),
                 // A catalog bound to a World is runtime evidence. If that type is not live,
                 // keep it for ownership metadata but never infer timing from its CLR name.
-                allowLegacyProfilerMarkerMatching: _world == null);
+                allowLegacyProfilerMarkerMatching: _world == null,
+                // ComponentSystemGroup.Update is an inclusive container around child system updates.
+                // Keep its timing visible, but downstream additive totals must not count it again.
+                isAggregateContainer: typeof(ComponentSystemGroup).IsAssignableFrom(type));
         }
 
         private string TryGetProfilerMarkerName(Type type)

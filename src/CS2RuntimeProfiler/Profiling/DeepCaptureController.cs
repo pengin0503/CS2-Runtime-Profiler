@@ -12,6 +12,8 @@ namespace CS2RuntimeProfiler.Profiling
         private readonly RecorderManager _recorders;
         private readonly DeepCaptureStateMachine _stateMachine;
         private readonly List<CaptureSession> _completed = new List<CaptureSession>();
+        private readonly HashSet<string> _attemptedMarkerIds = new HashSet<string>(StringComparer.Ordinal);
+        private readonly HashSet<string> _activatedMarkerIds = new HashSet<string>(StringComparer.Ordinal);
         private readonly HashSet<string> _capturedMarkerIds = new HashSet<string>(StringComparer.Ordinal);
         private double _overheadCeiling;
         private int _configuredMaxConcurrent;
@@ -118,7 +120,7 @@ namespace CS2RuntimeProfiler.Profiling
             }
 
             _stateMachine.ResetToMonitoring();
-            _capturedMarkerIds.Clear();
+            ResetMarkerCoverageTracking();
             _currentBatchIndex = -1;
             _sampleCounter = 0;
             _consecutiveOverheadBreaches = 0;
@@ -192,7 +194,7 @@ namespace CS2RuntimeProfiler.Profiling
                     CurrentSession.AddGlobalSample(sample);
             }
 
-            _capturedMarkerIds.Clear();
+            ResetMarkerCoverageTracking();
             _currentBatchIndex = -1;
             _sampleCounter = 0;
             ActivateNextBatch(nowSeconds);
@@ -221,7 +223,7 @@ namespace CS2RuntimeProfiler.Profiling
                     new MetricSample(nowSeconds, pair.Value.Value, MetricConfidence.Full, pair.Value.Count));
             }
 
-            CurrentSession.SetMarkerCoverage(_plan.DiscoveredCount, _capturedMarkerIds.Count, _plan.IsBatched);
+            UpdateMarkerCoverage();
         }
 
         private void ActivateNextBatch(double nowSeconds)
@@ -233,16 +235,38 @@ namespace CS2RuntimeProfiler.Profiling
             _currentBatchIndex = (_currentBatchIndex + 1) % _plan.Batches.Count;
             foreach (var id in _plan.Batches[_currentBatchIndex])
             {
+                _attemptedMarkerIds.Add(id);
                 if (_recorders.TryActivate(id, 8, out var error))
+                {
+                    _activatedMarkerIds.Add(id);
                     continue;
+                }
                 CurrentSession?.AddWarning($"Recorder activation failed for '{id}': {error}");
             }
+            UpdateMarkerCoverage();
             _batchStartedAt = nowSeconds;
+        }
+
+        private void UpdateMarkerCoverage()
+        {
+            CurrentSession?.SetMarkerCoverage(
+                _plan?.DiscoveredCount ?? 0,
+                _attemptedMarkerIds.Count,
+                _activatedMarkerIds.Count,
+                _capturedMarkerIds.Count,
+                _plan?.IsBatched ?? false);
+        }
+
+        private void ResetMarkerCoverageTracking()
+        {
+            _attemptedMarkerIds.Clear();
+            _activatedMarkerIds.Clear();
+            _capturedMarkerIds.Clear();
         }
 
         private void FinalizeCapture()
         {
-            CurrentSession.SetMarkerCoverage(_plan?.DiscoveredCount ?? 0, _capturedMarkerIds.Count, _plan?.IsBatched ?? false);
+            UpdateMarkerCoverage();
             _completed.Add(CurrentSession);
             while (_completed.Count > _maxCompletedSessions)
                 _completed.RemoveAt(0);

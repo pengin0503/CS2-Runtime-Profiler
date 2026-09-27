@@ -7,16 +7,31 @@ namespace CS2RuntimeProfiler.Core
     public readonly struct MarkerCoverageInfo
     {
         public MarkerCoverageInfo(int discovered, int captured, bool isBatched)
+            : this(discovered, captured, captured, captured, isBatched)
+        {
+        }
+
+        public MarkerCoverageInfo(int discovered, int attempted, int activated, int sampled, bool isBatched)
         {
             Discovered = Math.Max(0, discovered);
-            Captured = Math.Max(0, Math.Min(captured, Discovered));
+            Attempted = Math.Max(0, Math.Min(attempted, Discovered));
+            Activated = Math.Max(0, Math.Min(activated, Attempted));
+            Sampled = Math.Max(0, Math.Min(sampled, Activated));
             IsBatched = isBatched;
         }
 
         public int Discovered { get; }
-        public int Captured { get; }
+        public int Attempted { get; }
+        public int Activated { get; }
+        public int Sampled { get; }
+        public int Captured => Sampled;
         public bool IsBatched { get; }
-        public double? Ratio => Discovered == 0 ? (double?)null : (double)Captured / Discovered;
+        public double? AttemptedRatio => RatioOf(Attempted);
+        public double? ActivatedRatio => RatioOf(Activated);
+        public double? SampledRatio => RatioOf(Sampled);
+        public double? Ratio => SampledRatio;
+
+        private double? RatioOf(int value) => Discovered == 0 ? (double?)null : (double)value / Discovered;
     }
 
     public sealed class CaptureSession
@@ -64,6 +79,11 @@ namespace CS2RuntimeProfiler.Core
         public void SetMarkerCoverage(int discovered, int captured, bool isBatched)
         {
             MarkerCoverage = new MarkerCoverageInfo(discovered, captured, isBatched);
+        }
+
+        public void SetMarkerCoverage(int discovered, int attempted, int activated, int sampled, bool isBatched)
+        {
+            MarkerCoverage = new MarkerCoverageInfo(discovered, attempted, activated, sampled, isBatched);
         }
 
         public void SetSystemTiming(SystemTimingSnapshot snapshot)

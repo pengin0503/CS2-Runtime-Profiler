@@ -88,8 +88,14 @@ namespace CS2RuntimeProfiler.UI
         public double TriggeredAtSeconds { get; set; }
         public double DurationSeconds { get; set; }
         public int DiscoveredMarkers { get; set; }
+        public int AttemptedMarkers { get; set; }
+        public int ActivatedMarkers { get; set; }
+        public int SampledMarkers { get; set; }
         public int CapturedMarkers { get; set; }
         public bool Batched { get; set; }
+        public double? AttemptedRatio { get; set; }
+        public double? ActivatedRatio { get; set; }
+        public double? SampledRatio { get; set; }
         public double? CoverageRatio { get; set; }
         public int WarningCount { get; set; }
         public double ProfilerOverheadShare { get; set; }

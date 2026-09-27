@@ -55,7 +55,10 @@ namespace CS2RuntimeProfiler.Profiling
                 modName,
                 MetricConfidence.Unavailable,
                 patchOwners,
-                TryGetProfilerMarkerName(type));
+                profilerMarkerName: TryGetProfilerMarkerName(type),
+                // A catalog bound to a World is runtime evidence. If that type is not live,
+                // keep it for ownership metadata but never infer timing from its CLR name.
+                allowLegacyProfilerMarkerMatching: _world == null);
         }
 
         private string TryGetProfilerMarkerName(Type type)

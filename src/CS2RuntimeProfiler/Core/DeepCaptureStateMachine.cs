@@ -65,12 +65,21 @@ namespace CS2RuntimeProfiler.Core
 
         public void Observe(double nowSeconds, double selectedSpeed, double actualSpeed)
         {
+            Observe(nowSeconds, selectedSpeed, actualSpeed, automaticTriggerAllowed: true);
+        }
+
+        public void Observe(
+            double nowSeconds,
+            double selectedSpeed,
+            double actualSpeed,
+            bool automaticTriggerAllowed)
+        {
             AdvanceTimedStates(nowSeconds);
 
             if (State != CaptureState.Monitoring)
                 return;
 
-            if (!_automaticCaptureEnabled)
+            if (!_automaticCaptureEnabled || !automaticTriggerAllowed)
             {
                 _lowEfficiencySince = null;
                 return;

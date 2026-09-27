@@ -35,14 +35,14 @@ export function CapturesTab({ captures, onSelect }: { captures: CaptureSummaryUi
             <Button as="button" variant="flat" className={styles.captureHeader} onSelect={() => { setExpanded(open ? null : capture.id); onSelect?.(capture.id); }}>
               <span><strong>{triggerKindLabel(capture.triggerKind)}</strong><small>{capture.id}</small></span>
               <span>{capture.durationSeconds.toFixed(1)} 秒</span>
-              <span>カバレッジ {formatPercent(capture.coverageRatio)}</span>
+              <span>サンプル取得率 {formatPercent(capture.coverageRatio)}</span>
               <span>{capture.batched ? "分割計測" : "同時計測"}</span>
               <span>負荷 {formatPercent(capture.profilerOverheadShare)}</span>
             </Button>
             {open && (
               <div className={styles.captureBody}>
                 <div className={styles.captureFacts}>
-                  <span>マーカー <b>{capture.capturedMarkers}/{capture.discoveredMarkers}</b></span>
+                  <span>サンプル取得マーカー <b>{capture.capturedMarkers}/{capture.discoveredMarkers}</b></span>
                   <span>警告 <b>{capture.warningCount}</b></span>
                   <span>トリガー時刻 <b>{capture.triggeredAtSeconds.toFixed(2)} 秒</b></span>
                 </div>

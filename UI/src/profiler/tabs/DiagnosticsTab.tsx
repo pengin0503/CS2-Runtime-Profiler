@@ -9,7 +9,7 @@ export function DiagnosticsTab({ diagnostics, captures }: { diagnostics: Diagnos
     ["ゲームバージョン", diagnostics.gameVersion || "利用不可"],
     ["プロファイラーバージョン", diagnostics.profilerVersion || "利用不可"],
     ["検出マーカー数", diagnostics.discoveredMarkerCount],
-    ["取得マーカー数", diagnostics.capturedMarkerCount],
+    ["サンプル取得マーカー数", diagnostics.capturedMarkerCount],
     ["システム行数", diagnostics.systemCount],
     ["マーカーバッチサイズ", diagnostics.markerBatchSize],
     ["サンプリング間引き", diagnostics.samplingStride],
@@ -26,9 +26,9 @@ export function DiagnosticsTab({ diagnostics, captures }: { diagnostics: Diagnos
       <p className={styles.diagnosticMessage}>キャプチャ処理負荷は、詳細キャプチャ制御・集計処理を0.5秒の監視周期に対する割合で示した値です。ゲーム全体のプロファイラー負荷ではありません。</p>
       {latest && (
         <section>
-          <h3>最新キャプチャのカバレッジ</h3>
+          <h3>最新キャプチャのサンプル取得状況</h3>
           <div className={styles.captureFacts}>
-            <span>カバレッジ <b>{formatPercent(latest.coverageRatio)}</b></span>
+            <span>サンプル取得率 <b>{formatPercent(latest.coverageRatio)}</b></span>
             <span>方式 <b>{latest.batched ? "分割計測" : "同時計測"}</b></span>
             <span>最大キャプチャ処理負荷 <b>{formatPercent(latest.profilerOverheadShare)}</b></span>
           </div>

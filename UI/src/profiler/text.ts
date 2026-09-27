@@ -95,6 +95,12 @@ export function captureWarningLabel(warning: string): string {
   match = warning.match(/^Profiler overhead exceeded ([^;]+); marker batching reduced to (\d+) concurrent recorders\.$/);
   if (match) return `プロファイラー負荷が ${match[1]} を超えたため、同時記録数を ${match[2]} に抑えた分割計測へ切り替えました。`;
 
+  match = warning.match(/^Profiler memory grew by ([^ ]+) MiB during this capture; marker batching reduced to (\d+) concurrent recorders\.$/);
+  if (match) return `詳細キャプチャ中のプロファイラーメモリが ${match[1]} MiB 増加したため、同時記録数を ${match[2]} に抑えました。`;
+
+  match = warning.match(/^Profiler memory grew by ([^ ]+) MiB during this capture; sampling stride increased to (\d+)\.$/);
+  if (match) return `詳細キャプチャ中のプロファイラーメモリが ${match[1]} MiB 増加したため、サンプリング間引きを ${match[2]} に増やしました。`;
+
   if (warning === "System timing projection failed for this capture; per-system timing is unavailable.") {
     return "このキャプチャのシステム時間集計に失敗したため、システム別時間は利用できません。";
   }

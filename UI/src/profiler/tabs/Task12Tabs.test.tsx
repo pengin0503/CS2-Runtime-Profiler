@@ -24,8 +24,11 @@ const snapshot: any = {
     {
       id: "capture-1", triggerKind: "Automatic", triggeredAtSeconds: 10,
       durationSeconds: 12, discoveredMarkers: 200, capturedMarkers: 180,
-      batched: true, coverageRatio: 0.9, warningCount: 1, profilerOverheadShare: 0.045,
-      warnings: ["Profiler overhead remains high; sampling stride increased to 4."],
+      batched: true, coverageRatio: 0.9, warningCount: 2, profilerOverheadShare: 0.045,
+      warnings: [
+        "Profiler overhead remains high; sampling stride increased to 4.",
+        "Profiler memory grew by 128 MiB during this capture; marker batching reduced to 75 concurrent recorders."
+      ],
       correlatedChanges: [
         { metric: "actualSpeed", before: 4, after: 2, delta: -2, relativeDelta: -0.5, confidence: "Full" }
       ]
@@ -71,7 +74,9 @@ describe("Task 12 profiler tabs", () => {
     expect(html).toContain("4.5%");
     expect(html).toContain("相関変化が大きい項目");
     expect(html).toContain("プロファイラー負荷が高い状態が続いているため、サンプリング間引きを 4 に増やしました。");
+    expect(html).toContain("詳細キャプチャ中のプロファイラーメモリが 128 MiB 増加したため、同時記録数を 75 に抑えました。");
     expect(html).not.toContain("Profiler overhead remains high");
+    expect(html).not.toContain("Profiler memory grew by");
   });
 
   it("captures render unavailable sampled marker rate as a dash instead of one hundred percent", () => {

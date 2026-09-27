@@ -41,8 +41,21 @@ namespace CS2RuntimeProfiler.Profiling
                 return true;
             }
 
-            if (!_instrumentation.TryInstall(out reason))
+            try
+            {
+                if (!_instrumentation.TryInstall(out reason))
+                {
+                    reason = DisposeInstrumentation(reason);
+                    _active = false;
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                reason = DisposeInstrumentation(ex.GetBaseException().Message);
+                _active = false;
                 return false;
+            }
 
             try
             {
@@ -56,17 +69,18 @@ namespace CS2RuntimeProfiler.Profiling
             }
             catch (Exception ex)
             {
+                reason = ex.GetBaseException().Message;
                 try
                 {
                     _bridge.AbortCapture();
                 }
-                finally
+                catch (Exception abortException)
                 {
-                    _instrumentation.Dispose();
-                    _active = false;
+                    reason += "; bridge cleanup failed: " + abortException.GetBaseException().Message;
                 }
 
-                reason = ex.GetBaseException().Message;
+                reason = DisposeInstrumentation(reason);
+                _active = false;
                 return false;
             }
         }
@@ -83,7 +97,7 @@ namespace CS2RuntimeProfiler.Profiling
             finally
             {
                 _active = false;
-                _instrumentation.Dispose();
+                DisposeInstrumentation(null);
             }
         }
 
@@ -96,13 +110,32 @@ namespace CS2RuntimeProfiler.Profiling
             {
                 _bridge.AbortCapture();
             }
+            catch
+            {
+                // Instrumentation must still be disposed when bridge shutdown fails.
+            }
             finally
             {
                 _active = false;
-                _instrumentation.Dispose();
+                DisposeInstrumentation(null);
             }
         }
 
         public void Dispose() => Abort();
+
+        private string DisposeInstrumentation(string reason)
+        {
+            try
+            {
+                _instrumentation.Dispose();
+            }
+            catch (Exception ex)
+            {
+                var cleanupError = "instrumentation cleanup failed: " + ex.GetBaseException().Message;
+                return string.IsNullOrWhiteSpace(reason) ? cleanupError : reason + "; " + cleanupError;
+            }
+
+            return reason;
+        }
     }
 }

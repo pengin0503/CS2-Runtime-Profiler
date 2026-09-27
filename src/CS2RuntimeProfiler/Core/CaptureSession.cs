@@ -7,9 +7,7 @@ namespace CS2RuntimeProfiler.Core
     public readonly struct MarkerCoverageInfo
     {
         public MarkerCoverageInfo(int discovered, int captured, bool isBatched)
-            : this(discovered, captured, captured, captured, isBatched)
-        {
-        }
+            : this(discovered, captured, captured, captured, isBatched) { }
 
         public MarkerCoverageInfo(int discovered, int attempted, int activated, int sampled, bool isBatched)
         {
@@ -30,7 +28,6 @@ namespace CS2RuntimeProfiler.Core
         public double? ActivatedRatio => RatioOf(Activated);
         public double? SampledRatio => RatioOf(Sampled);
         public double? Ratio => SampledRatio;
-
         private double? RatioOf(int value) => Discovered == 0 ? (double?)null : (double)value / Discovered;
     }
 
@@ -43,9 +40,7 @@ namespace CS2RuntimeProfiler.Core
 
         public CaptureSession(string id, CaptureTrigger trigger, int maxSamplesPerSeries)
         {
-            if (maxSamplesPerSeries < 1)
-                throw new ArgumentOutOfRangeException(nameof(maxSamplesPerSeries));
-
+            if (maxSamplesPerSeries < 1) throw new ArgumentOutOfRangeException(nameof(maxSamplesPerSeries));
             Id = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString("N") : id;
             Trigger = trigger ?? throw new ArgumentNullException(nameof(trigger));
             _maxSamplesPerSeries = maxSamplesPerSeries;
@@ -59,6 +54,9 @@ namespace CS2RuntimeProfiler.Core
         public NamedMetricSnapshot PathfindingSnapshot { get; private set; }
         public NamedMetricSnapshot DomainMetricsSnapshot { get; private set; }
         public double MaxProfilerOverheadShare { get; private set; }
+        public double? TriggerSelectedSpeed { get; private set; }
+        public double? TriggerActualSpeed { get; private set; }
+        public double? TriggerEfficiency { get; private set; }
         public IReadOnlyList<string> Warnings => _warnings;
         public IReadOnlyList<GlobalMetricsSnapshot> GlobalSamples => _globalSamples;
         public IReadOnlyDictionary<string, IReadOnlyList<MetricSample>> MarkerSamples =>
@@ -71,66 +69,55 @@ namespace CS2RuntimeProfiler.Core
                 samples = series.Snapshot();
                 return true;
             }
-
             samples = Array.Empty<MetricSample>();
             return false;
         }
 
-        public void SetMarkerCoverage(int discovered, int captured, bool isBatched)
-        {
+        public void SetMarkerCoverage(int discovered, int captured, bool isBatched) =>
             MarkerCoverage = new MarkerCoverageInfo(discovered, captured, isBatched);
-        }
 
-        public void SetMarkerCoverage(int discovered, int attempted, int activated, int sampled, bool isBatched)
-        {
+        public void SetMarkerCoverage(int discovered, int attempted, int activated, int sampled, bool isBatched) =>
             MarkerCoverage = new MarkerCoverageInfo(discovered, attempted, activated, sampled, isBatched);
+
+        public void SetTriggerSnapshot(GlobalMetricsSnapshot sample)
+        {
+            if (sample == null) return;
+            TriggerSelectedSpeed = sample.SelectedSpeed;
+            TriggerActualSpeed = sample.ActualSpeed;
+            TriggerEfficiency = sample.Efficiency;
         }
 
-        public void SetSystemTiming(SystemTimingSnapshot snapshot)
-        {
-            SystemTiming = snapshot;
-        }
+        public void SetSystemTiming(SystemTimingSnapshot snapshot) => SystemTiming = snapshot;
 
         public void SetRuntimeSnapshots(NamedMetricSnapshot pathfinding, NamedMetricSnapshot domains)
         {
-            if (pathfinding != null)
-                PathfindingSnapshot = pathfinding;
-            if (domains != null)
-                DomainMetricsSnapshot = domains;
+            if (pathfinding != null) PathfindingSnapshot = pathfinding;
+            if (domains != null) DomainMetricsSnapshot = domains;
         }
 
         public void ObserveProfilerOverheadShare(double share)
         {
-            if (double.IsNaN(share) || double.IsInfinity(share) || share < 0d)
-                return;
+            if (double.IsNaN(share) || double.IsInfinity(share) || share < 0d) return;
             MaxProfilerOverheadShare = Math.Max(MaxProfilerOverheadShare, share);
         }
 
         public void AddWarning(string warning)
         {
-            if (!string.IsNullOrWhiteSpace(warning))
-                _warnings.Add(warning.Trim());
+            if (!string.IsNullOrWhiteSpace(warning)) _warnings.Add(warning.Trim());
         }
 
         public void AddGlobalSample(GlobalMetricsSnapshot sample)
         {
-            if (sample == null)
-                return;
-
-            if (_globalSamples.Count > 0
-                && _globalSamples[_globalSamples.Count - 1].TimestampSeconds.Equals(sample.TimestampSeconds))
-                return;
-
+            if (sample == null) return;
+            if (_globalSamples.Count > 0 && _globalSamples[_globalSamples.Count - 1].TimestampSeconds.Equals(sample.TimestampSeconds)) return;
             _globalSamples.Add(sample);
             var maxGlobalSamples = Math.Max(32, _maxSamplesPerSeries * 2);
-            if (_globalSamples.Count > maxGlobalSamples)
-                _globalSamples.RemoveRange(0, _globalSamples.Count - maxGlobalSamples);
+            if (_globalSamples.Count > maxGlobalSamples) _globalSamples.RemoveRange(0, _globalSamples.Count - maxGlobalSamples);
         }
 
         public void AddMarkerSample(string markerId, MetricSample sample)
         {
-            if (string.IsNullOrWhiteSpace(markerId))
-                return;
+            if (string.IsNullOrWhiteSpace(markerId)) return;
             if (!_markerSamples.TryGetValue(markerId, out var series))
             {
                 series = new RollingMetricSeries(_maxSamplesPerSeries);

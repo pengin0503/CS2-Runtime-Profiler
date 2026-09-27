@@ -9,18 +9,10 @@ namespace CS2RuntimeProfiler.Export
     public sealed class ReportNamedValue
     {
         public ReportNamedValue() { }
-        public ReportNamedValue(string name, string value)
-        {
-            Name = name;
-            Value = value;
-        }
-
+        public ReportNamedValue(string name, string value) { Name = name; Value = value; }
         [DataMember(Name = "name", Order = 1)] public string Name { get; set; }
         [DataMember(Name = "value", Order = 2, EmitDefaultValue = false)] public string Value { get; set; }
-
-        internal ReportNamedValue SanitizedCopy() => new ReportNamedValue(
-            PrivacySanitizer.Sanitize(Name),
-            PrivacySanitizer.Sanitize(Value));
+        internal ReportNamedValue SanitizedCopy() => new ReportNamedValue(PrivacySanitizer.Sanitize(Name), PrivacySanitizer.Sanitize(Value));
     }
 
     [DataContract]
@@ -32,23 +24,13 @@ namespace CS2RuntimeProfiler.Export
         [DataMember(Name = "confidence", Order = 4, EmitDefaultValue = false)] public string Confidence { get; set; }
         [DataMember(Name = "availability", Order = 5, EmitDefaultValue = false)] public string Availability { get; set; }
         [DataMember(Name = "note", Order = 6, EmitDefaultValue = false)] public string Note { get; set; }
-
-        internal ReportMetric SanitizedCopy() => new ReportMetric
-        {
-            Name = PrivacySanitizer.Sanitize(Name),
-            Value = Value,
-            Unit = PrivacySanitizer.Sanitize(Unit),
-            Confidence = PrivacySanitizer.Sanitize(Confidence),
-            Availability = PrivacySanitizer.Sanitize(Availability),
-            Note = PrivacySanitizer.Sanitize(Note)
-        };
+        internal ReportMetric SanitizedCopy() => new ReportMetric { Name = PrivacySanitizer.Sanitize(Name), Value = Value, Unit = PrivacySanitizer.Sanitize(Unit), Confidence = PrivacySanitizer.Sanitize(Confidence), Availability = PrivacySanitizer.Sanitize(Availability), Note = PrivacySanitizer.Sanitize(Note) };
     }
 
     [DataContract]
     public sealed class ReportSystem
     {
         public ReportSystem() { PatchOwners = new List<string>(); }
-
         [DataMember(Name = "systemId", Order = 1)] public string SystemId { get; set; }
         [DataMember(Name = "ownerAssembly", Order = 2, EmitDefaultValue = false)] public string OwnerAssembly { get; set; }
         [DataMember(Name = "modName", Order = 3, EmitDefaultValue = false)] public string ModName { get; set; }
@@ -62,23 +44,13 @@ namespace CS2RuntimeProfiler.Export
         [DataMember(Name = "totalMilliseconds", Order = 11, EmitDefaultValue = false)] public double? TotalMilliseconds { get; set; }
         [DataMember(Name = "calls", Order = 12, EmitDefaultValue = false)] public int? Calls { get; set; }
         [DataMember(Name = "patchOwners", Order = 13)] public List<string> PatchOwners { get; set; }
-
-        internal ReportSystem SanitizedCopy() => new ReportSystem
-        {
-            SystemId = PrivacySanitizer.Sanitize(SystemId), OwnerAssembly = PrivacySanitizer.Sanitize(OwnerAssembly),
-            ModName = PrivacySanitizer.Sanitize(ModName), Confidence = PrivacySanitizer.Sanitize(Confidence),
-            CurrentMilliseconds = CurrentMilliseconds, MeanMilliseconds = MeanMilliseconds, MedianMilliseconds = MedianMilliseconds,
-            P95Milliseconds = P95Milliseconds, P99Milliseconds = P99Milliseconds, MaxMilliseconds = MaxMilliseconds,
-            TotalMilliseconds = TotalMilliseconds, Calls = Calls,
-            PatchOwners = (PatchOwners ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList()
-        };
+        internal ReportSystem SanitizedCopy() => new ReportSystem { SystemId = PrivacySanitizer.Sanitize(SystemId), OwnerAssembly = PrivacySanitizer.Sanitize(OwnerAssembly), ModName = PrivacySanitizer.Sanitize(ModName), Confidence = PrivacySanitizer.Sanitize(Confidence), CurrentMilliseconds = CurrentMilliseconds, MeanMilliseconds = MeanMilliseconds, MedianMilliseconds = MedianMilliseconds, P95Milliseconds = P95Milliseconds, P99Milliseconds = P99Milliseconds, MaxMilliseconds = MaxMilliseconds, TotalMilliseconds = TotalMilliseconds, Calls = Calls, PatchOwners = (PatchOwners ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList() };
     }
 
     [DataContract]
     public sealed class ReportCapture
     {
         public ReportCapture() { Warnings = new List<string>(); }
-
         [DataMember(Name = "id", Order = 1)] public string Id { get; set; }
         [DataMember(Name = "triggerKind", Order = 2, EmitDefaultValue = false)] public string TriggerKind { get; set; }
         [DataMember(Name = "triggeredAtSeconds", Order = 3)] public double TriggeredAtSeconds { get; set; }
@@ -95,17 +67,10 @@ namespace CS2RuntimeProfiler.Export
         [DataMember(Name = "attemptedRatio", Order = 14, EmitDefaultValue = false)] public double? AttemptedRatio { get; set; }
         [DataMember(Name = "activatedRatio", Order = 15, EmitDefaultValue = false)] public double? ActivatedRatio { get; set; }
         [DataMember(Name = "sampledRatio", Order = 16, EmitDefaultValue = false)] public double? SampledRatio { get; set; }
-
-        internal ReportCapture SanitizedCopy() => new ReportCapture
-        {
-            Id = PrivacySanitizer.Sanitize(Id), TriggerKind = PrivacySanitizer.Sanitize(TriggerKind),
-            TriggeredAtSeconds = TriggeredAtSeconds, DurationSeconds = DurationSeconds,
-            DiscoveredMarkers = DiscoveredMarkers, CapturedMarkers = CapturedMarkers, CoverageRatio = CoverageRatio,
-            Batched = Batched, ProfilerOverheadShare = ProfilerOverheadShare,
-            Warnings = (Warnings ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(),
-            AttemptedMarkers = AttemptedMarkers, ActivatedMarkers = ActivatedMarkers, SampledMarkers = SampledMarkers,
-            AttemptedRatio = AttemptedRatio, ActivatedRatio = ActivatedRatio, SampledRatio = SampledRatio
-        };
+        [DataMember(Name = "triggerSelectedSpeed", Order = 17, EmitDefaultValue = false)] public double? TriggerSelectedSpeed { get; set; }
+        [DataMember(Name = "triggerActualSpeed", Order = 18, EmitDefaultValue = false)] public double? TriggerActualSpeed { get; set; }
+        [DataMember(Name = "triggerEfficiency", Order = 19, EmitDefaultValue = false)] public double? TriggerEfficiency { get; set; }
+        internal ReportCapture SanitizedCopy() => new ReportCapture { Id = PrivacySanitizer.Sanitize(Id), TriggerKind = PrivacySanitizer.Sanitize(TriggerKind), TriggeredAtSeconds = TriggeredAtSeconds, DurationSeconds = DurationSeconds, DiscoveredMarkers = DiscoveredMarkers, CapturedMarkers = CapturedMarkers, CoverageRatio = CoverageRatio, Batched = Batched, ProfilerOverheadShare = ProfilerOverheadShare, Warnings = (Warnings ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), AttemptedMarkers = AttemptedMarkers, ActivatedMarkers = ActivatedMarkers, SampledMarkers = SampledMarkers, AttemptedRatio = AttemptedRatio, ActivatedRatio = ActivatedRatio, SampledRatio = SampledRatio, TriggerSelectedSpeed = TriggerSelectedSpeed, TriggerActualSpeed = TriggerActualSpeed, TriggerEfficiency = TriggerEfficiency };
     }
 
     [DataContract]
@@ -115,22 +80,14 @@ namespace CS2RuntimeProfiler.Export
         [DataMember(Name = "metric", Order = 2)] public string Metric { get; set; }
         [DataMember(Name = "value", Order = 3)] public double Value { get; set; }
         [DataMember(Name = "confidence", Order = 4, EmitDefaultValue = false)] public string Confidence { get; set; }
-        internal ReportTimelinePoint SanitizedCopy() => new ReportTimelinePoint
-        { TimestampSeconds = TimestampSeconds, Metric = PrivacySanitizer.Sanitize(Metric), Value = Value, Confidence = PrivacySanitizer.Sanitize(Confidence) };
+        internal ReportTimelinePoint SanitizedCopy() => new ReportTimelinePoint { TimestampSeconds = TimestampSeconds, Metric = PrivacySanitizer.Sanitize(Metric), Value = Value, Confidence = PrivacySanitizer.Sanitize(Confidence) };
     }
 
     [DataContract]
     public sealed class PerformanceReport
     {
         public const int CurrentSchemaVersion = 2;
-        public PerformanceReport()
-        {
-            SchemaVersion = CurrentSchemaVersion; EnabledMods = new List<string>(); CaptureConfig = new List<ReportNamedValue>();
-            Capabilities = new List<ReportNamedValue>(); GlobalMetrics = new List<ReportMetric>(); Systems = new List<ReportSystem>();
-            ModAttribution = new List<ReportNamedValue>(); Pathfinding = new List<ReportMetric>(); DomainMetrics = new List<ReportMetric>();
-            Timeline = new List<ReportTimelinePoint>(); Captures = new List<ReportCapture>(); ProfilerOverhead = new List<ReportMetric>(); Warnings = new List<string>();
-        }
-
+        public PerformanceReport() { SchemaVersion = CurrentSchemaVersion; EnabledMods = new List<string>(); CaptureConfig = new List<ReportNamedValue>(); Capabilities = new List<ReportNamedValue>(); GlobalMetrics = new List<ReportMetric>(); Systems = new List<ReportSystem>(); ModAttribution = new List<ReportNamedValue>(); Pathfinding = new List<ReportMetric>(); DomainMetrics = new List<ReportMetric>(); Timeline = new List<ReportTimelinePoint>(); Captures = new List<ReportCapture>(); ProfilerOverhead = new List<ReportMetric>(); Warnings = new List<string>(); }
         [DataMember(Name = "schemaVersion", Order = 1)] public int SchemaVersion { get; set; }
         [DataMember(Name = "gameVersion", Order = 2, EmitDefaultValue = false)] public string GameVersion { get; set; }
         [DataMember(Name = "profilerVersion", Order = 3, EmitDefaultValue = false)] public string ProfilerVersion { get; set; }
@@ -148,30 +105,7 @@ namespace CS2RuntimeProfiler.Export
         [DataMember(Name = "warnings", Order = 15)] public List<string> Warnings { get; set; }
         [DataMember(Name = "captures", Order = 16)] public List<ReportCapture> Captures { get; set; }
         [DataMember(Name = "cityName", Order = 100, EmitDefaultValue = false)] public string CityName { get; set; }
-
         public static PerformanceReport CreateForTest() => new PerformanceReport { ProfilerVersion = "test", CityName = null };
-
-        internal PerformanceReport SanitizedCopy()
-        {
-            return new PerformanceReport
-            {
-                SchemaVersion = SchemaVersion <= 0 ? CurrentSchemaVersion : SchemaVersion,
-                GameVersion = PrivacySanitizer.Sanitize(GameVersion), ProfilerVersion = PrivacySanitizer.Sanitize(ProfilerVersion),
-                HardwareSummary = PrivacySanitizer.Sanitize(HardwareSummary),
-                EnabledMods = (EnabledMods ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(),
-                CaptureConfig = (CaptureConfig ?? new List<ReportNamedValue>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
-                Capabilities = (Capabilities ?? new List<ReportNamedValue>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
-                GlobalMetrics = (GlobalMetrics ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
-                Systems = (Systems ?? new List<ReportSystem>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
-                ModAttribution = (ModAttribution ?? new List<ReportNamedValue>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
-                Pathfinding = (Pathfinding ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
-                DomainMetrics = (DomainMetrics ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
-                Timeline = (Timeline ?? new List<ReportTimelinePoint>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
-                ProfilerOverhead = (ProfilerOverhead ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
-                Warnings = (Warnings ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(),
-                Captures = (Captures ?? new List<ReportCapture>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(),
-                CityName = string.IsNullOrWhiteSpace(CityName) ? null : PrivacySanitizer.Sanitize(CityName)
-            };
-        }
+        internal PerformanceReport SanitizedCopy() => new PerformanceReport { SchemaVersion = SchemaVersion <= 0 ? CurrentSchemaVersion : SchemaVersion, GameVersion = PrivacySanitizer.Sanitize(GameVersion), ProfilerVersion = PrivacySanitizer.Sanitize(ProfilerVersion), HardwareSummary = PrivacySanitizer.Sanitize(HardwareSummary), EnabledMods = (EnabledMods ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), CaptureConfig = (CaptureConfig ?? new List<ReportNamedValue>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Capabilities = (Capabilities ?? new List<ReportNamedValue>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), GlobalMetrics = (GlobalMetrics ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Systems = (Systems ?? new List<ReportSystem>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), ModAttribution = (ModAttribution ?? new List<ReportNamedValue>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Pathfinding = (Pathfinding ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), DomainMetrics = (DomainMetrics ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Timeline = (Timeline ?? new List<ReportTimelinePoint>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), ProfilerOverhead = (ProfilerOverhead ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Warnings = (Warnings ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), Captures = (Captures ?? new List<ReportCapture>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), CityName = string.IsNullOrWhiteSpace(CityName) ? null : PrivacySanitizer.Sanitize(CityName) };
     }
 }

@@ -86,6 +86,9 @@ namespace CS2RuntimeProfiler.UI
         public string Id { get; set; } = string.Empty;
         public string TriggerKind { get; set; } = string.Empty;
         public double TriggeredAtSeconds { get; set; }
+        public double? TriggerSelectedSpeed { get; set; }
+        public double? TriggerActualSpeed { get; set; }
+        public double? TriggerEfficiency { get; set; }
         public double DurationSeconds { get; set; }
         public int DiscoveredMarkers { get; set; }
         public int AttemptedMarkers { get; set; }
@@ -134,25 +137,9 @@ namespace CS2RuntimeProfiler.UI
     public sealed class UiSnapshotInput
     {
         public UiSnapshotInput() { }
-
-        public UiSnapshotInput(
-            GlobalMetricsSnapshot global,
-            CaptureState captureState,
-            NamedMetricSnapshot pathfinding,
-            NamedMetricSnapshot domains,
-            SystemTimingSnapshot systems,
-            IReadOnlyList<CaptureSession> captures,
-            double profilerOverheadShare,
-            IReadOnlyList<string> diagnostics)
+        public UiSnapshotInput(GlobalMetricsSnapshot global, CaptureState captureState, NamedMetricSnapshot pathfinding, NamedMetricSnapshot domains, SystemTimingSnapshot systems, IReadOnlyList<CaptureSession> captures, double profilerOverheadShare, IReadOnlyList<string> diagnostics)
         {
-            Global = global;
-            CaptureState = captureState;
-            Pathfinding = pathfinding;
-            Domains = domains;
-            Systems = systems;
-            Captures = captures;
-            ProfilerOverheadShare = profilerOverheadShare;
-            Diagnostics = diagnostics;
+            Global = global; CaptureState = captureState; Pathfinding = pathfinding; Domains = domains; Systems = systems; Captures = captures; ProfilerOverheadShare = profilerOverheadShare; Diagnostics = diagnostics;
         }
 
         public GlobalMetricsSnapshot Global { get; set; }

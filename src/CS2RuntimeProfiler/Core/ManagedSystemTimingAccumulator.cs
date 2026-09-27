@@ -6,9 +6,36 @@ namespace CS2RuntimeProfiler.Core
 {
     public sealed class ManagedSystemTimingAccumulator
     {
+        private sealed class SystemState
+        {
+            public SystemState(int capacity)
+            {
+                DistributionSamples = new Queue<double>(capacity);
+            }
+
+            public Queue<double> DistributionSamples { get; }
+            public long CallCount { get; private set; }
+            public double TotalMilliseconds { get; private set; }
+            public double CurrentMilliseconds { get; private set; }
+            public double MaxMilliseconds { get; private set; }
+
+            public void Record(double milliseconds, int capacity)
+            {
+                CallCount++;
+                TotalMilliseconds += milliseconds;
+                CurrentMilliseconds = milliseconds;
+                if (CallCount == 1 || milliseconds > MaxMilliseconds)
+                    MaxMilliseconds = milliseconds;
+
+                while (DistributionSamples.Count >= capacity)
+                    DistributionSamples.Dequeue();
+                DistributionSamples.Enqueue(milliseconds);
+            }
+        }
+
         private readonly int _maxSamplesPerSystem;
-        private readonly Dictionary<string, Queue<double>> _samples =
-            new Dictionary<string, Queue<double>>(StringComparer.Ordinal);
+        private readonly Dictionary<string, SystemState> _systems =
+            new Dictionary<string, SystemState>(StringComparer.Ordinal);
 
         public ManagedSystemTimingAccumulator(int maxSamplesPerSystem = 512)
         {
@@ -17,7 +44,7 @@ namespace CS2RuntimeProfiler.Core
             _maxSamplesPerSystem = maxSamplesPerSystem;
         }
 
-        public int SystemCount => _samples.Count;
+        public int SystemCount => _systems.Count;
 
         public void Record(string systemId, double milliseconds)
         {
@@ -29,18 +56,16 @@ namespace CS2RuntimeProfiler.Core
                 return;
             }
 
-            if (!_samples.TryGetValue(systemId, out var series))
+            if (!_systems.TryGetValue(systemId, out var state))
             {
-                series = new Queue<double>(_maxSamplesPerSystem);
-                _samples[systemId] = series;
+                state = new SystemState(_maxSamplesPerSystem);
+                _systems[systemId] = state;
             }
 
-            while (series.Count >= _maxSamplesPerSystem)
-                series.Dequeue();
-            series.Enqueue(milliseconds);
+            state.Record(milliseconds, _maxSamplesPerSystem);
         }
 
-        public void Clear() => _samples.Clear();
+        public void Clear() => _systems.Clear();
 
         public SystemTimingSnapshot BuildSnapshot(IEnumerable<SystemDescriptor> systems)
         {
@@ -50,18 +75,25 @@ namespace CS2RuntimeProfiler.Core
                 .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
             var snapshot = new SystemTimingSnapshot();
 
-            foreach (var pair in _samples.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            foreach (var pair in _systems.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {
-                var values = pair.Value.ToArray();
-                if (values.Length == 0)
+                var state = pair.Value;
+                var values = state.DistributionSamples.ToArray();
+                if (state.CallCount <= 0 || values.Length == 0)
                     continue;
 
+                var calls = state.CallCount >= int.MaxValue ? int.MaxValue : (int)state.CallCount;
+                var mean = state.TotalMilliseconds / state.CallCount;
                 descriptors.TryGetValue(pair.Key, out var descriptor);
-                var aggregate = SystemMetricAggregate.FromSamples(
+                var aggregate = SystemMetricAggregate.FromStreamingSummary(
                     pair.Key,
                     values,
-                    MetricConfidence.Managed,
-                    calls: values.Length);
+                    state.CurrentMilliseconds,
+                    mean,
+                    state.MaxMilliseconds,
+                    state.TotalMilliseconds,
+                    calls,
+                    MetricConfidence.Managed);
                 snapshot.AddSystemAggregate(
                     aggregate,
                     descriptor?.AssemblyName ?? string.Empty,

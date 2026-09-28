@@ -5,9 +5,45 @@ import { formatByUnit, shortMetricName } from "../format";
 import { confidenceLabel } from "../text";
 import styles from "../profiler.module.scss";
 
-function displayMetric(metric: string): string {
-  const withoutPrefix = metric.replace(/^(recorder|marker|system):/, "");
-  return shortMetricName(withoutPrefix);
+interface MetricIdentity {
+  kind: string;
+  qualifier: string;
+  shortName: string;
+}
+
+function metricIdentity(metric: string): MetricIdentity {
+  const prefix = metric.match(/^(recorder|marker|system):/);
+  const kind = prefix?.[1] ?? "metric";
+  const body = metric.replace(/^(recorder|marker|system):/, "");
+  const parts = body.split("\u001f");
+  return {
+    kind,
+    qualifier: parts.length > 1 ? parts.slice(0, -1).join(" / ") : "",
+    shortName: shortMetricName(body)
+  };
+}
+
+export function buildSeriesLabels(metrics: string[]): Map<string, string> {
+  const identities = metrics.map(metric => ({ metric, ...metricIdentity(metric) }));
+  const shortCounts = new Map<string, number>();
+  for (const item of identities) shortCounts.set(item.shortName, (shortCounts.get(item.shortName) ?? 0) + 1);
+
+  const firstPass = identities.map(item => ({
+    ...item,
+    label: (shortCounts.get(item.shortName) ?? 0) > 1
+      ? `${item.qualifier || item.kind} / ${item.shortName}`
+      : item.shortName
+  }));
+  const labelCounts = new Map<string, number>();
+  for (const item of firstPass) labelCounts.set(item.label, (labelCounts.get(item.label) ?? 0) + 1);
+
+  const result = new Map<string, string>();
+  for (const item of firstPass) {
+    result.set(item.metric, (labelCounts.get(item.label) ?? 0) > 1
+      ? `${item.kind} / ${item.label}`
+      : item.label);
+  }
+  return result;
 }
 
 interface GeometryPoint {
@@ -66,6 +102,7 @@ export function chartableSeries(points: TimelinePoint[]): { series: Series[]; si
 
 export function TimelineTab({ points }: { points: TimelinePoint[] }) {
   const { series, singleSampleCount } = useMemo(() => chartableSeries(points), [points]);
+  const labels = useMemo(() => buildSeriesLabels(series.map(item => item.metric)), [series]);
   const [hidden, setHidden] = useState<Set<string>>(() => new Set());
   const [selectedTime, setSelectedTime] = useState<number | null>(null);
 
@@ -83,6 +120,7 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
   const minTime = Math.min(...allPoints.map(point => point.timestampSeconds));
   const maxTime = Math.max(...allPoints.map(point => point.timestampSeconds));
   const colorOf = (metric: string) => SERIES_COLORS[series.findIndex(item => item.metric === metric) % SERIES_COLORS.length];
+  const labelOf = (metric: string) => labels.get(metric) ?? metricIdentity(metric).shortName;
   const visible = series.filter(item => !hidden.has(item.metric));
   const selected = selectedTime == null
     ? []
@@ -106,7 +144,7 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
               aria-pressed={shown}
             >
               <span className={styles.seriesSwatch} style={{ backgroundColor: shown ? colorOf(item.metric) : "transparent", borderColor: colorOf(item.metric) }} />
-              <span>{displayMetric(item.metric)}</span>
+              <span>{labelOf(item.metric)}</span>
             </Button>
           );
         })}
@@ -124,7 +162,7 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
                 <polyline points={coords.map(coord => `${coord.x.toFixed(1)},${coord.y.toFixed(1)}`).join(" ")} fill="none" stroke={color} className={styles.chartLine} />
                 {coords.map(({ point, x, y }, index) => (
                   <circle key={`${point.timestampSeconds}-${index}`} cx={x} cy={y} r="5" fill={color} className={styles.chartPoint} onClick={() => setSelectedTime(point.timestampSeconds)}>
-                    <title>{`${displayMetric(item.metric)} / ${point.timestampSeconds.toFixed(2)}秒 = ${formatByUnit(point.value, item.unitType)}（${confidenceLabel(point.confidence)}）`}</title>
+                    <title>{`${labelOf(item.metric)} / ${point.timestampSeconds.toFixed(2)}秒 = ${formatByUnit(point.value, item.unitType)}（${confidenceLabel(point.confidence)}）`}</title>
                   </circle>
                 ))}
               </g>
@@ -140,7 +178,7 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
         <div className={styles.selectedPoint}>
           <strong>時刻 = {selectedTime.toFixed(2)} 秒</strong>
           {selected.map(({ point, unitType }) => (
-            <span key={point.metric}>{displayMetric(point.metric)}: {formatByUnit(point.value, unitType)}（{confidenceLabel(point.confidence)}）</span>
+            <span key={point.metric}>{labelOf(point.metric)}: {formatByUnit(point.value, unitType)}（{confidenceLabel(point.confidence)}）</span>
           ))}
         </div>
       )}

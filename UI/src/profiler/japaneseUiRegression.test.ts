@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { formatMetricValue } from "./format";
+import { captureWarningLabel } from "./text";
 
 describe("Japanese profiler UI regression coverage", () => {
   it("formats profiler time and memory readings using their Unity recorder units", () => {
@@ -23,6 +24,20 @@ describe("Japanese profiler UI regression coverage", () => {
     expect(source).toContain('variant="floating"');
     expect(source).toContain("onSelect={onToggle}");
     expect(source).not.toContain(">Profiler<");
+  });
+
+  it("localizes mixed-timing and cross-capture memory warnings", () => {
+    const mixed = captureWarningLabel(
+      "System timing mixes native ECS marker timing (12 systems) with managed synchronous SystemBase fallback (4 systems). Managed rows exclude Job/Burst worker time, so Systems/Mods totals do not represent total CPU cost.");
+    const memory = captureWarningLabel(
+      "Profiler memory baseline increased across four consecutive captures by 300 MiB; this is a retention pressure signal, not proof of a memory leak.");
+
+    expect(mixed).toContain("ネイティブ ECS マーカー 12 件");
+    expect(mixed).toContain("Job/Burst ワーカー時間");
+    expect(mixed).not.toContain("System timing mixes");
+    expect(memory).toContain("4回連続のキャプチャ");
+    expect(memory).toContain("メモリリークを示す証拠ではありません");
+    expect(memory).not.toContain("retention pressure");
   });
 
   it("registers Japanese option localization through the game localization manager", () => {

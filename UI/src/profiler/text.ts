@@ -95,11 +95,23 @@ export function captureWarningLabel(warning: string): string {
   match = warning.match(/^Profiler overhead exceeded ([^;]+); marker batching reduced to (\d+) concurrent recorders\.$/);
   if (match) return `プロファイラー負荷が ${match[1]} を超えたため、同時記録数を ${match[2]} に抑えた分割計測へ切り替えました。`;
 
+  match = warning.match(/^Measured capture-controller overhead remains high; sampling stride increased to (\d+)\. This overhead metric does not include managed SystemBase timing instrumentation cost\.$/);
+  if (match) return `詳細キャプチャ制御部分の計測負荷が高い状態が続いたため、サンプリング間引きを ${match[1]} に増やしました。この負荷率には管理コードの SystemBase 時間計測コストは含まれません。`;
+
+  match = warning.match(/^Measured capture-controller overhead exceeded ([^;]+) repeatedly; marker batching reduced to (\d+) concurrent recorders\. This overhead metric does not include managed SystemBase timing instrumentation cost\.$/);
+  if (match) return `詳細キャプチャ制御部分の計測負荷が ${match[1]} を繰り返し超えたため、同時記録数を ${match[2]} に抑えました。この負荷率には管理コードの SystemBase 時間計測コストは含まれません。`;
+
+  match = warning.match(/^Measured capture-controller overhead remained above ([^ ]+) after repeated load reductions; the capture was finalized early\. This overhead metric does not include managed SystemBase timing instrumentation cost\.$/);
+  if (match) return `負荷削減後も詳細キャプチャ制御部分の計測負荷が ${match[1]} を超え続けたため、キャプチャを早期終了しました。この負荷率には管理コードの SystemBase 時間計測コストは含まれません。`;
+
   match = warning.match(/^Profiler memory grew by ([^ ]+) MiB during this capture; marker batching reduced to (\d+) concurrent recorders\.$/);
   if (match) return `詳細キャプチャ中のプロファイラーメモリが ${match[1]} MiB 増加したため、同時記録数を ${match[2]} に抑えました。`;
 
   match = warning.match(/^Profiler memory grew by ([^ ]+) MiB during this capture; sampling stride increased to (\d+)\.$/);
   if (match) return `詳細キャプチャ中のプロファイラーメモリが ${match[1]} MiB 増加したため、サンプリング間引きを ${match[2]} に増やしました。`;
+
+  match = warning.match(/^Profiler memory grew by ([^ ]+) MiB during this capture, exceeding the 512 MiB safety limit; the capture was finalized early\.$/);
+  if (match) return `詳細キャプチャ中のプロファイラーメモリが ${match[1]} MiB 増加して安全上限の 512 MiB を超えたため、キャプチャを早期終了しました。`;
 
   if (warning === "System timing projection failed for this capture; per-system timing is unavailable.") {
     return "このキャプチャのシステム時間集計に失敗したため、システム別時間は利用できません。";

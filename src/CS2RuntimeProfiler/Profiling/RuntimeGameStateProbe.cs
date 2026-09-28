@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using CS2RuntimeProfiler.Core;
 using Game.SceneFlow;
 
 namespace CS2RuntimeProfiler.Profiling
@@ -11,35 +12,69 @@ namespace CS2RuntimeProfiler.Profiling
 
         public static bool IsAutomaticCaptureAllowed()
         {
+            return IsAutomaticCaptureAllowed(simulationSystem: null);
+        }
+
+        public static bool IsAutomaticCaptureAllowed(object simulationSystem)
+        {
             var gameManager = GameManager.instance;
             if (gameManager == null)
                 return false;
 
+            var loading = TryReadBool(gameManager,
+                new[] { "isGameLoading", "IsGameLoading" },
+                new[] { "m_IsGameLoading", "isGameLoading" },
+                new[] { "get_isGameLoading" },
+                fallback: false);
+            var paused = simulationSystem != null && TryReadBool(simulationSystem,
+                new[] { "simulationPaused", "SimulationPaused" },
+                new[] { "m_SimulationPaused", "simulationPaused" },
+                new[] { "get_simulationPaused", "get_SimulationPaused" },
+                fallback: false);
+
+            return AutomaticCapturePolicy.IsAllowed(loading, paused);
+        }
+
+        private static bool TryReadBool(
+            object instance,
+            string[] propertyNames,
+            string[] fieldNames,
+            string[] getterNames,
+            bool fallback)
+        {
+            if (instance == null)
+                return fallback;
+
             try
             {
-                var type = gameManager.GetType();
-                var property = type.GetProperty("isGameLoading", InstanceFlags)
-                    ?? type.GetProperty("IsGameLoading", InstanceFlags);
-                if (property != null && property.PropertyType == typeof(bool) && property.GetIndexParameters().Length == 0)
-                    return !(bool)property.GetValue(gameManager, null);
+                var type = instance.GetType();
+                foreach (var name in propertyNames ?? Array.Empty<string>())
+                {
+                    var property = type.GetProperty(name, InstanceFlags);
+                    if (property != null && property.PropertyType == typeof(bool) && property.GetIndexParameters().Length == 0)
+                        return (bool)property.GetValue(instance, null);
+                }
 
-                var getter = type.GetMethod("get_isGameLoading", InstanceFlags, null, Type.EmptyTypes, null);
-                if (getter != null && getter.ReturnType == typeof(bool))
-                    return !(bool)getter.Invoke(gameManager, null);
+                foreach (var name in getterNames ?? Array.Empty<string>())
+                {
+                    var getter = type.GetMethod(name, InstanceFlags, null, Type.EmptyTypes, null);
+                    if (getter != null && getter.ReturnType == typeof(bool))
+                        return (bool)getter.Invoke(instance, null);
+                }
 
-                var field = type.GetField("m_IsGameLoading", InstanceFlags)
-                    ?? type.GetField("isGameLoading", InstanceFlags);
-                if (field != null && field.FieldType == typeof(bool))
-                    return !(bool)field.GetValue(gameManager);
+                foreach (var name in fieldNames ?? Array.Empty<string>())
+                {
+                    var field = type.GetField(name, InstanceFlags);
+                    if (field != null && field.FieldType == typeof(bool))
+                        return (bool)field.GetValue(instance);
+                }
             }
             catch
             {
-                // Loading-state discovery is a compatibility gate only. If a future game build changes
-                // the member, fail open rather than disabling automatic capture for the whole session.
-                return true;
+                // Compatibility gate: if a future build changes a member, leave only that signal fail-open.
             }
 
-            return true;
+            return fallback;
         }
     }
 }

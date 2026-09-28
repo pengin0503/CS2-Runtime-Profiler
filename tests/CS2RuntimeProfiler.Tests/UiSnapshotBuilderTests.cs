@@ -139,5 +139,24 @@ public class UiSnapshotBuilderTests
         Assert.That(snapshot.Pathfinding.Metrics, Is.Empty);
         Assert.That(snapshot.DomainMetrics, Is.Empty);
         Assert.That(snapshot.Captures, Is.Empty);
+        Assert.That(snapshot.Diagnostics.UnattributedJobsMilliseconds, Is.Null);
+    }
+
+    [Test]
+    public void Unattributed_job_time_distinguishes_missing_measurement_from_measured_zero()
+    {
+        var unavailable = UiSnapshotBuilder.Build(new UiSnapshotInput
+        {
+            Systems = new SystemTimingSnapshot()
+        });
+        var measuredZeroTiming = new SystemTimingSnapshot();
+        measuredZeroTiming.SetUnattributedJobsMilliseconds(0d);
+        var measuredZero = UiSnapshotBuilder.Build(new UiSnapshotInput
+        {
+            Systems = measuredZeroTiming
+        });
+
+        Assert.That(unavailable.Diagnostics.UnattributedJobsMilliseconds, Is.Null);
+        Assert.That(measuredZero.Diagnostics.UnattributedJobsMilliseconds, Is.EqualTo(0d));
     }
 }

@@ -14,7 +14,7 @@ export function DiagnosticsTab({ diagnostics, captures }: { diagnostics: Diagnos
     ["マーカーバッチサイズ", diagnostics.markerBatchSize],
     ["サンプリング間引き", diagnostics.samplingStride],
     ["キャプチャ処理負荷", formatPercent(diagnostics.profilerOverheadShare)],
-    ["未帰属ジョブ時間", formatMilliseconds(diagnostics.unattributedJobsMilliseconds)],
+    ["未帰属ジョブ時間", diagnostics.unattributedJobsMilliseconds == null ? "未計測" : formatMilliseconds(diagnostics.unattributedJobsMilliseconds)],
     ["パッチ情報", diagnostics.patchMapState || "利用不可"]
   ];
 

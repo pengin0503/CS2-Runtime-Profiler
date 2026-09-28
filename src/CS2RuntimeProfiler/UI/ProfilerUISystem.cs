@@ -209,7 +209,7 @@ namespace CS2RuntimeProfiler.UI
                 SelectedCaptureId = _selectedCaptureId,
                 GameVersion = GetGameVersion(),
                 ProfilerVersion = typeof(Mod).Assembly.GetName().Version?.ToString() ?? string.Empty,
-                DiscoveredMarkerCount = _global?.Recorders?.Descriptors?.Count ?? 0,
+                DiscoveredMarkerCount = _capture?.DiscoveredMarkerCount ?? 0,
                 CapturedMarkerCount = markerCapture?.MarkerCoverage.Captured ?? 0,
                 MarkerBatchSize = _capture?.CurrentBatchSize ?? 0,
                 SamplingStride = _capture?.SamplingStride ?? 1,
@@ -431,7 +431,7 @@ namespace CS2RuntimeProfiler.UI
             diagnostics = diagnostics ?? new DiagnosticsUi();
             writer.TypeBegin("CS2RuntimeProfiler.DiagnosticsUi");
             writer.PropertyName("profilerOverheadShare"); writer.Write(diagnostics.ProfilerOverheadShare);
-            writer.PropertyName("unattributedJobsMilliseconds"); writer.Write(diagnostics.UnattributedJobsMilliseconds);
+            writer.PropertyName("unattributedJobsMilliseconds"); WriteNullable(writer, diagnostics.UnattributedJobsMilliseconds);
             writer.PropertyName("messages"); WriteStrings(writer, diagnostics.Messages);
             writer.PropertyName("gameVersion"); writer.Write(diagnostics.GameVersion ?? string.Empty);
             writer.PropertyName("profilerVersion"); writer.Write(diagnostics.ProfilerVersion ?? string.Empty);

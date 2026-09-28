@@ -72,7 +72,18 @@ namespace CS2RuntimeProfiler.Export
             foreach (var metric in snapshot.DomainMetrics ?? Array.Empty<UiMetricRow>()) report.DomainMetrics.Add(ToReportMetric(metric));
             foreach (var point in snapshot.Timeline ?? Array.Empty<TimelinePoint>()) if (point != null) report.Timeline.Add(new ReportTimelinePoint { TimestampSeconds = point.TimestampSeconds, Metric = point.Metric, Value = point.Value, Confidence = point.Confidence });
             report.ProfilerOverhead.Add(new ReportMetric { Name = "captureOverheadShare", Value = snapshot.Diagnostics?.ProfilerOverheadShare ?? 0d, Unit = "ratio", Confidence = "Full", Availability = "Available" });
-            report.ProfilerOverhead.Add(new ReportMetric { Name = "unattributedJobsMilliseconds", Value = snapshot.Diagnostics?.UnattributedJobsMilliseconds ?? 0d, Unit = "ms", Confidence = "Indirect", Availability = "Available", Note = "Worker/job time is kept separate rather than assigned to a system without evidence." });
+            var unattributedJobsMilliseconds = snapshot.Diagnostics?.UnattributedJobsMilliseconds;
+            report.ProfilerOverhead.Add(new ReportMetric
+            {
+                Name = "unattributedJobsMilliseconds",
+                Value = unattributedJobsMilliseconds,
+                Unit = "ms",
+                Confidence = unattributedJobsMilliseconds.HasValue ? "Indirect" : "Unavailable",
+                Availability = unattributedJobsMilliseconds.HasValue ? "Available" : "Unavailable",
+                Note = unattributedJobsMilliseconds.HasValue
+                    ? "Worker/job time is kept separate rather than assigned to a system without evidence."
+                    : "Worker/job timing is not measured by this capture."
+            });
             foreach (var message in snapshot.Diagnostics?.Messages ?? Array.Empty<string>()) if (!string.IsNullOrWhiteSpace(message)) report.Warnings.Add(message);
             report.Capabilities.Add(new ReportNamedValue("systemTiming", report.Systems.Count > 0 ? "available" : "unavailable"));
             report.Capabilities.Add(new ReportNamedValue("pathfinding", HasAvailableMetric(report.Pathfinding) ? "available" : "unavailable"));

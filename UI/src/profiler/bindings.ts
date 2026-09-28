@@ -89,7 +89,7 @@ export interface CaptureSummaryUi {
 
 export interface DiagnosticsUi {
   profilerOverheadShare: number;
-  unattributedJobsMilliseconds: number;
+  unattributedJobsMilliseconds: number | null;
   messages: string[];
   gameVersion: string;
   profilerVersion: string;
@@ -144,7 +144,7 @@ export const EMPTY_SNAPSHOT: UiSnapshot = {
   captures: [],
   diagnostics: {
     profilerOverheadShare: 0,
-    unattributedJobsMilliseconds: 0,
+    unattributedJobsMilliseconds: null,
     messages: [],
     gameVersion: "",
     profilerVersion: "",

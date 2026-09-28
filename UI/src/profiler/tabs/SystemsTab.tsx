@@ -24,6 +24,14 @@ function sortValue(row: SystemUiRow, key: SortKey): number | string {
   }
 }
 
+function measurementSource(confidence: string): string {
+  switch (confidence) {
+    case "Full": return "Unity ECS プロファイラーマーカー";
+    case "Managed": return "管理システムの実行境界";
+    default: return "不明";
+  }
+}
+
 export function SystemsTab({ systems, onSelect }: SystemsTabProps) {
   const [sortKey, setSortKey] = useState<SortKey>("current");
   const rows = useMemo(() => [...systems].sort((a, b) => {
@@ -55,7 +63,7 @@ export function SystemsTab({ systems, onSelect }: SystemsTabProps) {
               <details>
                 <summary>{row.id}</summary>
                 <div className={styles.details}>
-                  <div>測定元: 管理システムの実行境界</div>
+                  <div>測定元: {measurementSource(row.confidence)}</div>
                   <div>パッチ所有者: {row.patchOwners.length ? row.patchOwners.join(", ") : "検出なし"}</div>
                   <div>マーカーや更新間隔の詳細は現在のスナップショットでは公開されていません。</div>
                 </div>

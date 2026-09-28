@@ -24,8 +24,6 @@ namespace CS2RuntimeProfiler.Export
 
     public sealed class ReportExporter
     {
-        private const int MaxCollisionRetries = 1000;
-
         public ReportExportResult Export(PerformanceReport report)
         {
             try
@@ -37,27 +35,12 @@ namespace CS2RuntimeProfiler.Export
                 var stem = $"CS2Profiler-report-{timestamp:yyyy-MM-dd_HHmmss_fff}";
                 var json = PerformanceReportSerializer.Serialize(report);
                 var encoding = new UTF8Encoding(false);
-
-                for (var attempt = 0; attempt < MaxCollisionRetries; attempt++)
+                var path = ReportFileWriter.WriteUnique(directory, stem, stream =>
                 {
-                    var suffix = attempt == 0 ? string.Empty : $"-{attempt}";
-                    var path = Path.Combine(directory, stem + suffix + ".json");
-
-                    try
-                    {
-                        using (var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read))
-                        using (var writer = new StreamWriter(stream, encoding))
-                            writer.Write(json);
-
-                        return ReportExportResult.Succeeded(path);
-                    }
-                    catch (IOException) when (File.Exists(path))
-                    {
-                        // Another export already claimed this name. Retry with a numeric suffix.
-                    }
-                }
-
-                throw new IOException("Could not allocate a unique profiler report filename.");
+                    using (var writer = new StreamWriter(stream, encoding))
+                        writer.Write(json);
+                });
+                return ReportExportResult.Succeeded(path);
             }
             catch (Exception ex)
             {

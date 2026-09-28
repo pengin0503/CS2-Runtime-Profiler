@@ -1,6 +1,7 @@
 using CS2RuntimeProfiler.Export;
 using CS2RuntimeProfiler.UI;
 using NUnit.Framework;
+using System.Text.Json;
 
 namespace CS2RuntimeProfiler.Tests;
 
@@ -190,5 +191,36 @@ public class ProfilerReportBuilderTests
         report = ProfilerReportBuilder.Build(snapshot);
         Assert.That(report.Capabilities.Single(x => x.Name == "domainMetrics").Value, Is.EqualTo("available"));
         Assert.That(report.Capabilities.Single(x => x.Name == "pathfinding").Value, Is.EqualTo("available"));
+    }
+
+    [Test]
+    public void Unmeasured_unattributed_job_time_is_exported_as_unavailable_not_zero()
+    {
+        var unavailable = ProfilerReportBuilder.Build(new UiSnapshot());
+        var unavailableMetric = unavailable.ProfilerOverhead.Single(x => x.Name == "unattributedJobsMilliseconds");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(unavailableMetric.Value, Is.Null);
+            Assert.That(unavailableMetric.Confidence, Is.EqualTo("Unavailable"));
+            Assert.That(unavailableMetric.Availability, Is.EqualTo("Unavailable"));
+        });
+
+        using (var document = JsonDocument.Parse(PerformanceReportSerializer.Serialize(unavailable)))
+        {
+            var exportedMetric = document.RootElement.GetProperty("profilerOverhead")
+                .EnumerateArray()
+                .Single(item => item.GetProperty("name").GetString() == "unattributedJobsMilliseconds");
+            Assert.That(exportedMetric.GetProperty("availability").GetString(), Is.EqualTo("Unavailable"));
+            Assert.That(exportedMetric.TryGetProperty("value", out _), Is.False);
+        }
+
+        var measuredZero = ProfilerReportBuilder.Build(new UiSnapshot
+        {
+            Diagnostics = new DiagnosticsUi { UnattributedJobsMilliseconds = 0d }
+        });
+        var measuredMetric = measuredZero.ProfilerOverhead.Single(x => x.Name == "unattributedJobsMilliseconds");
+        Assert.That(measuredMetric.Value, Is.EqualTo(0d));
+        Assert.That(measuredMetric.Availability, Is.EqualTo("Available"));
     }
 }

@@ -66,7 +66,7 @@ namespace CS2RuntimeProfiler.Core
         private readonly List<SystemTimingEntry> _systems = new List<SystemTimingEntry>();
 
         public IReadOnlyList<SystemTimingEntry> Systems => _systems;
-        public double UnattributedJobsMilliseconds { get; private set; }
+        public double? UnattributedJobsMilliseconds { get; private set; }
 
         public void AddSystem(
             string systemId,

@@ -46,7 +46,7 @@ namespace CS2RuntimeProfiler.UI
                 Timeline = BuildTimeline(detailCapture), Captures = captures,
                 Diagnostics = new DiagnosticsUi
                 {
-                    ProfilerOverheadShare = overheadShare, UnattributedJobsMilliseconds = detailTiming?.UnattributedJobsMilliseconds ?? 0d,
+                    ProfilerOverheadShare = overheadShare, UnattributedJobsMilliseconds = detailTiming?.UnattributedJobsMilliseconds,
                     Messages = diagnostics.ToArray(), GameVersion = input.GameVersion ?? string.Empty, ProfilerVersion = input.ProfilerVersion ?? string.Empty,
                     DiscoveredMarkerCount = Math.Max(0, input.DiscoveredMarkerCount), CapturedMarkerCount = Math.Max(0, input.CapturedMarkerCount),
                     SystemCount = systems.Count, MarkerBatchSize = Math.Max(0, input.MarkerBatchSize), SamplingStride = Math.Max(1, input.SamplingStride),

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { OverviewTab } from "./OverviewTab";
 import { SystemsTab } from "./SystemsTab";
 import { ModsTab } from "./ModsTab";
+import { DiagnosticsTab } from "./DiagnosticsTab";
 
 const snapshot: any = {
   global: {
@@ -56,6 +57,26 @@ describe("core profiler tabs", () => {
     expect(html).toContain("Game");
     expect(html).toContain("TrafficTweaks");
     expect(html).toContain("管理コード");
+    expect(html).toContain("管理システムの実行境界");
+  });
+
+  it("systems view labels full-marker and unknown timing sources accurately", () => {
+    const html = renderToStaticMarkup(<SystemsTab systems={[
+      { ...snapshot.systems[0], id: "FullMarkerSystem", confidence: "Full", sourceKind: "Vanilla" },
+      { ...snapshot.systems[0], id: "UnknownTimingSystem", confidence: "Unavailable", sourceKind: "Unknown" }
+    ]} />);
+
+    expect(html).toContain("Unity ECS プロファイラーマーカー");
+    expect(html).toContain("測定元: 不明");
+  });
+
+  it("diagnostics displays unmeasured job time as unavailable", () => {
+    const diagnostics = { ...snapshot.diagnostics, unattributedJobsMilliseconds: null };
+    const html = renderToStaticMarkup(<DiagnosticsTab diagnostics={diagnostics} captures={[]} />);
+
+    expect(html).toContain("未帰属ジョブ時間");
+    expect(html).toContain("未計測");
+    expect(html).not.toContain("0.00 ms");
   });
 
   it("mods view reports direct ownership and patched-system metadata without blame wording", () => {

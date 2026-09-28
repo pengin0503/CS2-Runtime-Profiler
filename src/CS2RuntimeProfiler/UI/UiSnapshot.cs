@@ -114,7 +114,7 @@ namespace CS2RuntimeProfiler.UI
     public sealed class DiagnosticsUi
     {
         public double ProfilerOverheadShare { get; set; }
-        public double UnattributedJobsMilliseconds { get; set; }
+        public double? UnattributedJobsMilliseconds { get; set; }
         public IReadOnlyList<string> Messages { get; set; } = Array.Empty<string>();
         public string GameVersion { get; set; } = string.Empty;
         public string ProfilerVersion { get; set; } = string.Empty;

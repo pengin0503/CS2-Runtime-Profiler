@@ -27,6 +27,7 @@ namespace CS2RuntimeProfiler.Collectors
         public RecorderManager Recorders => _recorderManager;
         public double SamplingPeriodSeconds => Mod.Settings?.ResolvedSamplingPeriodSeconds ?? DefaultSamplingPeriodSeconds;
         public double CurrentTimestampSeconds => _clock.Elapsed.TotalSeconds;
+        internal object SimulationRuntimeSystem => _simulationSystem;
 
         protected override void OnCreate()
         {

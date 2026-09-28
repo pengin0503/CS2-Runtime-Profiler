@@ -35,7 +35,7 @@ namespace CS2RuntimeProfiler.Tests
                 AdvisorConfidence.Medium), Graphics("Medium"));
             Assert.That(result.Direction, Is.EqualTo(RecommendationDirection.HeadroomAvailable));
             Assert.That(result.RecommendedValue, Is.EqualTo("High"));
-            Assert.That(result.Rationale, Does.Contain("measure"));
+            Assert.That(result.Rationale, Does.Contain("再計測"));
         }
 
         [Test]

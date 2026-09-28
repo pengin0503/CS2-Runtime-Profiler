@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using CS2RuntimeProfiler.Collectors;
 using CS2RuntimeProfiler.Core;
 using CS2RuntimeProfiler.Export;
@@ -101,7 +102,7 @@ namespace CS2RuntimeProfiler.Profiling
                 _controller.Observe(
                     latest.TimestampSeconds,
                     latest,
-                    RuntimeGameStateProbe.IsAutomaticCaptureAllowed(),
+                    RuntimeGameStateProbe.IsAutomaticCaptureAllowed(_global?.SimulationRuntimeSystem),
                     prebuffer);
                 var afterSession = _controller.CurrentSession;
                 var afterState = _controller.State;
@@ -271,14 +272,25 @@ namespace CS2RuntimeProfiler.Profiling
                 Mod.Log.Error(ex, "System timing projection failed for a completed capture");
             }
 
-            try
-            {
-                Mod.Log.Info(CaptureCompletionLogFormatter.Format(capture));
-            }
-            catch (Exception ex)
-            {
-                Mod.Log.Error(ex, "Capture completion diagnostic logging failed");
-            }
+            CaptureCompletionDiagnosticsDispatcher.Dispatch(
+                capture,
+                message => Mod.Log.Info(message),
+                TryFlushModLog);
+        }
+
+        private static void TryFlushModLog()
+        {
+            var logger = Mod.Log;
+            if (logger == null)
+                return;
+
+            var flush = logger.GetType().GetMethod(
+                "Flush",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                binder: null,
+                types: Type.EmptyTypes,
+                modifiers: null);
+            flush?.Invoke(logger, null);
         }
     }
 }

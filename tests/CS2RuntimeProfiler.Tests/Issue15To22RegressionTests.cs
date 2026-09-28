@@ -75,6 +75,28 @@ public class Issue15To22RegressionTests
         });
     }
 
+    [Test]
+    public void Monotonically_rising_profiler_memory_baselines_emit_a_retention_pressure_warning_without_calling_it_a_leak()
+    {
+        using var controller = CreateController();
+        var baselinesMiB = new[] { 100d, 200d, 300d, 400d };
+
+        for (var i = 0; i < baselinesMiB.Length; i++)
+        {
+            var now = i * 10d;
+            controller.RequestManualCapture(now, new[] { Global(now, baselinesMiB[i] * MiB) });
+            controller.InterruptActiveCapture("test completion");
+        }
+
+        var latest = controller.CompletedSessions.Last();
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.CompletedSessions.Count, Is.EqualTo(4));
+            Assert.That(latest.Warnings, Has.Some.Contains("retention pressure"));
+            Assert.That(latest.Warnings, Has.Some.Contains("not proof of a memory leak"));
+        });
+    }
+
     [TestCase(true, null, true)]
     [TestCase(true, "", true)]
     [TestCase(true, "Simulation Exact.Runtime.System", false)]

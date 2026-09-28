@@ -26,11 +26,9 @@ namespace CS2RuntimeProfiler.Profiling
                 new[] { "m_IsGameLoading", "isGameLoading" },
                 new[] { "get_isGameLoading" },
                 fallback: false);
-            var paused = simulationSystem != null && TryReadBool(simulationSystem,
-                new[] { "simulationPaused", "SimulationPaused" },
-                new[] { "m_SimulationPaused", "simulationPaused" },
-                new[] { "get_simulationPaused", "get_SimulationPaused" },
-                fallback: false);
+            var paused = simulationSystem != null
+                && RuntimePauseStateReader.TryRead(simulationSystem, out var simulationPaused)
+                && simulationPaused;
 
             return AutomaticCapturePolicy.IsAllowed(loading, paused);
         }

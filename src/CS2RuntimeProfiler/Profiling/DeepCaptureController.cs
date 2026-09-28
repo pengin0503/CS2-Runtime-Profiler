@@ -9,8 +9,10 @@ namespace CS2RuntimeProfiler.Profiling
     {
         private const int ConsecutiveOverheadBreachesBeforeDegrade = 3;
         private const int MaxDegradationActionsBeforeAbort = 4;
+        private const int ProfilerMemoryTrendCaptureCount = 4;
         private const double ProfilerMemoryGrowthStepBytes = 128d * 1024d * 1024d;
         private const double ProfilerMemoryHardStopBytes = 512d * 1024d * 1024d;
+        private const double ProfilerMemoryTrendWarningBytes = 256d * 1024d * 1024d;
         private const string ProfilerUsedMemoryRecorderId = "Memory\u001fProfiler Used Memory";
 
         private readonly RecorderManager _recorders;
@@ -274,6 +276,38 @@ namespace CS2RuntimeProfiler.Profiling
         private void UpdateMarkerCoverage() => CurrentSession?.SetMarkerCoverage(_plan?.DiscoveredCount ?? 0, _attemptedMarkerIds.Count, _activatedMarkerIds.Count, _capturedMarkerIds.Count, _plan?.IsBatched ?? false);
         private void ResetMarkerCoverageTracking() { _attemptedMarkerIds.Clear(); _activatedMarkerIds.Clear(); _capturedMarkerIds.Clear(); }
 
+        private void AddProfilerMemoryTrendWarning(CaptureSession completed)
+        {
+            var measured = _completed
+                .Where(capture => capture?.ProfilerMemoryBaselineBytes.HasValue == true)
+                .ToArray();
+            if (measured.Length < ProfilerMemoryTrendCaptureCount)
+                return;
+
+            var recent = measured.Skip(measured.Length - ProfilerMemoryTrendCaptureCount).ToArray();
+            var strictlyIncreasing = true;
+            for (var index = 1; index < recent.Length; index++)
+            {
+                if (recent[index].ProfilerMemoryBaselineBytes.Value <= recent[index - 1].ProfilerMemoryBaselineBytes.Value)
+                {
+                    strictlyIncreasing = false;
+                    break;
+                }
+            }
+
+            if (!strictlyIncreasing)
+                return;
+
+            var growthBytes = recent[recent.Length - 1].ProfilerMemoryBaselineBytes.Value
+                - recent[0].ProfilerMemoryBaselineBytes.Value;
+            if (growthBytes < ProfilerMemoryTrendWarningBytes)
+                return;
+
+            completed.AddWarning(
+                $"Profiler memory baseline increased across four consecutive captures by {growthBytes / (1024d * 1024d):0.#} MiB; "
+                + "this is a retention pressure signal, not proof of a memory leak.");
+        }
+
         private void FinalizeCapture()
         {
             var completed = CurrentSession;
@@ -283,6 +317,7 @@ namespace CS2RuntimeProfiler.Profiling
             UpdateMarkerCoverage();
             _completed.Add(completed);
             while (_completed.Count > _maxCompletedSessions) _completed.RemoveAt(0);
+            AddProfilerMemoryTrendWarning(completed);
             CurrentSession = null;
             _consecutiveOverheadBreaches = 0;
             _degradationActions = 0;

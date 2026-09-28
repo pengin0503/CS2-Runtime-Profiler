@@ -76,6 +76,20 @@ namespace CS2RuntimeProfiler
         [SettingsUISlider(min = 5, max = 50, step = 5, scalarMultiplier = 1)]
         public int MaxCompletedCaptures { get; set; }
 
+        // Panel geometry in screen pixels, written when the user moves or resizes the profiler panel.
+        // A non-positive width marks "use the default layout". Hidden from the options UI.
+        [SettingsUIHidden]
+        public int PanelLeft { get; set; }
+
+        [SettingsUIHidden]
+        public int PanelTop { get; set; }
+
+        [SettingsUIHidden]
+        public int PanelWidth { get; set; }
+
+        [SettingsUIHidden]
+        public int PanelHeight { get; set; }
+
         internal int ResolvedUiScalePercent => Clamp(UiScalePercent, 75, 150);
         internal double ResolvedUiRefreshPeriodSeconds => Clamp(UiRefreshMilliseconds, 250, 2000) / 1000d;
         internal double ResolvedSamplingPeriodSeconds => Clamp(SamplingIntervalMilliseconds, 250, 2000) / 1000d;
@@ -105,6 +119,10 @@ namespace CS2RuntimeProfiler
             MaxConcurrentMarkers = 150;
             ProfilerOverheadLimitPercent = 8;
             MaxCompletedCaptures = 20;
+            PanelLeft = 0;
+            PanelTop = 0;
+            PanelWidth = 0;
+            PanelHeight = 0;
         }
 
         private static int Clamp(int value, int min, int max)

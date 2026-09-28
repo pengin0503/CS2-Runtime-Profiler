@@ -43,20 +43,24 @@ public class ModProjectEvaluationTests
     }
 
     [Test]
-    public void Production_history_avoids_framework_profile_conflicting_Queue_type()
+    public void Production_sources_avoid_framework_profile_conflicting_Queue_type()
     {
-        var historyPath = Path.Combine(
+        var sourceRoot = Path.Combine(
             FindRepositoryRoot(),
             "src",
-            "CS2RuntimeProfiler",
-            "Core",
-            "GlobalSnapshotHistory.cs");
-        var source = File.ReadAllText(historyPath);
+            "CS2RuntimeProfiler");
+        var productionSource = string.Join(
+            Environment.NewLine,
+            Directory.GetFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
+                .Where(path => !Path.GetRelativePath(sourceRoot, path)
+                    .Split(Path.DirectorySeparatorChar)
+                    .Any(segment => segment is "bin" or "obj"))
+                .Select(File.ReadAllText));
 
         Assert.That(
-            source,
+            productionSource,
             Does.Not.Contain("Queue<"),
-            "System.Collections.Generic.Queue<T> resolves from both System and mscorlib in the current CS2 build profile. Use the fixed-capacity ring buffer instead.");
+            "System.Collections.Generic.Queue<T> resolves from both System and mscorlib in the current CS2 build profile. Use an array-backed fixed-capacity ring buffer instead.");
     }
 
     [Test]

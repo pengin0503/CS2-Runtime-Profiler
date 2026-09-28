@@ -72,7 +72,15 @@ namespace CS2RuntimeProfiler.Export
             foreach (var metric in snapshot.Pathfinding?.Metrics ?? Array.Empty<UiMetricRow>()) report.Pathfinding.Add(ToReportMetric(metric));
             foreach (var metric in snapshot.DomainMetrics ?? Array.Empty<UiMetricRow>()) report.DomainMetrics.Add(ToReportMetric(metric));
             foreach (var point in snapshot.Timeline ?? Array.Empty<TimelinePoint>()) if (point != null) report.Timeline.Add(new ReportTimelinePoint { TimestampSeconds = point.TimestampSeconds, Metric = point.Metric, Value = point.Value, Confidence = point.Confidence, Unit = string.IsNullOrEmpty(point.UnitType) ? null : point.UnitType });
-            report.ProfilerOverhead.Add(new ReportMetric { Name = "captureOverheadShare", Value = snapshot.Diagnostics?.ProfilerOverheadShare ?? 0d, Unit = "ratio", Confidence = "Full", Availability = "Available" });
+            report.ProfilerOverhead.Add(new ReportMetric
+            {
+                Name = "captureOverheadShare",
+                Value = snapshot.Diagnostics?.ProfilerOverheadShare ?? 0d,
+                Unit = "ratio",
+                Confidence = "Full",
+                Availability = "Available",
+                Note = "Capture controller and aggregation time relative to the sampling period; this excludes managed SystemBase timing instrumentation and is not total profiler overhead."
+            });
             var unattributedJobsMilliseconds = snapshot.Diagnostics?.UnattributedJobsMilliseconds;
             report.ProfilerOverhead.Add(new ReportMetric
             {

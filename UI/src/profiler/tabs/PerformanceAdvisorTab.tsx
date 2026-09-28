@@ -11,6 +11,52 @@ const GROUPS = [
   { id: "none", label: "推奨なし", include: (r: AdvisorRecommendation) => r.direction === "NoRecommendation" || r.direction === "KeepCurrent" }
 ];
 
+function categoryLabel(value: string): string {
+  switch (value) {
+    case "RenderingGpu": return "描画/GPU";
+    case "SimulationCpu": return "シミュレーション/CPU";
+    case "MemoryGc": return "メモリ/GC";
+    case "Pathfinding": return "経路探索";
+    case "Unknown": return "不明";
+    default: return value || "不明";
+  }
+}
+
+function levelLabel(value: string): string {
+  switch (value) {
+    case "High": return "高";
+    case "Medium": return "中";
+    case "Low": return "低";
+    case "InsufficientEvidence": return "根拠不足";
+    default: return value || "不明";
+  }
+}
+
+function changeStatusLabel(value: string): string {
+  switch (value) {
+    case "Pending": return "処理待ち";
+    case "Applied": return "適用済み";
+    case "Undone": return "元に戻しました";
+    case "ExternallyModified": return "外部変更あり";
+    case "KeptExternalValue": return "外部変更を維持";
+    case "ApplyFailed": return "適用失敗";
+    case "UndoFailed": return "復元失敗";
+    case "RestartPending": return "再起動待ち";
+    default: return value || "不明";
+  }
+}
+
+function applyBehaviorLabel(value: string): string {
+  switch (value) {
+    case "Immediate": return "即時反映";
+    case "ApplyRequired": return "適用操作が必要";
+    case "ConfirmationRequired": return "確認が必要";
+    case "RestartRequired": return "再起動が必要";
+    case "ReadOnlyForAdvisor": return "標準設定画面から変更";
+    default: return value || "不明";
+  }
+}
+
 function RecommendationCard({ recommendation, onApply }: {
   recommendation: AdvisorRecommendation;
   onApply?: (id: string, value: string, confirmed: boolean) => void;
@@ -22,21 +68,21 @@ function RecommendationCard({ recommendation, onApply }: {
     <article className={styles.advisorCard}>
       <strong>{recommendation.displayName}</strong>
       <span>現在値: {recommendation.currentValue} → 提案値: {recommendation.recommendedValue}</span>
-      <span>優先度: {recommendation.priority}・確信度: {recommendation.confidence}</span>
+      <span>優先度: {levelLabel(recommendation.priority)}・確信度: {levelLabel(recommendation.confidence)}</span>
       <span>{recommendation.applyCapability === "ReadOnlyForAdvisor"
         ? "この項目はゲームの標準設定画面で変更してください。" : "変更する前に根拠を確認してください。"}</span>
       {onApply && recommendation.applyCapability === "Available" &&
         (needsConfirmation && !acknowledge
           ? <Button as="button" variant="flat" onSelect={() => setAcknowledge(true)}>確認が必要: 変更内容を確認</Button>
           : <Button as="button" variant="flat" onSelect={() => onApply(recommendation.settingId,
-              recommendation.recommendedValue, needsConfirmation && acknowledge)}>Apply</Button>)}
+              recommendation.recommendedValue, needsConfirmation && acknowledge)}>適用</Button>)}
       <Button as="button" variant="flat" onSelect={() => setDetails(!details)} aria-expanded={details}>
         {details ? "詳細を閉じる" : "詳細を見る"}
       </Button>
       {details && <div className={styles.advisorDetails}>
         <span>{recommendation.rationale}</span>
         <span>根拠: {recommendation.evidenceIds?.join("、") || "十分な根拠なし"}</span>
-        <span>反映方法: {recommendation.applyBehavior}</span>
+        <span>反映方法: {applyBehaviorLabel(recommendation.applyBehavior)}</span>
       </div>}
     </article>
   );
@@ -51,11 +97,11 @@ function ChangeCard({ change, onUndo, onResolveConflict }: {
   return <article className={styles.advisorCard}>
     <strong>{change.settingId}</strong>
     <span>{change.originalValue} → {change.appliedValue}・現在値: {change.currentObservedValue}</span>
-    <span>状態: {change.status}</span>
+    <span>状態: {changeStatusLabel(change.status)}</span>
     {change.status === "Applied" && onUndo && (
       acknowledgeUndo
-        ? <Button as="button" variant="flat" onSelect={() => onUndo(change.settingId, true)}>Undo を確定</Button>
-        : <Button as="button" variant="flat" onSelect={() => setAcknowledgeUndo(true)}>Undo</Button>
+        ? <Button as="button" variant="flat" onSelect={() => onUndo(change.settingId, true)}>元に戻す操作を確定</Button>
+        : <Button as="button" variant="flat" onSelect={() => setAcknowledgeUndo(true)}>元に戻す</Button>
     )}
     {change.status === "ExternallyModified" && onResolveConflict && <div className={styles.advisorActions}>
       <span>外部変更を検出しました。元の値へ自動的には戻しません。</span>
@@ -101,8 +147,8 @@ export function PerformanceAdvisorTab({ advisor = EMPTY_ADVISOR, captures = [], 
         : <p>完了した詳細キャプチャを選んで診断してください。</p>}
       {advisor.observations.map((observation, index) => (
         <div className={styles.advisorObservation} key={`${observation.category}-${index}`}>
-          <strong>{observation.category}・{observation.severity}</strong>
-          <span>確信度: {observation.confidence}・根拠: {observation.evidenceIds?.join("、")}</span>
+          <strong>{categoryLabel(observation.category)}・{levelLabel(observation.severity)}</strong>
+          <span>確信度: {levelLabel(observation.confidence)}・根拠: {observation.evidenceIds?.join("、")}</span>
           <span>{observation.rationale}</span>
         </div>
       ))}
@@ -114,20 +160,20 @@ export function PerformanceAdvisorTab({ advisor = EMPTY_ADVISOR, captures = [], 
             {group.id === "none"
               ? <Button as="button" variant="flat" aria-label="推奨なしを表示" aria-expanded={open}
                   onSelect={() => setShowNoRecommendation(!showNoRecommendation)}>{group.label} ({entries.length})</Button>
-              : <h3>{group.label} ({entries.length})</h3>}
+              : <h3 className={styles.advisorGroupTitle}>{group.label} ({entries.length})</h3>}
             {open && entries.map(entry => <RecommendationCard key={entry.settingId} recommendation={entry} onApply={onApply} />)}
           </section>
         );
       })}
       {!!advisor.changes?.length && <section className={styles.advisorGroup}>
-        <h3>このセッションの変更 ({advisor.changes.length})</h3>
+        <h3 className={styles.advisorGroupTitle}>このセッションの変更 ({advisor.changes.length})</h3>
         {advisor.changes.map((change, index) => <ChangeCard key={`${change.settingId}-${index}`} change={change}
           onUndo={onUndo} onResolveConflict={onResolveConflict} />)}
         {onUndoSession && advisor.changes.some(change => change.status === "Applied") &&
           <Button as="button" variant="flat" onSelect={onUndoSession}>セッションの変更を元に戻す</Button>}
       </section>}
       {advisor.comparison && <section className={styles.advisorGroup}>
-        <h3>診断の前後比較</h3>
+        <h3 className={styles.advisorGroupTitle}>診断の前後比較</h3>
         {advisor.comparison.multipleChanges &&
           <p>複数の設定を変更しています。以下は測定差分であり、個別設定の効果を断定しません。</p>}
         {advisor.comparison.metrics.map(metric => (

@@ -191,8 +191,8 @@ namespace CS2RuntimeProfiler.Collectors
             {
                 var args = new object[] { 0u, 0u };
                 method.Invoke(_queueSystem, args);
-                metrics.Add(NamedMetricValue.Available(usedId, Convert.ToDouble(args[0]), MetricConfidence.Full));
-                metrics.Add(NamedMetricValue.Available(allocatedId, Convert.ToDouble(args[1]), MetricConfidence.Full));
+                metrics.Add(NamedMetricValue.Available(usedId, Convert.ToDouble(args[0]), MetricConfidence.Full, MetricUnits.Bytes));
+                metrics.Add(NamedMetricValue.Available(allocatedId, Convert.ToDouble(args[1]), MetricConfidence.Full, MetricUnits.Bytes));
             }
             catch (Exception ex)
             {

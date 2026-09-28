@@ -20,7 +20,8 @@ namespace CS2RuntimeProfiler.Core
             double? totalMilliseconds = null,
             int? calls = null,
             SystemSourceKind sourceKind = SystemSourceKind.Unknown,
-            bool isAggregateContainer = false)
+            bool isAggregateContainer = false,
+            double? millisecondsPerFrame = null)
         {
             SystemId = systemId ?? string.Empty;
             Milliseconds = Math.Max(0d, milliseconds);
@@ -36,6 +37,7 @@ namespace CS2RuntimeProfiler.Core
             Calls = calls.HasValue ? Math.Max(0, calls.Value) : (int?)null;
             SourceKind = sourceKind;
             IsAggregateContainer = isAggregateContainer;
+            MillisecondsPerFrame = Normalize(millisecondsPerFrame);
         }
 
         public string SystemId { get; }
@@ -52,6 +54,13 @@ namespace CS2RuntimeProfiler.Core
         public int? Calls { get; }
         public SystemSourceKind SourceKind { get; }
         public bool IsAggregateContainer { get; }
+
+        /// <summary>
+        /// Total measured time divided by the number of rendered frames in the measurement window.
+        /// Unlike per-call statistics this is additive across systems with different update intervals.
+        /// Null when the window frame count is unknown.
+        /// </summary>
+        public double? MillisecondsPerFrame { get; }
 
         private static double? Normalize(double? value)
         {
@@ -92,7 +101,8 @@ namespace CS2RuntimeProfiler.Core
             string ownerAssembly = "",
             IEnumerable<string> patchOwners = null,
             SystemSourceKind sourceKind = SystemSourceKind.Unknown,
-            bool isAggregateContainer = false)
+            bool isAggregateContainer = false,
+            double? millisecondsPerFrame = null)
         {
             if (aggregate == null)
                 return;
@@ -111,7 +121,8 @@ namespace CS2RuntimeProfiler.Core
                 aggregate.TotalMilliseconds,
                 aggregate.Calls,
                 sourceKind,
-                isAggregateContainer));
+                isAggregateContainer,
+                millisecondsPerFrame));
         }
 
         public void AddEntry(SystemTimingEntry entry)
@@ -133,7 +144,8 @@ namespace CS2RuntimeProfiler.Core
                 entry.TotalMilliseconds,
                 entry.Calls,
                 entry.SourceKind,
-                entry.IsAggregateContainer));
+                entry.IsAggregateContainer,
+                entry.MillisecondsPerFrame));
         }
 
         public void SetUnattributedJobsMilliseconds(double milliseconds)

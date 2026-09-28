@@ -8,6 +8,7 @@ namespace CS2RuntimeProfiler.Profiling
     {
         private static readonly object Gate = new object();
         private static volatile ManagedSystemTimingAccumulator _active;
+        private static int _startFrame;
 
         // This check runs from the Harmony prefix of every managed SystemBase.Update call.
         // Keep the normal-monitoring path lock-free; locking is limited to active Deep Capture.
@@ -16,7 +17,10 @@ namespace CS2RuntimeProfiler.Profiling
         public static void BeginCapture()
         {
             lock (Gate)
+            {
+                _startFrame = UnityEngine.Time.frameCount;
                 _active = new ManagedSystemTimingAccumulator();
+            }
         }
 
         public static void Record(string systemId, double milliseconds)
@@ -35,13 +39,17 @@ namespace CS2RuntimeProfiler.Profiling
         public static SystemTimingSnapshot EndCapture(IEnumerable<SystemDescriptor> systems)
         {
             ManagedSystemTimingAccumulator completed;
+            int windowFrames;
             lock (Gate)
             {
                 completed = _active;
                 _active = null;
+                // Begin/End run on the main thread; frames rendered in between normalize
+                // per-system totals so rarely updating systems are not ranked by one spike.
+                windowFrames = UnityEngine.Time.frameCount - _startFrame;
             }
 
-            return completed?.BuildSnapshot(systems) ?? new SystemTimingSnapshot();
+            return completed?.BuildSnapshot(systems, windowFrames > 0 ? windowFrames : (int?)null) ?? new SystemTimingSnapshot();
         }
 
         public static void AbortCapture()

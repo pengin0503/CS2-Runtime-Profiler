@@ -89,7 +89,12 @@ namespace CS2RuntimeProfiler.Core
 
         public void Clear() => _systems.Clear();
 
-        public SystemTimingSnapshot BuildSnapshot(IEnumerable<SystemDescriptor> systems)
+        public SystemTimingSnapshot BuildSnapshot(IEnumerable<SystemDescriptor> systems) => BuildSnapshot(systems, windowFrames: null);
+
+        /// <param name="windowFrames">Frames rendered while this accumulator was active. When positive,
+        /// each entry also reports total time per frame, which stays comparable between systems that
+        /// update every frame and systems that update rarely (for example serialization on autosave).</param>
+        public SystemTimingSnapshot BuildSnapshot(IEnumerable<SystemDescriptor> systems, int? windowFrames)
         {
             var descriptors = (systems ?? Array.Empty<SystemDescriptor>())
                 .Where(system => system != null && !string.IsNullOrWhiteSpace(system.FullTypeName))
@@ -121,7 +126,8 @@ namespace CS2RuntimeProfiler.Core
                     descriptor?.AssemblyName ?? string.Empty,
                     descriptor?.PatchOwners?.Select(owner => owner.OwnerId) ?? Array.Empty<string>(),
                     descriptor?.SourceKind ?? SystemSourceKind.Unknown,
-                    descriptor?.IsAggregateContainer ?? false);
+                    descriptor?.IsAggregateContainer ?? false,
+                    windowFrames > 0 ? state.TotalMilliseconds / windowFrames.Value : (double?)null);
             }
 
             return snapshot;

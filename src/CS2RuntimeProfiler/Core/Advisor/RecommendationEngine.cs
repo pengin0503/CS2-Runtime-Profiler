@@ -55,10 +55,10 @@ namespace CS2RuntimeProfiler.Core.Advisor
                 ? RecommendationPriority.High : direction == RecommendationDirection.NoRecommendation
                     ? RecommendationPriority.Low : RecommendationPriority.Medium;
             var rationale = lower && depthOfField
-                ? "Measured GPU pressure supports trying depth of field Disabled; measure again."
-                : lower ? "Measured rendering pressure supports trying one lower quality level; measure again."
-                : headroom ? "Headroom available in measured conditions; measure again after any increase."
-                : "No supported performance change is justified by current evidence.";
+                ? "計測したGPU負荷から、被写界深度を「無効」にして再計測する価値があります。"
+                : lower ? "計測した描画負荷から、品質を1段階下げて再計測する価値があります。"
+                : headroom ? "現在の計測条件では描画負荷に余裕があります。上げる場合は変更後に再計測してください。"
+                : "現在の根拠だけでは性能目的の設定変更を推奨できません。";
             return new SettingRecommendation(setting.SettingId, setting.DisplayName, setting.CurrentValue,
                 next, direction, priority, confidence, rationale,
                 direction == RecommendationDirection.NoRecommendation ? Array.Empty<string>() : observation.EvidenceIds,

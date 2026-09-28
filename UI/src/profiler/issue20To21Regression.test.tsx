@@ -1,7 +1,7 @@
 import React from "react";
 import TestRenderer from "react-test-renderer";
 import { describe, expect, it } from "vitest";
-import { TimelineTab } from "./tabs/TimelineTab";
+import { TimelineTab, seriesVisualIdentity } from "./tabs/TimelineTab";
 import { PerformanceAdvisorTab } from "./tabs/PerformanceAdvisorTab";
 import { EMPTY_ADVISOR } from "./bindings";
 
@@ -23,6 +23,13 @@ describe("Issue #20 timeline identity", () => {
     const rendered = text(TestRenderer.create(<TimelineTab points={points} />).toJSON());
     expect(rendered).toContain("Render / GPU Frame Time");
     expect(rendered).toContain("GPU / GPU Frame Time");
+  });
+
+  it("uses a second visual channel when the color palette repeats after eight series", () => {
+    const first = seriesVisualIdentity(0);
+    const ninth = seriesVisualIdentity(8);
+    expect(ninth.color).toBe(first.color);
+    expect(ninth.dash).not.toBe(first.dash);
   });
 });
 
@@ -46,5 +53,15 @@ describe("Issue #21 advisor presentation", () => {
     expect(rendered).toContain("優先度: 高・確信度: 低");
     expect(rendered).toContain("状態: 適用済み");
     expect(rendered).not.toContain("RenderingGpu・High");
+  });
+
+  it("translates advisor availability failures instead of exposing the English transport message", () => {
+    const advisor = {
+      ...EMPTY_ADVISOR,
+      unavailableReason: "Standard Options catalog unavailable: MissingMethodException"
+    } as any;
+    const rendered = text(TestRenderer.create(<PerformanceAdvisorTab advisor={advisor} captures={[]} />).toJSON());
+    expect(rendered).toContain("標準設定カタログを取得できません");
+    expect(rendered).not.toContain("Standard Options catalog unavailable");
   });
 });

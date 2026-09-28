@@ -55,6 +55,7 @@ namespace CS2RuntimeProfiler.Profiling
                 ? _patchInspector.GetPatchOwners(onUpdate)
                 : Array.Empty<PatchOwnerInfo>();
 
+            var profilerMarkerName = TryGetProfilerMarkerName(type, out var systemIsLive);
             return new SystemDescriptor(
                 type.FullName ?? type.Name,
                 assemblyName,
@@ -62,17 +63,19 @@ namespace CS2RuntimeProfiler.Profiling
                 modName,
                 MetricConfidence.Unavailable,
                 patchOwners,
-                profilerMarkerName: TryGetProfilerMarkerName(type),
-                // A catalog bound to a World is runtime evidence. If that type is not live,
-                // keep it for ownership metadata but never infer timing from its CLR name.
-                allowLegacyProfilerMarkerMatching: _world == null,
+                profilerMarkerName: profilerMarkerName,
+                // A world-bound catalog is runtime evidence. A live system whose marker-name API is
+                // unavailable may use strict full-type-name compatibility; inactive catalog types may not.
+                allowLegacyProfilerMarkerMatching: _world == null
+                    || RuntimeMarkerIdentityPolicy.AllowStrictFullTypeFallback(systemIsLive, profilerMarkerName),
                 // ComponentSystemGroup.Update is an inclusive container around child system updates.
                 // Keep its timing visible, but downstream additive totals must not count it again.
                 isAggregateContainer: typeof(ComponentSystemGroup).IsAssignableFrom(type));
         }
 
-        private string TryGetProfilerMarkerName(Type type)
+        private string TryGetProfilerMarkerName(Type type, out bool systemIsLive)
         {
+            systemIsLive = false;
             if (_world == null || !_world.IsCreated || type == null)
                 return null;
 
@@ -82,9 +85,18 @@ namespace CS2RuntimeProfiler.Profiling
                 if (system == null)
                     return null;
 
-                return EntityManager.EntityManagerDebug.GetSystemProfilerMarkerName(
-                    _world,
-                    system.SystemHandle);
+                systemIsLive = true;
+                try
+                {
+                    return EntityManager.EntityManagerDebug.GetSystemProfilerMarkerName(
+                        _world,
+                        system.SystemHandle);
+                }
+                catch
+                {
+                    // The system is known live even when a game/Entities build cannot expose its marker name.
+                    return null;
+                }
             }
             catch
             {

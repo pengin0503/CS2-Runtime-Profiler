@@ -8,6 +8,13 @@ import {
   resetPanelLayout,
   savePanelLayout,
   selectCapture,
+  requestAdvisorDiagnosis,
+  requestAdvisorRediagnosis,
+  selectAdvisorBaseline,
+  advisorApply,
+  advisorUndo,
+  advisorUndoSession,
+  advisorResolveConflict,
   useExportResult,
   usePanelLayout,
   usePanelVisible,
@@ -21,11 +28,12 @@ import { PathfindingTab } from "./tabs/PathfindingTab";
 import { TimelineTab } from "./tabs/TimelineTab";
 import { CapturesTab } from "./tabs/CapturesTab";
 import { DiagnosticsTab } from "./tabs/DiagnosticsTab";
+import { PerformanceAdvisorTab } from "./tabs/PerformanceAdvisorTab";
 import { captureStateLabel } from "./text";
 import { PanelRect, clampPanelRect, movePanelRect, resizePanelRect } from "./panelLayout";
 import styles from "./profiler.module.scss";
 
-type ProfilerTab = "overview" | "systems" | "mods" | "pathfinding" | "timeline" | "captures" | "diagnostics";
+type ProfilerTab = "overview" | "systems" | "mods" | "pathfinding" | "timeline" | "captures" | "diagnostics" | "advisor";
 type DragMode = "move" | "resize";
 
 interface DragState {
@@ -140,6 +148,7 @@ export function ProfilerRoot() {
     ["pathfinding", "経路探索"],
     ["timeline", "タイムライン"],
     ["captures", "キャプチャ"],
+    ["advisor", "改善提案"],
     ["diagnostics", "診断"]
   ];
 
@@ -184,6 +193,11 @@ export function ProfilerRoot() {
             {tab === "pathfinding" && <PathfindingTab metrics={snapshot.pathfinding.metrics} />}
             {tab === "timeline" && <TimelineTab points={snapshot.timeline} />}
             {tab === "captures" && <CapturesTab captures={snapshot.captures} onSelect={selectCapture} />}
+            {tab === "advisor" && <PerformanceAdvisorTab advisor={snapshot.advisor} captures={snapshot.captures}
+              onDiagnose={requestAdvisorDiagnosis} onBaseline={selectAdvisorBaseline} onManualCapture={requestManualCapture}
+              onRediagnose={requestAdvisorRediagnosis}
+              onApply={advisorApply} onUndo={advisorUndo} onUndoSession={advisorUndoSession}
+              onResolveConflict={advisorResolveConflict} />}
             {tab === "diagnostics" && <DiagnosticsTab diagnostics={snapshot.diagnostics} captures={snapshot.captures} />}
           </div>
         </Scrollable>

@@ -90,6 +90,95 @@ namespace CS2RuntimeProfiler.Export
     }
 
     [DataContract]
+    public sealed class ReportAdvisorObservation
+    {
+        [DataMember(Name = "category", Order = 1)] public string Category { get; set; }
+        [DataMember(Name = "severity", Order = 2)] public string Severity { get; set; }
+        [DataMember(Name = "confidence", Order = 3)] public string Confidence { get; set; }
+        [DataMember(Name = "evidenceIds", Order = 4)] public List<string> EvidenceIds { get; set; } = new List<string>();
+        [DataMember(Name = "rationale", Order = 5)] public string Rationale { get; set; }
+        internal ReportAdvisorObservation SanitizedCopy() => new ReportAdvisorObservation { Category = PrivacySanitizer.Sanitize(Category), Severity = PrivacySanitizer.Sanitize(Severity), Confidence = PrivacySanitizer.Sanitize(Confidence), EvidenceIds = (EvidenceIds ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), Rationale = PrivacySanitizer.Sanitize(Rationale) };
+    }
+
+    [DataContract]
+    public sealed class ReportAdvisorRecommendation
+    {
+        [DataMember(Name = "settingId", Order = 1)] public string SettingId { get; set; }
+        [DataMember(Name = "currentValue", Order = 2)] public string CurrentValue { get; set; }
+        [DataMember(Name = "recommendedValue", Order = 3)] public string RecommendedValue { get; set; }
+        [DataMember(Name = "direction", Order = 4)] public string Direction { get; set; }
+        [DataMember(Name = "priority", Order = 5)] public string Priority { get; set; }
+        [DataMember(Name = "confidence", Order = 6)] public string Confidence { get; set; }
+        [DataMember(Name = "evidenceIds", Order = 7)] public List<string> EvidenceIds { get; set; } = new List<string>();
+        [DataMember(Name = "rationale", Order = 8)] public string Rationale { get; set; }
+        [DataMember(Name = "capability", Order = 9)] public string Capability { get; set; }
+        [DataMember(Name = "applyBehavior", Order = 10)] public string ApplyBehavior { get; set; }
+        internal ReportAdvisorRecommendation SanitizedCopy() => new ReportAdvisorRecommendation { SettingId = PrivacySanitizer.Sanitize(SettingId), CurrentValue = PrivacySanitizer.Sanitize(CurrentValue), RecommendedValue = PrivacySanitizer.Sanitize(RecommendedValue), Direction = PrivacySanitizer.Sanitize(Direction), Priority = PrivacySanitizer.Sanitize(Priority), Confidence = PrivacySanitizer.Sanitize(Confidence), EvidenceIds = (EvidenceIds ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), Rationale = PrivacySanitizer.Sanitize(Rationale), Capability = PrivacySanitizer.Sanitize(Capability), ApplyBehavior = PrivacySanitizer.Sanitize(ApplyBehavior) };
+    }
+
+    [DataContract]
+    public sealed class ReportAdvisorSetting
+    {
+        [DataMember(Name = "settingId", Order = 1)] public string SettingId { get; set; }
+        [DataMember(Name = "category", Order = 2)] public string Category { get; set; }
+        [DataMember(Name = "currentValue", Order = 3)] public string CurrentValue { get; set; }
+        [DataMember(Name = "valueKind", Order = 4)] public string ValueKind { get; set; }
+        [DataMember(Name = "capability", Order = 5)] public string Capability { get; set; }
+        [DataMember(Name = "applyBehavior", Order = 6)] public string ApplyBehavior { get; set; }
+        [DataMember(Name = "writable", Order = 7)] public bool Writable { get; set; }
+        [DataMember(Name = "currentlyVisible", Order = 8, EmitDefaultValue = false)] public bool? CurrentlyVisible { get; set; }
+        [DataMember(Name = "currentlyEnabled", Order = 9, EmitDefaultValue = false)] public bool? CurrentlyEnabled { get; set; }
+        internal ReportAdvisorSetting SanitizedCopy() => new ReportAdvisorSetting { SettingId = PrivacySanitizer.Sanitize(SettingId), Category = PrivacySanitizer.Sanitize(Category), CurrentValue = PrivacySanitizer.Sanitize(CurrentValue), ValueKind = PrivacySanitizer.Sanitize(ValueKind), Capability = PrivacySanitizer.Sanitize(Capability), ApplyBehavior = PrivacySanitizer.Sanitize(ApplyBehavior), Writable = Writable, CurrentlyVisible = CurrentlyVisible, CurrentlyEnabled = CurrentlyEnabled };
+    }
+
+    [DataContract]
+    public sealed class ReportAdvisorChange
+    {
+        [DataMember(Name = "settingId", Order = 1)] public string SettingId { get; set; }
+        [DataMember(Name = "originalValue", Order = 2)] public string OriginalValue { get; set; }
+        [DataMember(Name = "appliedValue", Order = 3)] public string AppliedValue { get; set; }
+        [DataMember(Name = "currentObservedValue", Order = 4)] public string CurrentObservedValue { get; set; }
+        [DataMember(Name = "status", Order = 5)] public string Status { get; set; }
+        [DataMember(Name = "appliedAtUtc", Order = 6)] public string AppliedAtUtc { get; set; }
+        internal ReportAdvisorChange SanitizedCopy() => new ReportAdvisorChange { SettingId = PrivacySanitizer.Sanitize(SettingId), OriginalValue = PrivacySanitizer.Sanitize(OriginalValue), AppliedValue = PrivacySanitizer.Sanitize(AppliedValue), CurrentObservedValue = PrivacySanitizer.Sanitize(CurrentObservedValue), Status = PrivacySanitizer.Sanitize(Status), AppliedAtUtc = PrivacySanitizer.Sanitize(AppliedAtUtc) };
+    }
+
+    [DataContract]
+    public sealed class ReportAdvisorMetricComparison
+    {
+        [DataMember(Name = "id", Order = 1)] public string Id { get; set; }
+        [DataMember(Name = "baselineValue", Order = 2, EmitDefaultValue = false)] public double? BaselineValue { get; set; }
+        [DataMember(Name = "followUpValue", Order = 3, EmitDefaultValue = false)] public double? FollowUpValue { get; set; }
+        [DataMember(Name = "state", Order = 4)] public string State { get; set; }
+        [DataMember(Name = "reason", Order = 5, EmitDefaultValue = false)] public string Reason { get; set; }
+        internal ReportAdvisorMetricComparison SanitizedCopy() => new ReportAdvisorMetricComparison { Id = PrivacySanitizer.Sanitize(Id), BaselineValue = BaselineValue, FollowUpValue = FollowUpValue, State = PrivacySanitizer.Sanitize(State), Reason = PrivacySanitizer.Sanitize(Reason) };
+    }
+
+    [DataContract]
+    public sealed class ReportAdvisorComparison
+    {
+        [DataMember(Name = "metrics", Order = 1)] public List<ReportAdvisorMetricComparison> Metrics { get; set; } = new List<ReportAdvisorMetricComparison>();
+        [DataMember(Name = "changedSettingIds", Order = 2)] public List<string> ChangedSettingIds { get; set; } = new List<string>();
+        [DataMember(Name = "multipleChanges", Order = 3)] public bool MultipleChanges { get; set; }
+        internal ReportAdvisorComparison SanitizedCopy() => new ReportAdvisorComparison { Metrics = (Metrics ?? new List<ReportAdvisorMetricComparison>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), ChangedSettingIds = (ChangedSettingIds ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), MultipleChanges = MultipleChanges };
+    }
+
+    [DataContract]
+    public sealed class ReportAdvisor
+    {
+        [DataMember(Name = "selectedCaptureId", Order = 1)] public string SelectedCaptureId { get; set; }
+        [DataMember(Name = "baselineCaptureId", Order = 2)] public string BaselineCaptureId { get; set; }
+        [DataMember(Name = "unavailableReason", Order = 3, EmitDefaultValue = false)] public string UnavailableReason { get; set; }
+        [DataMember(Name = "evidence", Order = 4)] public List<ReportMetric> Evidence { get; set; } = new List<ReportMetric>();
+        [DataMember(Name = "diagnosis", Order = 5)] public List<ReportAdvisorObservation> Diagnosis { get; set; } = new List<ReportAdvisorObservation>();
+        [DataMember(Name = "recommendations", Order = 6)] public List<ReportAdvisorRecommendation> Recommendations { get; set; } = new List<ReportAdvisorRecommendation>();
+        [DataMember(Name = "catalog", Order = 7)] public List<ReportAdvisorSetting> Catalog { get; set; } = new List<ReportAdvisorSetting>();
+        [DataMember(Name = "changes", Order = 8)] public List<ReportAdvisorChange> Changes { get; set; } = new List<ReportAdvisorChange>();
+        [DataMember(Name = "comparison", Order = 9, EmitDefaultValue = false)] public ReportAdvisorComparison Comparison { get; set; }
+        internal ReportAdvisor SanitizedCopy() => new ReportAdvisor { SelectedCaptureId = PrivacySanitizer.Sanitize(SelectedCaptureId), BaselineCaptureId = PrivacySanitizer.Sanitize(BaselineCaptureId), UnavailableReason = PrivacySanitizer.Sanitize(UnavailableReason), Evidence = (Evidence ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Diagnosis = (Diagnosis ?? new List<ReportAdvisorObservation>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Recommendations = (Recommendations ?? new List<ReportAdvisorRecommendation>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Catalog = (Catalog ?? new List<ReportAdvisorSetting>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Changes = (Changes ?? new List<ReportAdvisorChange>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Comparison = Comparison?.SanitizedCopy() };
+    }
+
+    [DataContract]
     public sealed class PerformanceReport
     {
         public const int CurrentSchemaVersion = 2;
@@ -111,8 +200,9 @@ namespace CS2RuntimeProfiler.Export
         [DataMember(Name = "warnings", Order = 15)] public List<string> Warnings { get; set; }
         [DataMember(Name = "captures", Order = 16)] public List<ReportCapture> Captures { get; set; }
         [DataMember(Name = "buildId", Order = 17, EmitDefaultValue = false)] public string BuildId { get; set; }
+        [DataMember(Name = "advisor", Order = 18, EmitDefaultValue = false)] public ReportAdvisor Advisor { get; set; }
         [DataMember(Name = "cityName", Order = 100, EmitDefaultValue = false)] public string CityName { get; set; }
         public static PerformanceReport CreateForTest() => new PerformanceReport { ProfilerVersion = "test", CityName = null };
-        internal PerformanceReport SanitizedCopy() => new PerformanceReport { SchemaVersion = SchemaVersion <= 0 ? CurrentSchemaVersion : SchemaVersion, GameVersion = PrivacySanitizer.Sanitize(GameVersion), ProfilerVersion = PrivacySanitizer.Sanitize(ProfilerVersion), HardwareSummary = PrivacySanitizer.Sanitize(HardwareSummary), EnabledMods = (EnabledMods ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), CaptureConfig = (CaptureConfig ?? new List<ReportNamedValue>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Capabilities = (Capabilities ?? new List<ReportNamedValue>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), GlobalMetrics = (GlobalMetrics ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Systems = (Systems ?? new List<ReportSystem>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), ModAttribution = (ModAttribution ?? new List<ReportNamedValue>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Pathfinding = (Pathfinding ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), DomainMetrics = (DomainMetrics ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Timeline = (Timeline ?? new List<ReportTimelinePoint>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), ProfilerOverhead = (ProfilerOverhead ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Warnings = (Warnings ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), Captures = (Captures ?? new List<ReportCapture>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), BuildId = PrivacySanitizer.Sanitize(BuildId), CityName = string.IsNullOrWhiteSpace(CityName) ? null : PrivacySanitizer.Sanitize(CityName) };
+        internal PerformanceReport SanitizedCopy() => new PerformanceReport { SchemaVersion = SchemaVersion <= 0 ? CurrentSchemaVersion : SchemaVersion, GameVersion = PrivacySanitizer.Sanitize(GameVersion), ProfilerVersion = PrivacySanitizer.Sanitize(ProfilerVersion), HardwareSummary = PrivacySanitizer.Sanitize(HardwareSummary), EnabledMods = (EnabledMods ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), CaptureConfig = (CaptureConfig ?? new List<ReportNamedValue>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Capabilities = (Capabilities ?? new List<ReportNamedValue>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), GlobalMetrics = (GlobalMetrics ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Systems = (Systems ?? new List<ReportSystem>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), ModAttribution = (ModAttribution ?? new List<ReportNamedValue>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Pathfinding = (Pathfinding ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), DomainMetrics = (DomainMetrics ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Timeline = (Timeline ?? new List<ReportTimelinePoint>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), ProfilerOverhead = (ProfilerOverhead ?? new List<ReportMetric>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), Warnings = (Warnings ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), Captures = (Captures ?? new List<ReportCapture>()).Where(x => x != null).Select(x => x.SanitizedCopy()).ToList(), BuildId = PrivacySanitizer.Sanitize(BuildId), Advisor = Advisor?.SanitizedCopy(), CityName = string.IsNullOrWhiteSpace(CityName) ? null : PrivacySanitizer.Sanitize(CityName) };
     }
 }

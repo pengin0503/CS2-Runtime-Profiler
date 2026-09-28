@@ -109,6 +109,53 @@ export interface DiagnosticsUi {
   patchMapState: string;
 }
 
+export interface AdvisorRecommendation {
+  settingId: string;
+  displayName: string;
+  currentValue: string;
+  recommendedValue: string;
+  direction: string;
+  priority: string;
+  confidence: string;
+  rationale: string;
+  evidenceIds: string[];
+  applyCapability: string;
+  applyBehavior: string;
+}
+
+export interface AdvisorUiState {
+  available: boolean;
+  unavailableReason: string;
+  selectedCaptureId: string;
+  baselineCaptureId: string;
+  catalog: Array<{ settingId: string; category: string; displayName: string; currentValue: string;
+    isUserFacing: boolean; isReadable: boolean; isWritable: boolean; applyBehavior: string }>;
+  observations: Array<{ category: string; severity: string; confidence: string; rationale: string; evidenceIds: string[] }>;
+  recommendations: AdvisorRecommendation[];
+  changes?: AdvisorChange[];
+  comparison?: AdvisorComparison | null;
+}
+
+export interface AdvisorComparison {
+  multipleChanges: boolean;
+  changedSettingIds: string[];
+  metrics: Array<{ id: string; baselineValue: number | null; followUpValue: number | null;
+    state: "Improved" | "Regressed" | "NoMaterialChange" | "NotComparable"; reason: string }>;
+}
+
+export interface AdvisorChange {
+  settingId: string;
+  originalValue: string;
+  appliedValue: string;
+  currentObservedValue: string;
+  status: string;
+}
+
+export const EMPTY_ADVISOR: AdvisorUiState = {
+  available: false, unavailableReason: "", selectedCaptureId: "", baselineCaptureId: "",
+  catalog: [], observations: [], recommendations: [], changes: [], comparison: null
+};
+
 export interface UiSnapshot {
   global: GlobalUiMetrics;
   capture: CaptureUiState;
@@ -119,6 +166,7 @@ export interface UiSnapshot {
   timeline: TimelinePoint[];
   captures: CaptureSummaryUi[];
   diagnostics: DiagnosticsUi;
+  advisor?: AdvisorUiState;
 }
 
 /** Persisted panel geometry in screen pixels; `custom` is false until the user moves or resizes the panel. */
@@ -161,6 +209,7 @@ export const EMPTY_SNAPSHOT: UiSnapshot = {
   domainMetrics: [],
   timeline: [],
   captures: [],
+  advisor: EMPTY_ADVISOR,
   diagnostics: {
     profilerOverheadShare: 0,
     unattributedJobsMilliseconds: null,
@@ -202,4 +251,13 @@ export const savePanelLayout = (left: number, top: number, width: number, height
 export const resetPanelLayout = () => trigger(GROUP, "resetPanelLayout");
 export const requestManualCapture = () => trigger(GROUP, "manualCapture");
 export const selectCapture = (id: string) => trigger(GROUP, "selectCapture", id);
+export const requestAdvisorDiagnosis = (id: string) => trigger(GROUP, "diagnoseAdvisor", id);
+export const requestAdvisorRediagnosis = (id: string) => trigger(GROUP, "advisorRediagnose", id);
+export const selectAdvisorBaseline = (id: string) => trigger(GROUP, "selectAdvisorBaseline", id);
+export const advisorApply = (id: string, value: string, confirmed = false) =>
+  trigger(GROUP, "advisorApply", id, value, confirmed);
+export const advisorUndo = (id: string, confirmed = false) => trigger(GROUP, "advisorUndo", id, confirmed);
+export const advisorUndoSession = () => trigger(GROUP, "advisorUndoSession");
+export const advisorResolveConflict = (id: string, restoreOriginal: boolean) =>
+  trigger(GROUP, "advisorResolveConflict", id, restoreOriginal);
 export const exportReport = () => trigger(GROUP, "exportReport");

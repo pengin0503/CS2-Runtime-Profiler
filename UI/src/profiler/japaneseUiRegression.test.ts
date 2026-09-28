@@ -11,7 +11,7 @@ describe("Japanese profiler UI regression coverage", () => {
 
   it("uses Japanese labels and CS2-native select events for the main tabs", () => {
     const source = readFileSync(new URL("./ProfilerRoot.tsx", import.meta.url), "utf8");
-    for (const label of ["概要", "システム", "MOD", "経路探索", "タイムライン", "キャプチャ", "診断"]) {
+    for (const label of ["概要", "システム", "MOD", "経路探索", "タイムライン", "キャプチャ", "改善提案", "診断"]) {
       expect(source).toContain(label);
     }
     expect(source).toContain('from "cs2/ui"');

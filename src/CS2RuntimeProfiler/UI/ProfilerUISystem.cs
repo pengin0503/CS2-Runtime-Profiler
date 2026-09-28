@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Colossal.UI.Binding;
+using CS2RuntimeProfiler.Advisor;
+using CS2RuntimeProfiler.Core.Advisor;
 using CS2RuntimeProfiler.Collectors;
 using CS2RuntimeProfiler.Core;
 using CS2RuntimeProfiler.Export;
@@ -22,6 +24,7 @@ namespace CS2RuntimeProfiler.UI
         private GlobalMetricsCollector _global;
         private DomainMetricsSystem _domains;
         private CaptureRuntimeSystem _capture;
+        private AdvisorSystem _advisor;
         private ReportExporter _exporter;
         private UiSnapshot _snapshot = new UiSnapshot();
         private RawValueBinding _snapshotBinding;
@@ -44,6 +47,8 @@ namespace CS2RuntimeProfiler.UI
             _global = World.GetOrCreateSystemManaged<GlobalMetricsCollector>();
             _domains = World.GetOrCreateSystemManaged<DomainMetricsSystem>();
             _capture = World.GetOrCreateSystemManaged<CaptureRuntimeSystem>();
+            try { _advisor = World.GetOrCreateSystemManaged<AdvisorSystem>(); }
+            catch (Exception) { _advisor = null; }
             _exporter = new ReportExporter();
 
             AddBinding(_snapshotBinding = new RawValueBinding(Group, "snapshot", WriteSnapshot));
@@ -61,6 +66,13 @@ namespace CS2RuntimeProfiler.UI
             AddBinding(new TriggerBinding(Group, "resetPanelLayout", () => SetPanelLayout(0, 0, 0, 0)));
             AddBinding(new TriggerBinding(Group, "manualCapture", ManualCapture));
             AddBinding(new TriggerBinding<string>(Group, "selectCapture", SelectCapture));
+            AddBinding(new TriggerBinding<string>(Group, "diagnoseAdvisor", DiagnoseAdvisor));
+            AddBinding(new TriggerBinding<string>(Group, "advisorRediagnose", RediagnoseAdvisor));
+            AddBinding(new TriggerBinding<string>(Group, "selectAdvisorBaseline", SelectAdvisorBaseline));
+            AddBinding(new TriggerBinding<string, string, bool>(Group, "advisorApply", AdvisorApply));
+            AddBinding(new TriggerBinding<string, bool>(Group, "advisorUndo", AdvisorUndo));
+            AddBinding(new TriggerBinding(Group, "advisorUndoSession", AdvisorUndoSession));
+            AddBinding(new TriggerBinding<string, bool>(Group, "advisorResolveConflict", AdvisorResolveConflict));
             AddBinding(new TriggerBinding(Group, "exportReport", ExportReport));
 
             RefreshSnapshot();
@@ -154,6 +166,48 @@ namespace CS2RuntimeProfiler.UI
                 RefreshSnapshot();
                 _snapshotBinding.Update();
             }
+        }
+
+        private void DiagnoseAdvisor(string id)
+        {
+            _advisor?.DiagnoseCompletedCapture(id);
+            if (_panelVisible) { RefreshSnapshot(); _snapshotBinding.Update(); }
+        }
+
+        private void RediagnoseAdvisor(string id)
+        {
+            _advisor?.Rediagnose(id);
+            if (_panelVisible) { RefreshSnapshot(); _snapshotBinding.Update(); }
+        }
+
+        private void SelectAdvisorBaseline(string id)
+        {
+            _advisor?.SelectBaseline(id);
+            if (_panelVisible) { RefreshSnapshot(); _snapshotBinding.Update(); }
+        }
+
+        private void AdvisorApply(string id, string proposed, bool confirmed)
+        {
+            _advisor?.ApplySetting(id, proposed, confirmed);
+            if (_panelVisible) { RefreshSnapshot(); _snapshotBinding.Update(); }
+        }
+
+        private void AdvisorUndo(string id, bool confirmed)
+        {
+            _advisor?.UndoSetting(id, confirmed);
+            if (_panelVisible) { RefreshSnapshot(); _snapshotBinding.Update(); }
+        }
+
+        private void AdvisorUndoSession()
+        {
+            _advisor?.UndoSession();
+            if (_panelVisible) { RefreshSnapshot(); _snapshotBinding.Update(); }
+        }
+
+        private void AdvisorResolveConflict(string id, bool restoreOriginal)
+        {
+            _advisor?.ResolveConflict(id, restoreOriginal);
+            if (_panelVisible) { RefreshSnapshot(); _snapshotBinding.Update(); }
         }
 
         private void SelectCapture(string id)
@@ -258,7 +312,8 @@ namespace CS2RuntimeProfiler.UI
                 CapturedMarkerCount = markerCapture?.MarkerCoverage.Captured ?? 0,
                 MarkerBatchSize = _capture?.CurrentBatchSize ?? 0,
                 SamplingStride = _capture?.SamplingStride ?? 1,
-                PatchMapState = patchMapState
+                PatchMapState = patchMapState,
+                Advisor = _advisor?.CurrentState
             };
         }
 
@@ -312,7 +367,103 @@ namespace CS2RuntimeProfiler.UI
             WriteCaptures(writer, snapshot.Captures);
             writer.PropertyName("diagnostics");
             WriteDiagnostics(writer, snapshot.Diagnostics);
+            writer.PropertyName("advisor");
+            WriteAdvisor(writer, snapshot.Advisor);
 
+            writer.TypeEnd();
+        }
+
+        private static void WriteAdvisor(IJsonWriter writer, AdvisorState state)
+        {
+            state = state ?? new AdvisorState(null, null, null, "Advisor unavailable.");
+            writer.TypeBegin("CS2RuntimeProfiler.AdvisorUiState");
+            writer.PropertyName("available"); writer.Write(state.IsAvailable);
+            writer.PropertyName("unavailableReason"); writer.Write(state.UnavailableReason ?? string.Empty);
+            writer.PropertyName("selectedCaptureId"); writer.Write(state.SelectedCaptureId ?? string.Empty);
+            writer.PropertyName("baselineCaptureId"); writer.Write(state.BaselineCaptureId ?? string.Empty);
+            writer.PropertyName("catalog");
+            writer.ArrayBegin((uint)state.Catalog.Count);
+            foreach (var item in state.Catalog)
+            {
+                writer.TypeBegin("CS2RuntimeProfiler.AdvisorSetting");
+                writer.PropertyName("settingId"); writer.Write(item.SettingId);
+                writer.PropertyName("category"); writer.Write(item.Category);
+                writer.PropertyName("displayName"); writer.Write(item.DisplayName);
+                writer.PropertyName("currentValue"); writer.Write(item.CurrentValue);
+                writer.PropertyName("isUserFacing"); writer.Write(item.IsUserFacing);
+                writer.PropertyName("isReadable"); writer.Write(item.IsReadable);
+                writer.PropertyName("isWritable"); writer.Write(item.IsWritable);
+                writer.PropertyName("applyBehavior"); writer.Write(item.ApplyBehavior.ToString());
+                writer.TypeEnd();
+            }
+            writer.ArrayEnd();
+            writer.PropertyName("observations");
+            writer.ArrayBegin((uint)state.Observations.Count);
+            foreach (var item in state.Observations)
+            {
+                writer.TypeBegin("CS2RuntimeProfiler.AdvisorObservation");
+                writer.PropertyName("category"); writer.Write(item.Category.ToString());
+                writer.PropertyName("severity"); writer.Write(item.Severity.ToString());
+                writer.PropertyName("confidence"); writer.Write(item.Confidence.ToString());
+                writer.PropertyName("rationale"); writer.Write(item.Rationale);
+                writer.PropertyName("evidenceIds"); WriteStrings(writer, item.EvidenceIds);
+                writer.TypeEnd();
+            }
+            writer.ArrayEnd();
+            writer.PropertyName("recommendations");
+            writer.ArrayBegin((uint)state.Recommendations.Count);
+            foreach (var item in state.Recommendations)
+            {
+                writer.TypeBegin("CS2RuntimeProfiler.AdvisorRecommendation");
+                writer.PropertyName("settingId"); writer.Write(item.SettingId);
+                writer.PropertyName("displayName"); writer.Write(item.DisplayName);
+                writer.PropertyName("currentValue"); writer.Write(item.CurrentValue);
+                writer.PropertyName("recommendedValue"); writer.Write(item.RecommendedValue);
+                writer.PropertyName("direction"); writer.Write(item.Direction.ToString());
+                writer.PropertyName("priority"); writer.Write(item.Priority.ToString());
+                writer.PropertyName("confidence"); writer.Write(item.Confidence.ToString());
+                writer.PropertyName("rationale"); writer.Write(item.Rationale);
+                writer.PropertyName("evidenceIds"); WriteStrings(writer, item.EvidenceIds);
+                writer.PropertyName("applyCapability"); writer.Write(item.ApplyCapability.ToString());
+                writer.PropertyName("applyBehavior"); writer.Write(item.ApplyBehavior.ToString());
+                writer.TypeEnd();
+            }
+            writer.ArrayEnd();
+            writer.PropertyName("changes");
+            writer.ArrayBegin((uint)state.Changes.Count);
+            foreach (var item in state.Changes)
+            {
+                writer.TypeBegin("CS2RuntimeProfiler.AdvisorChange");
+                writer.PropertyName("settingId"); writer.Write(item.SettingId);
+                writer.PropertyName("originalValue"); writer.Write(item.OriginalValue ?? string.Empty);
+                writer.PropertyName("appliedValue"); writer.Write(item.AppliedValue ?? string.Empty);
+                writer.PropertyName("currentObservedValue"); writer.Write(item.CurrentObservedValue ?? string.Empty);
+                writer.PropertyName("status"); writer.Write(item.Status.ToString());
+                writer.TypeEnd();
+            }
+            writer.ArrayEnd();
+            writer.PropertyName("comparison");
+            if (state.Comparison == null) writer.WriteNull();
+            else
+            {
+                writer.TypeBegin("CS2RuntimeProfiler.AdvisorComparison");
+                writer.PropertyName("multipleChanges"); writer.Write(state.Comparison.MultipleChanges);
+                writer.PropertyName("changedSettingIds"); WriteStrings(writer, state.Comparison.ChangedSettingIds);
+                writer.PropertyName("metrics");
+                writer.ArrayBegin((uint)state.Comparison.Metrics.Count);
+                foreach (var metric in state.Comparison.Metrics)
+                {
+                    writer.TypeBegin("CS2RuntimeProfiler.AdvisorMetricComparison");
+                    writer.PropertyName("id"); writer.Write(metric.Id);
+                    writer.PropertyName("baselineValue"); WriteNullable(writer, metric.BaselineValue);
+                    writer.PropertyName("followUpValue"); WriteNullable(writer, metric.FollowUpValue);
+                    writer.PropertyName("state"); writer.Write(metric.State.ToString());
+                    writer.PropertyName("reason"); writer.Write(metric.Reason ?? string.Empty);
+                    writer.TypeEnd();
+                }
+                writer.ArrayEnd();
+                writer.TypeEnd();
+            }
             writer.TypeEnd();
         }
 

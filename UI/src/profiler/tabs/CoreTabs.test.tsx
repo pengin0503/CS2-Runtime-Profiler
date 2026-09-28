@@ -1,5 +1,6 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import TestRenderer, { act } from "react-test-renderer";
 import { describe, expect, it } from "vitest";
 import { OverviewTab } from "./OverviewTab";
 import { SystemsTab } from "./SystemsTab";
@@ -30,6 +31,13 @@ const snapshot: any = {
   diagnostics: { profilerOverheadShare: 0.02, unattributedJobsMilliseconds: 4.1, messages: [] }
 };
 
+function renderedText(node: any): string {
+  if (node == null) return "";
+  if (Array.isArray(node)) return node.map(renderedText).join("");
+  if (typeof node === "object") return renderedText(node.children);
+  return String(node);
+}
+
 describe("core profiler tabs", () => {
   it("overview shows Japanese status text and formats profiler units truthfully", () => {
     const html = renderToStaticMarkup(<OverviewTab snapshot={snapshot} onManualCapture={() => {}} onExport={() => {}} exportResult="" />);
@@ -52,22 +60,40 @@ describe("core profiler tabs", () => {
   });
 
   it("systems view keeps owner and patch metadata separate", () => {
-    const html = renderToStaticMarkup(<SystemsTab systems={snapshot.systems} />);
-    expect(html).toContain("TrafficSystem");
-    expect(html).toContain("所有元: Game");
-    expect(html).toContain("パッチ: TrafficTweaks");
-    expect(html).toContain("管理コード");
-    expect(html).toContain("管理システムの実行境界");
+    const renderer = TestRenderer.create(<SystemsTab systems={snapshot.systems} />);
+    const collapsedHtml = renderedText(renderer.toJSON());
+    expect(collapsedHtml).toContain("TrafficSystem");
+    expect(collapsedHtml).toContain("所有元: Game");
+    expect(collapsedHtml).toContain("パッチ: TrafficTweaks");
+    expect(collapsedHtml).toContain("管理コード");
+    expect(collapsedHtml).not.toContain("測定元:");
+
+    const systemButton = renderer.root.find(node => node.type === "button" && typeof node.props["aria-expanded"] === "boolean");
+    expect(systemButton.props["aria-expanded"]).toBe(false);
+    act(() => systemButton.props.onClick());
+
+    const expandedHtml = renderedText(renderer.toJSON());
+    expect(expandedHtml).toContain("測定元: 管理システムの実行境界（管理コードの OnUpdate 同期実行時間。ジョブ/Burst のワーカー時間は含みません）");
+    expect(expandedHtml).toContain("最後の呼び出し: 3.40 ms");
+    expect(systemButton.props["aria-expanded"]).toBe(true);
   });
 
   it("systems view labels full-marker and unknown timing sources accurately", () => {
-    const html = renderToStaticMarkup(<SystemsTab systems={[
+    const systems = [
       { ...snapshot.systems[0], id: "FullMarkerSystem", confidence: "Full", sourceKind: "Vanilla" },
       { ...snapshot.systems[0], id: "UnknownTimingSystem", confidence: "Unavailable", sourceKind: "Unknown" }
-    ]} />);
+    ];
 
-    expect(html).toContain("Unity ECS プロファイラーマーカー");
-    expect(html).toContain("測定元: 不明");
+    for (const [index, expectedSource] of [
+      [0, "Unity ECS プロファイラーマーカー"],
+      [1, "不明"]
+    ] as const) {
+      const renderer = TestRenderer.create(<SystemsTab systems={[systems[index]]} />);
+      const systemButton = renderer.root.find(node => node.type === "button" && typeof node.props["aria-expanded"] === "boolean");
+      act(() => systemButton.props.onClick());
+      expect(renderedText(renderer.toJSON())).toContain(`測定元: ${expectedSource}`);
+      renderer.unmount();
+    }
   });
 
   it("diagnostics displays unmeasured job time as unavailable", () => {

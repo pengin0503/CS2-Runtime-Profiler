@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../../src/CS2RuntimeProfiler/Core/**/*.cs" LinkBase="Core" />
+    <Compile Include="../../src/CS2RuntimeProfiler/Advisor/Settings/**/*.cs" LinkBase="Advisor/Settings" />
     <Compile Include="../../src/CS2RuntimeProfiler/Attribution/AssemblyAttributor.cs" Link="Attribution/AssemblyAttributor.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Profiling/IRecorderBackend.cs" Link="Profiling/IRecorderBackend.cs" />
     <Compile Include="../../src/CS2RuntimeProfiler/Profiling/RecorderManager.cs" Link="Profiling/RecorderManager.cs" />

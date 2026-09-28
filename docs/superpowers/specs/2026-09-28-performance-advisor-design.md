@@ -1,7 +1,7 @@
 # CS2 Runtime Profiler — Performance Advisor Design Specification
 
 **Date:** 2026-09-28  
-**Status:** Approved conversational design; written-spec review pending  
+**Status:** Implementation staged on `feature/performance-advisor`; in-game validation and full Release build pending
 **Target project:** `pengin0503/CS2-Runtime-Profiler`  
 **Target game baseline:** Cities: Skylines II 1.6.2-era runtime, with capability-oriented handling for later versions
 

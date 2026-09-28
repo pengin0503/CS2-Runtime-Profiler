@@ -132,6 +132,14 @@ namespace CS2RuntimeProfiler.Core
             if (!string.IsNullOrWhiteSpace(warning)) _warnings.Add(warning.Trim());
         }
 
+        public void AddManagedTimingFallbackUnavailableWarning(string reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+                return;
+
+            AddWarning("Managed SystemBase timing fallback unavailable: " + reason);
+        }
+
         public void AddGlobalSample(GlobalMetricsSnapshot sample)
         {
             if (sample == null) return;

@@ -262,12 +262,7 @@ namespace CS2RuntimeProfiler.Profiling
                     _deepRecorders?.Descriptors ?? Array.Empty<RecorderDescriptor>(),
                     managedTiming);
 
-                if (!string.IsNullOrWhiteSpace(_managedInstrumentationUnavailableReason))
-                {
-                    capture.AddWarning(
-                        "Managed SystemBase timing fallback unavailable: "
-                        + _managedInstrumentationUnavailableReason);
-                }
+                capture.AddManagedTimingFallbackUnavailableWarning(_managedInstrumentationUnavailableReason);
             }
             catch (Exception ex)
             {

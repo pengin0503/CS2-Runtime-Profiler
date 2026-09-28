@@ -88,6 +88,22 @@ public class CaptureUiProjectionTests
     }
 
     [Test]
+    public void Diagnostics_uses_the_selected_capture_catalog_count_over_a_stale_live_count()
+    {
+        var capture = new CaptureSession("selected", new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null), 8);
+        capture.SetMarkerCoverage(38, 0, false);
+
+        var snapshot = UiSnapshotBuilder.Build(new UiSnapshotInput
+        {
+            Captures = new[] { capture },
+            SelectedCaptureId = "selected",
+            DiscoveredMarkerCount = 129
+        });
+
+        Assert.That(snapshot.Diagnostics.DiscoveredMarkerCount, Is.EqualTo(38));
+    }
+
+    [Test]
     public void Current_capture_is_not_counted_or_listed_as_completed()
     {
         var completed = new CaptureSession("completed", new CaptureTrigger(CaptureTriggerKind.Manual, 1d, null), 16);

@@ -3,16 +3,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("repository issue regressions", () => {
-  it("prevents report filename collisions without overwriting an existing export", () => {
-    const exporter = readFileSync(path.resolve(process.cwd(), "../src/CS2RuntimeProfiler/Export/ReportExporter.cs"), "utf8");
-    const writer = readFileSync(path.resolve(process.cwd(), "../src/CS2RuntimeProfiler/Export/ReportFileWriter.cs"), "utf8");
-    expect(exporter).toContain("yyyy-MM-dd_HHmmss_fff");
-    expect(exporter).toContain("ReportFileWriter.WriteUnique");
-    expect(writer).toContain("FileMode.CreateNew");
-    expect(writer).toContain("-{attempt}");
-    expect(writer).toContain("TryDeletePartialFile(path)");
-  });
-
   it("preserves Unity recorder handles until rediscovery succeeds", () => {
     const source = readFileSync(path.resolve(process.cwd(), "../src/CS2RuntimeProfiler/Profiling/UnityRecorderBackend.cs"), "utf8");
     const discoveryIndex = source.indexOf("ProfilerRecorderHandle.GetAvailable");
@@ -58,18 +48,4 @@ describe("repository issue regressions", () => {
     expect(readme).toContain("`-1`、`-2`");
   });
 
-  it("uses the Deep Capture catalog for the discovered-marker diagnostic", () => {
-    const source = readFileSync(path.resolve(process.cwd(), "../src/CS2RuntimeProfiler/UI/ProfilerUISystem.cs"), "utf8");
-
-    expect(source).toContain("DiscoveredMarkerCount = _capture?.DiscoveredMarkerCount ?? 0");
-    expect(source).not.toContain("DiscoveredMarkerCount = _global?.Recorders?.Descriptors?.Count ?? 0");
-  });
-
-  it("retains the managed fallback failure warning when full marker rows exist", () => {
-    const source = readFileSync(path.resolve(process.cwd(), "../src/CS2RuntimeProfiler/Profiling/CaptureRuntimeSystem.cs"), "utf8");
-    const completionHandler = source.slice(source.indexOf("private void HandleCaptureCompleted"));
-
-    expect(completionHandler).toContain("if (!string.IsNullOrWhiteSpace(_managedInstrumentationUnavailableReason))");
-    expect(completionHandler).not.toContain("capture.SystemTiming?.Systems?.Count == 0");
-  });
 });

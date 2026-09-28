@@ -18,7 +18,6 @@ namespace CS2RuntimeProfiler.Core
                         continue;
                     result.AddEntry(entry);
                 }
-                result.SetUnattributedJobsMilliseconds(primary.UnattributedJobsMilliseconds);
             }
 
             if (fallback != null)
@@ -29,10 +28,12 @@ namespace CS2RuntimeProfiler.Core
                         continue;
                     result.AddEntry(entry);
                 }
-
-                if (primary == null)
-                    result.SetUnattributedJobsMilliseconds(fallback.UnattributedJobsMilliseconds);
             }
+
+            var unattributedJobsMilliseconds = primary?.UnattributedJobsMilliseconds
+                ?? fallback?.UnattributedJobsMilliseconds;
+            if (unattributedJobsMilliseconds.HasValue)
+                result.SetUnattributedJobsMilliseconds(unattributedJobsMilliseconds.Value);
 
             return result;
         }

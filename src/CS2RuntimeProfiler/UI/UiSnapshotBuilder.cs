@@ -48,7 +48,7 @@ namespace CS2RuntimeProfiler.UI
                 {
                     ProfilerOverheadShare = overheadShare, UnattributedJobsMilliseconds = detailTiming?.UnattributedJobsMilliseconds,
                     Messages = diagnostics.ToArray(), GameVersion = input.GameVersion ?? string.Empty, ProfilerVersion = input.ProfilerVersion ?? string.Empty,
-                    DiscoveredMarkerCount = Math.Max(0, input.DiscoveredMarkerCount), CapturedMarkerCount = Math.Max(0, input.CapturedMarkerCount),
+                    DiscoveredMarkerCount = Math.Max(0, detailCapture?.MarkerCoverage.Discovered ?? input.DiscoveredMarkerCount), CapturedMarkerCount = Math.Max(0, input.CapturedMarkerCount),
                     SystemCount = systems.Count, MarkerBatchSize = Math.Max(0, input.MarkerBatchSize), SamplingStride = Math.Max(1, input.SamplingStride),
                     PatchMapState = input.PatchMapState ?? string.Empty
                 }

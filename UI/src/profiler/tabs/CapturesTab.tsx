@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "cs2/ui";
 import type { CaptureSummaryUi, CorrelatedChangeUi } from "../bindings";
-import { formatNumber, formatPercent, shortMetricName } from "../format";
+import { formatByUnit, formatPercent, shortMetricName } from "../format";
 import { MetricBadge } from "../components/MetricBadge";
 import { captureWarningLabel, triggerKindLabel } from "../text";
 import styles from "../profiler.module.scss";
@@ -11,11 +11,11 @@ function metricLabel(metric: string) {
 }
 
 function ChangeRow({ change }: { change: CorrelatedChangeUi }) {
-  const delta = `${change.delta >= 0 ? "+" : ""}${formatNumber(change.delta, 2)}`;
+  const delta = `${change.delta >= 0 ? "+" : ""}${formatByUnit(change.delta, change.unitType)}`;
   return (
     <div className={styles.changeRow}>
       <span>{metricLabel(change.metric)}</span>
-      <span>{formatNumber(change.before, 2)} → {formatNumber(change.after, 2)}</span>
+      <span>{formatByUnit(change.before, change.unitType)} → {formatByUnit(change.after, change.unitType)}</span>
       <b>{delta}</b>
       <MetricBadge confidence={change.confidence} availability="Available" />
     </div>

@@ -58,19 +58,19 @@ namespace CS2RuntimeProfiler.Export
             foreach (var system in snapshot.Systems ?? Array.Empty<SystemUiRow>())
             {
                 if (system == null) continue;
-                report.Systems.Add(new ReportSystem { SystemId = system.Id, OwnerAssembly = system.OwnerAssembly, Confidence = system.Confidence, CurrentMilliseconds = system.CurrentMilliseconds, MeanMilliseconds = system.MeanMilliseconds, MedianMilliseconds = system.MedianMilliseconds, P95Milliseconds = system.P95Milliseconds, P99Milliseconds = system.P99Milliseconds, MaxMilliseconds = system.MaxMilliseconds, TotalMilliseconds = system.TotalMilliseconds, Calls = system.Calls, PatchOwners = (system.PatchOwners ?? Array.Empty<string>()).ToList(), IsAggregateContainer = system.IsAggregateContainer });
+                report.Systems.Add(new ReportSystem { SystemId = system.Id, OwnerAssembly = system.OwnerAssembly, Confidence = system.Confidence, CurrentMilliseconds = system.CurrentMilliseconds, MeanMilliseconds = system.MeanMilliseconds, MedianMilliseconds = system.MedianMilliseconds, P95Milliseconds = system.P95Milliseconds, P99Milliseconds = system.P99Milliseconds, MaxMilliseconds = system.MaxMilliseconds, TotalMilliseconds = system.TotalMilliseconds, Calls = system.Calls, PatchOwners = (system.PatchOwners ?? Array.Empty<string>()).ToList(), IsAggregateContainer = system.IsAggregateContainer, MillisecondsPerFrame = system.MillisecondsPerFrame });
             }
 
             foreach (var mod in snapshot.Mods ?? Array.Empty<ModUiRow>())
             {
                 if (mod == null) continue;
-                var detail = string.Format(CultureInfo.InvariantCulture, "directMs={0:0.###}; directSystems={1}; patchedVanillaSystems={2}", mod.DirectSystemMilliseconds, mod.DirectSystemCount, mod.PatchedVanillaSystemCount);
+                var detail = string.Format(CultureInfo.InvariantCulture, "directMs={0:0.###}; costBasis={3}; directSystems={1}; patchedVanillaSystems={2}", mod.DirectSystemMilliseconds, mod.DirectSystemCount, mod.PatchedVanillaSystemCount, mod.DirectCostBasis);
                 report.ModAttribution.Add(new ReportNamedValue(mod.AssemblyName, detail));
             }
 
             foreach (var metric in snapshot.Pathfinding?.Metrics ?? Array.Empty<UiMetricRow>()) report.Pathfinding.Add(ToReportMetric(metric));
             foreach (var metric in snapshot.DomainMetrics ?? Array.Empty<UiMetricRow>()) report.DomainMetrics.Add(ToReportMetric(metric));
-            foreach (var point in snapshot.Timeline ?? Array.Empty<TimelinePoint>()) if (point != null) report.Timeline.Add(new ReportTimelinePoint { TimestampSeconds = point.TimestampSeconds, Metric = point.Metric, Value = point.Value, Confidence = point.Confidence });
+            foreach (var point in snapshot.Timeline ?? Array.Empty<TimelinePoint>()) if (point != null) report.Timeline.Add(new ReportTimelinePoint { TimestampSeconds = point.TimestampSeconds, Metric = point.Metric, Value = point.Value, Confidence = point.Confidence, Unit = string.IsNullOrEmpty(point.UnitType) ? null : point.UnitType });
             report.ProfilerOverhead.Add(new ReportMetric { Name = "captureOverheadShare", Value = snapshot.Diagnostics?.ProfilerOverheadShare ?? 0d, Unit = "ratio", Confidence = "Full", Availability = "Available" });
             var unattributedJobsMilliseconds = snapshot.Diagnostics?.UnattributedJobsMilliseconds;
             report.ProfilerOverhead.Add(new ReportMetric

@@ -37,6 +37,8 @@ export interface SystemUiRow {
   id: string;
   ownerAssembly: string;
   sourceKind: string;
+  /** Group systems whose inclusive time already contains their children; excluded from additive totals. */
+  isAggregateContainer?: boolean;
   currentMilliseconds: number;
   meanMilliseconds: number | null;
   medianMilliseconds: number | null;
@@ -44,6 +46,8 @@ export interface SystemUiRow {
   p99Milliseconds: number | null;
   maxMilliseconds: number | null;
   totalMilliseconds: number | null;
+  /** Total time divided by frames rendered in the measurement window; null when the frame count is unknown. */
+  millisecondsPerFrame?: number | null;
   calls: number | null;
   confidence: string;
   patchOwners: string[];
@@ -52,6 +56,8 @@ export interface SystemUiRow {
 export interface ModUiRow {
   assemblyName: string;
   directSystemMilliseconds: number;
+  /** "perFrame" when every contributing system has a frame-normalized cost, otherwise "perSample". */
+  directCostBasis?: string;
   directSystemCount: number;
   patchedVanillaSystemCount: number;
 }
@@ -60,6 +66,7 @@ export interface TimelinePoint {
   timestampSeconds: number;
   metric: string;
   value: number;
+  unitType?: string;
   confidence: string;
 }
 
@@ -69,6 +76,7 @@ export interface CorrelatedChangeUi {
   after: number;
   delta: number;
   relativeDelta: number | null;
+  unitType?: string;
   confidence: string;
 }
 
@@ -112,6 +120,17 @@ export interface UiSnapshot {
   captures: CaptureSummaryUi[];
   diagnostics: DiagnosticsUi;
 }
+
+/** Persisted panel geometry in screen pixels; `custom` is false until the user moves or resizes the panel. */
+export interface PanelLayout {
+  custom: boolean;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export const DEFAULT_PANEL_LAYOUT: PanelLayout = { custom: false, left: 0, top: 0, width: 0, height: 0 };
 
 export const EMPTY_HUD_SNAPSHOT: UiHudSnapshot = {
   selectedSpeed: null,
@@ -164,22 +183,23 @@ const hudSnapshotBinding = bindValue<UiHudSnapshot>(GROUP, "hudSnapshot", EMPTY_
 const panelVisibleBinding = bindValue<boolean>(GROUP, "panelVisible", false);
 const uiScalePercentBinding = bindValue<number>(GROUP, "uiScalePercent", 100);
 const selectedCaptureBinding = bindValue<string>(GROUP, "selectedCaptureId", "");
-const selectedSystemBinding = bindValue<string>(GROUP, "selectedSystemId", "");
-const selectedModBinding = bindValue<string>(GROUP, "selectedModId", "");
 const exportResultBinding = bindValue<string>(GROUP, "exportResult", "");
+const panelLayoutBinding = bindValue<PanelLayout>(GROUP, "panelLayout", DEFAULT_PANEL_LAYOUT);
 
 export const useProfilerSnapshot = () => useValue(snapshotBinding);
 export const useProfilerHudSnapshot = () => useValue(hudSnapshotBinding);
 export const usePanelVisible = () => useValue(panelVisibleBinding);
 export const useUiScalePercent = () => useValue(uiScalePercentBinding);
 export const useSelectedCaptureId = () => useValue(selectedCaptureBinding);
-export const useSelectedSystemId = () => useValue(selectedSystemBinding);
-export const useSelectedModId = () => useValue(selectedModBinding);
 export const useExportResult = () => useValue(exportResultBinding);
+export const usePanelLayout = () => useValue(panelLayoutBinding);
 
 export const togglePanel = () => trigger(GROUP, "togglePanel");
+/** Idempotent close; safe when the game delivers the Back action more than once. */
+export const closePanel = () => trigger(GROUP, "setPanelVisible", false);
+export const savePanelLayout = (left: number, top: number, width: number, height: number) =>
+  trigger(GROUP, "setPanelLayout", Math.round(left), Math.round(top), Math.round(width), Math.round(height));
+export const resetPanelLayout = () => trigger(GROUP, "resetPanelLayout");
 export const requestManualCapture = () => trigger(GROUP, "manualCapture");
 export const selectCapture = (id: string) => trigger(GROUP, "selectCapture", id);
-export const selectSystem = (id: string) => trigger(GROUP, "selectSystem", id);
-export const selectMod = (id: string) => trigger(GROUP, "selectMod", id);
 export const exportReport = () => trigger(GROUP, "exportReport");

@@ -54,8 +54,8 @@ describe("core profiler tabs", () => {
   it("systems view keeps owner and patch metadata separate", () => {
     const html = renderToStaticMarkup(<SystemsTab systems={snapshot.systems} />);
     expect(html).toContain("TrafficSystem");
-    expect(html).toContain("Game");
-    expect(html).toContain("TrafficTweaks");
+    expect(html).toContain("所有元: Game");
+    expect(html).toContain("パッチ: TrafficTweaks");
     expect(html).toContain("管理コード");
     expect(html).toContain("管理システムの実行境界");
   });
@@ -79,11 +79,34 @@ describe("core profiler tabs", () => {
     expect(html).not.toContain("0.00 ms");
   });
 
+  it("systems view ranks by per-frame cost so a one-off autosave call does not lead", () => {
+    // Values from an in-game report: SerializerSystem ran once for 502 ms during a 144-frame capture.
+    const systems = [
+      { ...snapshot.systems[0], id: "Game.Serialization.SerializerSystem", currentMilliseconds: 502.49, meanMilliseconds: 502.49, maxMilliseconds: 502.49, totalMilliseconds: 502.49, millisecondsPerFrame: 502.49 / 144, calls: 1, patchOwners: [] },
+      { ...snapshot.systems[0], id: "Game.Rendering.PreRenderSystem", currentMilliseconds: 10.58, meanMilliseconds: 8.31, maxMilliseconds: 14.49, totalMilliseconds: 1196.05, millisecondsPerFrame: 1196.05 / 144, calls: 144, patchOwners: [] }
+    ];
+    const html = renderToStaticMarkup(<SystemsTab systems={systems} />);
+    expect(html.indexOf("PreRenderSystem")).toBeLessThan(html.indexOf("SerializerSystem"));
+    expect(html).toContain("8.31 ms");
+    expect(html).toContain("3.49 ms");
+    expect(html).toContain("502.49 ms");
+    expect(html).toContain("フレーム平均");
+  });
+
+  it("systems view renders at most one page of rows and offers more", () => {
+    const systems = Array.from({ length: 150 }, (_, index) => ({ ...snapshot.systems[0], id: `System${index}`, currentMilliseconds: index }));
+    const html = renderToStaticMarkup(<SystemsTab systems={systems} />);
+    expect(html).toContain("100 / 150 件を表示");
+    expect(html).toContain("さらに 50 件表示");
+    expect(html).not.toContain("<table");
+  });
+
   it("mods view reports direct ownership and patched-system metadata without blame wording", () => {
     const html = renderToStaticMarkup(<ModsTab mods={snapshot.mods} />);
     expect(html).toContain("TrafficTweaks");
     expect(html).toContain("1.20 ms");
     expect(html).toContain("パッチ対象システム");
+    expect(html).toContain("フレーム平均");
     expect(html.toLowerCase()).not.toContain("worst");
   });
 });

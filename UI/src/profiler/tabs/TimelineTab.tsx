@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
+import { Button } from "cs2/ui";
 import type { TimelinePoint } from "../bindings";
-import { formatNumber, shortMetricName } from "../format";
+import { formatByUnit, shortMetricName } from "../format";
 import { confidenceLabel } from "../text";
 import styles from "../profiler.module.scss";
 
@@ -14,6 +15,14 @@ interface GeometryPoint {
   x: number;
   y: number;
 }
+
+interface Series {
+  metric: string;
+  points: TimelinePoint[];
+  unitType: string;
+}
+
+const SERIES_COLORS = ["#63b5ff", "#f2b84b", "#6fd08c", "#e07bd8", "#ff7a6b", "#9ea7ff", "#4fd1c5", "#d7e36b"];
 
 function geometry(points: TimelinePoint[], minTime: number, maxTime: number): GeometryPoint[] {
   if (!points.length) return [];
@@ -29,14 +38,36 @@ function geometry(points: TimelinePoint[], minTime: number, maxTime: number): Ge
   }));
 }
 
+/**
+ * Only series with at least two samples can form a line. Single end-of-capture readings (one per
+ * profiler marker and one per system, over a thousand in a real city) are not a time series; they
+ * are summarized as a count and remain available in the Systems tab and the JSON export.
+ */
+export function chartableSeries(points: TimelinePoint[]): { series: Series[]; singleSampleCount: number } {
+  const grouped = new Map<string, TimelinePoint[]>();
+  for (const point of points ?? []) {
+    if (point.metric.startsWith("system:")) continue;
+    const list = grouped.get(point.metric);
+    if (list) list.push(point); else grouped.set(point.metric, [point]);
+  }
+  const series: Series[] = [];
+  let singleSampleCount = 0;
+  for (const [metric, list] of grouped) {
+    if (list.length < 2) {
+      singleSampleCount++;
+      continue;
+    }
+    list.sort((a, b) => a.timestampSeconds - b.timestampSeconds);
+    series.push({ metric, points: list, unitType: list.find(point => point.unitType)?.unitType ?? "" });
+  }
+  series.sort((a, b) => a.metric.localeCompare(b.metric));
+  return { series, singleSampleCount };
+}
+
 export function TimelineTab({ points }: { points: TimelinePoint[] }) {
-  const series = useMemo(() => Array.from(new Set((points ?? []).map(point => point.metric))).sort(), [points]);
+  const { series, singleSampleCount } = useMemo(() => chartableSeries(points), [points]);
   const [hidden, setHidden] = useState<Set<string>>(() => new Set());
   const [selectedTime, setSelectedTime] = useState<number | null>(null);
-
-  const visible = series.filter(metric => !hidden.has(metric));
-  const minTime = points?.length ? Math.min(...points.map(point => point.timestampSeconds)) : 0;
-  const maxTime = points?.length ? Math.max(...points.map(point => point.timestampSeconds)) : 1;
 
   const toggle = (metric: string) => setHidden(previous => {
     const next = new Set(previous);
@@ -44,38 +75,56 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
     return next;
   });
 
-  if (!points?.length) {
+  if (!series.length) {
     return <p className={styles.empty}>保持されているタイムライン履歴はまだありません。単一時点のカウンターから履歴を捏造することはありません。</p>;
   }
 
+  const allPoints = series.flatMap(item => item.points);
+  const minTime = Math.min(...allPoints.map(point => point.timestampSeconds));
+  const maxTime = Math.max(...allPoints.map(point => point.timestampSeconds));
+  const colorOf = (metric: string) => SERIES_COLORS[series.findIndex(item => item.metric === metric) % SERIES_COLORS.length];
+  const visible = series.filter(item => !hidden.has(item.metric));
   const selected = selectedTime == null
     ? []
-    : points.filter(point => Math.abs(point.timestampSeconds - selectedTime) < 0.0001);
+    : series.flatMap(item => item.points
+        .filter(point => Math.abs(point.timestampSeconds - selectedTime) < 0.0001)
+        .map(point => ({ point, unitType: item.unitType })));
 
   return (
     <div className={styles.tabBody}>
       <div className={styles.seriesControls}>
-        {series.map(metric => (
-          <label key={metric} className={styles.seriesToggle}>
-            <input type="checkbox" checked={!hidden.has(metric)} onChange={() => toggle(metric)} />
-            <span>{displayMetric(metric)}</span>
-          </label>
-        ))}
+        {series.map(item => {
+          const shown = !hidden.has(item.metric);
+          return (
+            <Button
+              as="button"
+              variant="flat"
+              key={item.metric}
+              selected={shown}
+              className={`${styles.seriesToggle} ${shown ? styles.seriesToggleOn : ""}`}
+              onSelect={() => toggle(item.metric)}
+              aria-pressed={shown}
+            >
+              <span className={styles.seriesSwatch} style={{ backgroundColor: shown ? colorOf(item.metric) : "transparent", borderColor: colorOf(item.metric) }} />
+              <span>{displayMetric(item.metric)}</span>
+            </Button>
+          );
+        })}
       </div>
 
       <div className={styles.chartWrap}>
         <svg className={styles.timelineChart} viewBox="0 0 1000 260" role="img" aria-label="プロファイラーのタイムライン">
           <line x1="28" y1="232" x2="972" y2="232" className={styles.chartAxis} />
           <line x1="28" y1="28" x2="28" y2="232" className={styles.chartAxis} />
-          {visible.map(metric => {
-            const metricPoints = points.filter(point => point.metric === metric).sort((a, b) => a.timestampSeconds - b.timestampSeconds);
-            const coords = geometry(metricPoints, minTime, maxTime);
+          {visible.map(item => {
+            const coords = geometry(item.points, minTime, maxTime);
+            const color = colorOf(item.metric);
             return (
-              <g key={metric} data-series={metric}>
-                <polyline points={coords.map(item => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(" ")} fill="none" className={styles.chartLine} />
+              <g key={item.metric} data-series={item.metric}>
+                <polyline points={coords.map(coord => `${coord.x.toFixed(1)},${coord.y.toFixed(1)}`).join(" ")} fill="none" stroke={color} className={styles.chartLine} />
                 {coords.map(({ point, x, y }, index) => (
-                  <circle key={`${point.timestampSeconds}-${index}`} cx={x} cy={y} r="5" className={styles.chartPoint} onClick={() => setSelectedTime(point.timestampSeconds)}>
-                    <title>{`${displayMetric(metric)} / ${point.timestampSeconds.toFixed(2)}秒 = ${formatNumber(point.value, 2)}（${confidenceLabel(point.confidence)}）`}</title>
+                  <circle key={`${point.timestampSeconds}-${index}`} cx={x} cy={y} r="5" fill={color} className={styles.chartPoint} onClick={() => setSelectedTime(point.timestampSeconds)}>
+                    <title>{`${displayMetric(item.metric)} / ${point.timestampSeconds.toFixed(2)}秒 = ${formatByUnit(point.value, item.unitType)}（${confidenceLabel(point.confidence)}）`}</title>
                   </circle>
                 ))}
               </g>
@@ -83,11 +132,16 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
           })}
         </svg>
       </div>
-      <p className={styles.chartNote}>形状比較のため各系列は観測範囲ごとに正規化しています。生の値はポイントのホバー／選択で確認できます。</p>
+      <p className={styles.chartNote}>
+        形状比較のため各系列は観測範囲ごとに正規化しています。生の値はポイントのホバー／選択で確認できます。
+        {singleSampleCount > 0 ? ` 1点しかない値（${singleSampleCount} 件）は線にならないため表示していません。` : ""}
+      </p>
       {selectedTime != null && (
         <div className={styles.selectedPoint}>
           <strong>時刻 = {selectedTime.toFixed(2)} 秒</strong>
-          {selected.map(point => <span key={`${point.metric}-${point.value}`}>{displayMetric(point.metric)}: {formatNumber(point.value, 2)}（{confidenceLabel(point.confidence)}）</span>)}
+          {selected.map(({ point, unitType }) => (
+            <span key={point.metric}>{displayMetric(point.metric)}: {formatByUnit(point.value, unitType)}（{confidenceLabel(point.confidence)}）</span>
+          ))}
         </div>
       )}
     </div>

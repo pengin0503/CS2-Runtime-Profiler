@@ -29,9 +29,8 @@ namespace CS2RuntimeProfiler.UI
         private ValueBinding<bool> _panelVisibleBinding;
         private ValueBinding<int> _uiScalePercentBinding;
         private ValueBinding<string> _selectedCaptureBinding;
-        private ValueBinding<string> _selectedSystemBinding;
-        private ValueBinding<string> _selectedModBinding;
         private ValueBinding<string> _exportResultBinding;
+        private RawValueBinding _panelLayoutBinding;
         private double _nextRefreshAt;
         private bool _panelVisible;
         private string _selectedCaptureId = string.Empty;
@@ -52,15 +51,16 @@ namespace CS2RuntimeProfiler.UI
             AddBinding(_panelVisibleBinding = new ValueBinding<bool>(Group, "panelVisible", false));
             AddBinding(_uiScalePercentBinding = new ValueBinding<int>(Group, "uiScalePercent", GetUiScalePercent()));
             AddBinding(_selectedCaptureBinding = new ValueBinding<string>(Group, "selectedCaptureId", string.Empty));
-            AddBinding(_selectedSystemBinding = new ValueBinding<string>(Group, "selectedSystemId", string.Empty));
-            AddBinding(_selectedModBinding = new ValueBinding<string>(Group, "selectedModId", string.Empty));
             AddBinding(_exportResultBinding = new ValueBinding<string>(Group, "exportResult", string.Empty));
 
+            AddBinding(_panelLayoutBinding = new RawValueBinding(Group, "panelLayout", WritePanelLayout));
+
             AddBinding(new TriggerBinding(Group, "togglePanel", TogglePanel));
+            AddBinding(new TriggerBinding<bool>(Group, "setPanelVisible", SetPanelVisible));
+            AddBinding(new TriggerBinding<int, int, int, int>(Group, "setPanelLayout", SetPanelLayout));
+            AddBinding(new TriggerBinding(Group, "resetPanelLayout", () => SetPanelLayout(0, 0, 0, 0)));
             AddBinding(new TriggerBinding(Group, "manualCapture", ManualCapture));
             AddBinding(new TriggerBinding<string>(Group, "selectCapture", SelectCapture));
-            AddBinding(new TriggerBinding<string>(Group, "selectSystem", id => _selectedSystemBinding.Update(id ?? string.Empty)));
-            AddBinding(new TriggerBinding<string>(Group, "selectMod", id => _selectedModBinding.Update(id ?? string.Empty)));
             AddBinding(new TriggerBinding(Group, "exportReport", ExportReport));
 
             RefreshSnapshot();
@@ -85,9 +85,16 @@ namespace CS2RuntimeProfiler.UI
             _snapshotBinding.Update();
         }
 
-        private void TogglePanel()
+        private void TogglePanel() => SetPanelVisible(!_panelVisible);
+
+        // Idempotent so that a close request (for example the game's Back/Escape input action)
+        // can never reopen the panel if it is delivered twice.
+        private void SetPanelVisible(bool visible)
         {
-            _panelVisible = !_panelVisible;
+            if (_panelVisible == visible)
+                return;
+
+            _panelVisible = visible;
             _panelVisibleBinding.Update(_panelVisible);
             _uiScalePercentBinding.Update(GetUiScalePercent());
             _hudSnapshotBinding.Update();
@@ -97,6 +104,44 @@ namespace CS2RuntimeProfiler.UI
                 RefreshSnapshot();
                 _snapshotBinding.Update();
             }
+        }
+
+        private void SetPanelLayout(int left, int top, int width, int height)
+        {
+            var settings = Mod.Settings;
+            if (settings == null)
+                return;
+
+            var reset = width <= 0 || height <= 0;
+            // The UI clamps against the current viewport (the left edge may sit partly off screen while the
+            // header stays grabbable); store the geometry as given so the panel does not jump after a drop.
+            settings.PanelLeft = reset ? 0 : left;
+            settings.PanelTop = reset ? 0 : top;
+            settings.PanelWidth = reset ? 0 : width;
+            settings.PanelHeight = reset ? 0 : height;
+            try
+            {
+                settings.ApplyAndSave();
+            }
+            catch (Exception ex)
+            {
+                Mod.Log.Warn($"Saving profiler panel layout failed: {PrivacySanitizer.Sanitize(ex.Message)}");
+            }
+
+            _panelLayoutBinding.Update();
+        }
+
+        private void WritePanelLayout(IJsonWriter writer)
+        {
+            var settings = Mod.Settings;
+            var hasLayout = settings != null && settings.PanelWidth > 0 && settings.PanelHeight > 0;
+            writer.TypeBegin("CS2RuntimeProfiler.PanelLayout");
+            writer.PropertyName("custom"); writer.Write(hasLayout);
+            writer.PropertyName("left"); writer.Write(hasLayout ? settings.PanelLeft : 0);
+            writer.PropertyName("top"); writer.Write(hasLayout ? settings.PanelTop : 0);
+            writer.PropertyName("width"); writer.Write(hasLayout ? settings.PanelWidth : 0);
+            writer.PropertyName("height"); writer.Write(hasLayout ? settings.PanelHeight : 0);
+            writer.TypeEnd();
         }
 
         private void ManualCapture()
@@ -307,6 +352,7 @@ namespace CS2RuntimeProfiler.UI
                 writer.PropertyName("id"); writer.Write(item.Id ?? string.Empty);
                 writer.PropertyName("ownerAssembly"); writer.Write(item.OwnerAssembly ?? string.Empty);
                 writer.PropertyName("sourceKind"); writer.Write(item.SourceKind ?? string.Empty);
+                writer.PropertyName("isAggregateContainer"); writer.Write(item.IsAggregateContainer);
                 writer.PropertyName("currentMilliseconds"); writer.Write(item.CurrentMilliseconds);
                 writer.PropertyName("meanMilliseconds"); WriteNullable(writer, item.MeanMilliseconds);
                 writer.PropertyName("medianMilliseconds"); WriteNullable(writer, item.MedianMilliseconds);
@@ -314,6 +360,7 @@ namespace CS2RuntimeProfiler.UI
                 writer.PropertyName("p99Milliseconds"); WriteNullable(writer, item.P99Milliseconds);
                 writer.PropertyName("maxMilliseconds"); WriteNullable(writer, item.MaxMilliseconds);
                 writer.PropertyName("totalMilliseconds"); WriteNullable(writer, item.TotalMilliseconds);
+                writer.PropertyName("millisecondsPerFrame"); WriteNullable(writer, item.MillisecondsPerFrame);
                 writer.PropertyName("calls"); if (item.Calls.HasValue) writer.Write(item.Calls.Value); else writer.WriteNull();
                 writer.PropertyName("confidence"); writer.Write(item.Confidence ?? string.Empty);
                 writer.PropertyName("patchOwners"); WriteStrings(writer, item.PatchOwners);
@@ -332,6 +379,7 @@ namespace CS2RuntimeProfiler.UI
                 writer.TypeBegin("CS2RuntimeProfiler.ModUiRow");
                 writer.PropertyName("assemblyName"); writer.Write(item.AssemblyName ?? string.Empty);
                 writer.PropertyName("directSystemMilliseconds"); writer.Write(item.DirectSystemMilliseconds);
+                writer.PropertyName("directCostBasis"); writer.Write(item.DirectCostBasis ?? string.Empty);
                 writer.PropertyName("directSystemCount"); writer.Write(item.DirectSystemCount);
                 writer.PropertyName("patchedVanillaSystemCount"); writer.Write(item.PatchedVanillaSystemCount);
                 writer.TypeEnd();
@@ -376,6 +424,7 @@ namespace CS2RuntimeProfiler.UI
                 writer.PropertyName("timestampSeconds"); writer.Write(item.TimestampSeconds);
                 writer.PropertyName("metric"); writer.Write(item.Metric ?? string.Empty);
                 writer.PropertyName("value"); writer.Write(item.Value);
+                writer.PropertyName("unitType"); writer.Write(item.UnitType ?? string.Empty);
                 writer.PropertyName("confidence"); writer.Write(item.Confidence ?? string.Empty);
                 writer.TypeEnd();
             }
@@ -420,6 +469,7 @@ namespace CS2RuntimeProfiler.UI
                 writer.PropertyName("after"); writer.Write(item.After);
                 writer.PropertyName("delta"); writer.Write(item.Delta);
                 writer.PropertyName("relativeDelta"); WriteNullable(writer, item.RelativeDelta);
+                writer.PropertyName("unitType"); writer.Write(item.UnitType ?? string.Empty);
                 writer.PropertyName("confidence"); writer.Write(item.Confidence ?? string.Empty);
                 writer.TypeEnd();
             }

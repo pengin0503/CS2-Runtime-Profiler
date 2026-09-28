@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -47,20 +48,45 @@ namespace CS2RuntimeProfiler.Attribution
                 if (patchInfo == null)
                     return Array.Empty<PatchOwnerInfo>();
 
-                var ownersProperty = patchInfo.GetType().GetProperty("Owners", BindingFlags.Public | BindingFlags.Instance);
-                if (!(ownersProperty?.GetValue(patchInfo) is IEnumerable<string> owners))
-                    return Array.Empty<PatchOwnerInfo>();
+                var patches = new List<(string HarmonyId, string PatchAssemblyName)>();
+                foreach (var listName in new[] { "Prefixes", "Postfixes", "Transpilers", "Finalizers" })
+                {
+                    // Harmony 2.x exposes these as public readonly fields; accept properties for other layouts.
+                    if (!(ReadMember(patchInfo, listName) is IEnumerable list))
+                        continue;
+                    foreach (var patch in list)
+                    {
+                        if (patch == null)
+                            continue;
+                        var owner = ReadMember(patch, "owner") as string;
+                        var patchMethod = ReadMember(patch, "PatchMethod") as MethodInfo;
+                        patches.Add((owner, patchMethod?.DeclaringType?.Assembly.GetName().Name));
+                    }
+                }
 
-                return owners
-                    .Where(owner => !string.IsNullOrWhiteSpace(owner))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Select(owner => new PatchOwnerInfo(owner, owner))
-                    .ToArray();
+                if (patches.Count == 0)
+                {
+                    // Older Harmony layouts: fall back to the owner IDs only.
+                    var ownersProperty = patchInfo.GetType().GetProperty("Owners", BindingFlags.Public | BindingFlags.Instance);
+                    if (ownersProperty?.GetValue(patchInfo) is IEnumerable<string> owners)
+                        patches.AddRange(owners.Select(owner => (owner, (string)null)));
+                }
+
+                return PatchOwnerResolver.Resolve(patches);
             }
             catch
             {
                 return Array.Empty<PatchOwnerInfo>();
             }
+        }
+
+        private static object ReadMember(object instance, string name)
+        {
+            var type = instance.GetType();
+            var field = type.GetField(name, BindingFlags.Public | BindingFlags.Instance);
+            if (field != null)
+                return field.GetValue(instance);
+            return type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance)?.GetValue(instance);
         }
     }
 }

@@ -47,6 +47,7 @@ namespace CS2RuntimeProfiler.UI
         public double? P99Milliseconds { get; set; }
         public double? MaxMilliseconds { get; set; }
         public double? TotalMilliseconds { get; set; }
+        public double? MillisecondsPerFrame { get; set; }
         public int? Calls { get; set; }
         public string Confidence { get; set; } = MetricConfidence.Unavailable.ToString();
         public IReadOnlyList<string> PatchOwners { get; set; } = Array.Empty<string>();
@@ -55,9 +56,22 @@ namespace CS2RuntimeProfiler.UI
     public sealed class ModUiRow
     {
         public string AssemblyName { get; set; } = string.Empty;
+        /// <summary>
+        /// Additive direct cost of the systems owned by this assembly. Uses total time per frame when the
+        /// measurement window frame count is known, otherwise the per-sample mean (see <see cref="DirectCostBasis"/>).
+        /// </summary>
         public double DirectSystemMilliseconds { get; set; }
+        public string DirectCostBasis { get; set; } = ModCostBasis.PerFrame;
         public int DirectSystemCount { get; set; }
         public int PatchedVanillaSystemCount { get; set; }
+    }
+
+    public static class ModCostBasis
+    {
+        /// <summary>Every contributing system reports total time divided by rendered frames.</summary>
+        public const string PerFrame = "perFrame";
+        /// <summary>At least one system lacks a frame count; its per-sample mean (or current value) was used.</summary>
+        public const string PerSample = "perSample";
     }
 
     public sealed class PathfindingUiMetrics
@@ -70,6 +84,7 @@ namespace CS2RuntimeProfiler.UI
         public double TimestampSeconds { get; set; }
         public string Metric { get; set; } = string.Empty;
         public double Value { get; set; }
+        public string UnitType { get; set; } = string.Empty;
         public string Confidence { get; set; } = MetricConfidence.Unavailable.ToString();
     }
 
@@ -80,6 +95,7 @@ namespace CS2RuntimeProfiler.UI
         public double After { get; set; }
         public double Delta { get; set; }
         public double? RelativeDelta { get; set; }
+        public string UnitType { get; set; } = string.Empty;
         public string Confidence { get; set; } = MetricConfidence.Unavailable.ToString();
     }
 

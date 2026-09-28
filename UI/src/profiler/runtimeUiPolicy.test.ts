@@ -16,6 +16,6 @@ it("updates only the lightweight HUD on periodic refresh while the panel is clos
 
 it("rebuilds the full snapshot immediately when the panel opens", () => {
   expect(source).toMatch(
-    /private void TogglePanel\(\)[\s\S]*?_panelVisibleBinding\.Update\(_panelVisible\);[\s\S]*?if \(_panelVisible\)\s*\{\s*RefreshSnapshot\(\);\s*_snapshotBinding\.Update\(\);\s*\}/
+    /private void SetPanelVisible\(bool visible\)[\s\S]*?_panelVisibleBinding\.Update\(_panelVisible\);[\s\S]*?if \(_panelVisible\)\s*\{\s*RefreshSnapshot\(\);\s*_snapshotBinding\.Update\(\);\s*\}/
   );
 });

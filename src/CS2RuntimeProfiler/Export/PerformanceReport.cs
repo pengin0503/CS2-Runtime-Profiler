@@ -45,7 +45,8 @@ namespace CS2RuntimeProfiler.Export
         [DataMember(Name = "calls", Order = 12, EmitDefaultValue = false)] public int? Calls { get; set; }
         [DataMember(Name = "patchOwners", Order = 13)] public List<string> PatchOwners { get; set; }
         [DataMember(Name = "isAggregateContainer", Order = 14, EmitDefaultValue = false)] public bool IsAggregateContainer { get; set; }
-        internal ReportSystem SanitizedCopy() => new ReportSystem { SystemId = PrivacySanitizer.Sanitize(SystemId), OwnerAssembly = PrivacySanitizer.Sanitize(OwnerAssembly), ModName = PrivacySanitizer.Sanitize(ModName), Confidence = PrivacySanitizer.Sanitize(Confidence), CurrentMilliseconds = CurrentMilliseconds, MeanMilliseconds = MeanMilliseconds, MedianMilliseconds = MedianMilliseconds, P95Milliseconds = P95Milliseconds, P99Milliseconds = P99Milliseconds, MaxMilliseconds = MaxMilliseconds, TotalMilliseconds = TotalMilliseconds, Calls = Calls, PatchOwners = (PatchOwners ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), IsAggregateContainer = IsAggregateContainer };
+        [DataMember(Name = "millisecondsPerFrame", Order = 15, EmitDefaultValue = false)] public double? MillisecondsPerFrame { get; set; }
+        internal ReportSystem SanitizedCopy() => new ReportSystem { MillisecondsPerFrame = MillisecondsPerFrame, SystemId = PrivacySanitizer.Sanitize(SystemId), OwnerAssembly = PrivacySanitizer.Sanitize(OwnerAssembly), ModName = PrivacySanitizer.Sanitize(ModName), Confidence = PrivacySanitizer.Sanitize(Confidence), CurrentMilliseconds = CurrentMilliseconds, MeanMilliseconds = MeanMilliseconds, MedianMilliseconds = MedianMilliseconds, P95Milliseconds = P95Milliseconds, P99Milliseconds = P99Milliseconds, MaxMilliseconds = MaxMilliseconds, TotalMilliseconds = TotalMilliseconds, Calls = Calls, PatchOwners = (PatchOwners ?? new List<string>()).Select(PrivacySanitizer.Sanitize).ToList(), IsAggregateContainer = IsAggregateContainer };
     }
 
     [DataContract]
@@ -84,7 +85,8 @@ namespace CS2RuntimeProfiler.Export
         [DataMember(Name = "metric", Order = 2)] public string Metric { get; set; }
         [DataMember(Name = "value", Order = 3)] public double Value { get; set; }
         [DataMember(Name = "confidence", Order = 4, EmitDefaultValue = false)] public string Confidence { get; set; }
-        internal ReportTimelinePoint SanitizedCopy() => new ReportTimelinePoint { TimestampSeconds = TimestampSeconds, Metric = PrivacySanitizer.Sanitize(Metric), Value = Value, Confidence = PrivacySanitizer.Sanitize(Confidence) };
+        [DataMember(Name = "unit", Order = 5, EmitDefaultValue = false)] public string Unit { get; set; }
+        internal ReportTimelinePoint SanitizedCopy() => new ReportTimelinePoint { Unit = PrivacySanitizer.Sanitize(Unit), TimestampSeconds = TimestampSeconds, Metric = PrivacySanitizer.Sanitize(Metric), Value = Value, Confidence = PrivacySanitizer.Sanitize(Confidence) };
     }
 
     [DataContract]

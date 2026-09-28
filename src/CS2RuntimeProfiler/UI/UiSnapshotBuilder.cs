@@ -100,7 +100,7 @@ namespace CS2RuntimeProfiler.UI
         {
             if (snapshot == null) return Array.Empty<UiMetricRow>();
             return snapshot.Metrics.Values.OrderBy(metric => metric.Id, StringComparer.Ordinal)
-                .Select(metric => new UiMetricRow { Id = metric.Id, Value = metric.Value, Confidence = metric.Confidence.ToString(), Availability = metric.Availability.ToString(), Reason = metric.Reason }).ToArray();
+                .Select(metric => new UiMetricRow { Id = metric.Id, Value = metric.Value, UnitType = metric.UnitType, Confidence = metric.Confidence.ToString(), Availability = metric.Availability.ToString(), Reason = metric.Reason }).ToArray();
         }
 
         private static IReadOnlyList<SystemUiRow> BuildSystems(SystemTimingSnapshot snapshot)
@@ -111,8 +111,8 @@ namespace CS2RuntimeProfiler.UI
                 Id = system.SystemId, OwnerAssembly = system.OwnerAssembly, SourceKind = system.SourceKind.ToString(), IsAggregateContainer = system.IsAggregateContainer,
                 CurrentMilliseconds = system.Milliseconds, MeanMilliseconds = system.MeanMilliseconds, MedianMilliseconds = system.MedianMilliseconds,
                 P95Milliseconds = system.P95Milliseconds, P99Milliseconds = system.P99Milliseconds, MaxMilliseconds = system.MaxMilliseconds,
-                TotalMilliseconds = system.TotalMilliseconds, Calls = system.Calls, Confidence = system.Confidence.ToString(), PatchOwners = system.PatchOwners.ToArray()
-            }).OrderByDescending(system => system.CurrentMilliseconds).ThenBy(system => system.Id, StringComparer.Ordinal).ToArray();
+                TotalMilliseconds = system.TotalMilliseconds, MillisecondsPerFrame = system.MillisecondsPerFrame, Calls = system.Calls, Confidence = system.Confidence.ToString(), PatchOwners = system.PatchOwners.ToArray()
+            }).OrderByDescending(AdditiveCost).ThenBy(system => system.Id, StringComparer.Ordinal).ToArray();
         }
 
         private static IReadOnlyList<ModUiRow> BuildMods(IReadOnlyList<SystemUiRow> systems)
@@ -120,7 +120,13 @@ namespace CS2RuntimeProfiler.UI
             if (systems == null || systems.Count == 0) return Array.Empty<ModUiRow>();
             var direct = systems.Where(system => !system.IsAggregateContainer && string.Equals(system.SourceKind, SystemSourceKind.Mod.ToString(), StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(system.OwnerAssembly))
                 .GroupBy(system => system.OwnerAssembly, StringComparer.Ordinal)
-                .ToDictionary(group => group.Key, group => new ModUiRow { AssemblyName = group.Key, DirectSystemMilliseconds = group.Sum(system => system.CurrentMilliseconds), DirectSystemCount = group.Count() }, StringComparer.Ordinal);
+                .ToDictionary(group => group.Key, group => new ModUiRow
+                {
+                    AssemblyName = group.Key,
+                    DirectSystemMilliseconds = group.Sum(AdditiveCost),
+                    DirectCostBasis = group.All(system => system.MillisecondsPerFrame.HasValue) ? ModCostBasis.PerFrame : ModCostBasis.PerSample,
+                    DirectSystemCount = group.Count()
+                }, StringComparer.Ordinal);
             foreach (var system in systems)
             foreach (var patchOwner in system.PatchOwners ?? Array.Empty<string>())
             {
@@ -130,6 +136,10 @@ namespace CS2RuntimeProfiler.UI
             }
             return direct.Values.OrderByDescending(row => row.DirectSystemMilliseconds).ThenBy(row => row.AssemblyName, StringComparer.Ordinal).ToArray();
         }
+
+        // The last observed call ("current") is not additive: summing it lets a single rare call, such as an
+        // autosave serializer, dominate a mod total. Prefer total time per frame, then the per-sample mean.
+        private static double AdditiveCost(SystemUiRow system) => system.MillisecondsPerFrame ?? system.MeanMilliseconds ?? system.CurrentMilliseconds;
 
         private static CaptureSummaryUi BuildCapture(CaptureSession capture)
         {
@@ -157,8 +167,8 @@ namespace CS2RuntimeProfiler.UI
             var post = capture.GlobalSamples.Where(sample => sample.TimestampSeconds >= trigger && sample.TimestampSeconds <= trigger + CorrelationWindowSeconds).ToArray();
             if (pre.Length == 0 || post.Length == 0) return Array.Empty<CorrelatedChangeUi>();
             var changes = new List<CorrelatedChangeUi>();
-            AddChange(changes, "actualSpeed", pre.Average(sample => sample.ActualSpeed), post.Average(sample => sample.ActualSpeed), MetricConfidence.Full);
-            AddChange(changes, "efficiency", pre.Average(sample => sample.Efficiency), post.Average(sample => sample.Efficiency), MetricConfidence.Full);
+            AddChange(changes, "actualSpeed", pre.Average(sample => sample.ActualSpeed), post.Average(sample => sample.ActualSpeed), MetricConfidence.Full, MetricUnits.Speed);
+            AddChange(changes, "efficiency", pre.Average(sample => sample.Efficiency), post.Average(sample => sample.Efficiency), MetricConfidence.Full, MetricUnits.Ratio);
             var sharedRecorderIds = pre.SelectMany(sample => sample.RecorderReadings.Where(pair => pair.Value.Count > 0).Select(pair => pair.Key))
                 .Intersect(post.SelectMany(sample => sample.RecorderReadings.Where(pair => pair.Value.Count > 0).Select(pair => pair.Key)), StringComparer.Ordinal).Distinct(StringComparer.Ordinal);
             foreach (var id in sharedRecorderIds)
@@ -166,37 +176,43 @@ namespace CS2RuntimeProfiler.UI
                 var beforeValues = pre.Where(sample => sample.RecorderReadings.TryGetValue(id, out var reading) && reading.Count > 0).Select(sample => sample.RecorderReadings[id].Value).ToArray();
                 var afterValues = post.Where(sample => sample.RecorderReadings.TryGetValue(id, out var reading) && reading.Count > 0).Select(sample => sample.RecorderReadings[id].Value).ToArray();
                 if (beforeValues.Length == 0 || afterValues.Length == 0) continue;
-                AddChange(changes, id, beforeValues.Average(), afterValues.Average(), MetricConfidence.Full);
+                var unit = post.Concat(pre).Select(sample => UnitOf(sample.RecorderUnits, id)).FirstOrDefault(value => !string.IsNullOrEmpty(value)) ?? string.Empty;
+                AddChange(changes, id, beforeValues.Average(), afterValues.Average(), MetricConfidence.Full, unit);
             }
             return changes.Where(change => Math.Abs(change.Delta) > double.Epsilon).OrderByDescending(change => Math.Abs(change.RelativeDelta ?? 0d)).ThenByDescending(change => Math.Abs(change.Delta)).Take(MaxCorrelatedChanges).ToArray();
         }
 
-        private static void AddChange(List<CorrelatedChangeUi> changes, string metric, double before, double after, MetricConfidence confidence)
+        private static void AddChange(List<CorrelatedChangeUi> changes, string metric, double before, double after, MetricConfidence confidence, string unitType)
         {
             if (double.IsNaN(before) || double.IsInfinity(before) || double.IsNaN(after) || double.IsInfinity(after)) return;
             var delta = after - before;
-            changes.Add(new CorrelatedChangeUi { Metric = metric, Before = before, After = after, Delta = delta, RelativeDelta = Math.Abs(before) <= double.Epsilon ? (double?)null : delta / Math.Abs(before), Confidence = confidence.ToString() });
+            changes.Add(new CorrelatedChangeUi { Metric = metric, Before = before, After = after, Delta = delta, RelativeDelta = Math.Abs(before) <= double.Epsilon ? (double?)null : delta / Math.Abs(before), UnitType = unitType ?? string.Empty, Confidence = confidence.ToString() });
         }
 
         private static IReadOnlyList<TimelinePoint> BuildTimeline(CaptureSession capture)
         {
             if (capture == null) return Array.Empty<TimelinePoint>();
             var points = new List<TimelinePoint>();
+            var units = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var sample in capture.GlobalSamples)
             {
-                points.Add(new TimelinePoint { TimestampSeconds = sample.TimestampSeconds, Metric = "selectedSpeed", Value = sample.SelectedSpeed, Confidence = MetricConfidence.Full.ToString() });
-                points.Add(new TimelinePoint { TimestampSeconds = sample.TimestampSeconds, Metric = "actualSpeed", Value = sample.ActualSpeed, Confidence = MetricConfidence.Full.ToString() });
-                points.Add(new TimelinePoint { TimestampSeconds = sample.TimestampSeconds, Metric = "efficiency", Value = sample.Efficiency, Confidence = MetricConfidence.Full.ToString() });
+                foreach (var unit in sample.RecorderUnits) units[unit.Key] = unit.Value ?? string.Empty;
+                points.Add(new TimelinePoint { TimestampSeconds = sample.TimestampSeconds, Metric = "selectedSpeed", Value = sample.SelectedSpeed, UnitType = MetricUnits.Speed, Confidence = MetricConfidence.Full.ToString() });
+                points.Add(new TimelinePoint { TimestampSeconds = sample.TimestampSeconds, Metric = "actualSpeed", Value = sample.ActualSpeed, UnitType = MetricUnits.Speed, Confidence = MetricConfidence.Full.ToString() });
+                points.Add(new TimelinePoint { TimestampSeconds = sample.TimestampSeconds, Metric = "efficiency", Value = sample.Efficiency, UnitType = MetricUnits.Ratio, Confidence = MetricConfidence.Full.ToString() });
                 foreach (var recorder in sample.RecorderReadings.Where(pair => pair.Value.Count > 0))
-                    points.Add(new TimelinePoint { TimestampSeconds = sample.TimestampSeconds, Metric = "recorder:" + recorder.Key, Value = recorder.Value.Value, Confidence = MetricConfidence.Full.ToString() });
+                    points.Add(new TimelinePoint { TimestampSeconds = sample.TimestampSeconds, Metric = "recorder:" + recorder.Key, Value = recorder.Value.Value, UnitType = UnitOf(sample.RecorderUnits, recorder.Key), Confidence = MetricConfidence.Full.ToString() });
             }
             foreach (var marker in capture.MarkerSamples)
             foreach (var sample in marker.Value)
-                points.Add(new TimelinePoint { TimestampSeconds = sample.TimestampSeconds, Metric = "marker:" + marker.Key, Value = sample.Value, Confidence = sample.Confidence.ToString() });
+                points.Add(new TimelinePoint { TimestampSeconds = sample.TimestampSeconds, Metric = "marker:" + marker.Key, Value = sample.Value, UnitType = UnitOf(units, marker.Key), Confidence = sample.Confidence.ToString() });
             if (capture.SystemTiming != null)
             foreach (var system in capture.SystemTiming.Systems)
-                points.Add(new TimelinePoint { TimestampSeconds = capture.Trigger.TimestampSeconds, Metric = "system:" + system.SystemId, Value = system.Milliseconds, Confidence = system.Confidence.ToString() });
+                points.Add(new TimelinePoint { TimestampSeconds = capture.Trigger.TimestampSeconds, Metric = "system:" + system.SystemId, Value = system.Milliseconds, UnitType = MetricUnits.Milliseconds, Confidence = system.Confidence.ToString() });
             return points.OrderBy(point => point.TimestampSeconds).ThenBy(point => point.Metric, StringComparer.Ordinal).ToArray();
         }
+
+        private static string UnitOf(IReadOnlyDictionary<string, string> units, string id) =>
+            units != null && units.TryGetValue(id, out var unit) ? unit ?? string.Empty : string.Empty;
     }
 }

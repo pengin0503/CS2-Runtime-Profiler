@@ -11,6 +11,8 @@ const GROUPS = [
   { id: "none", label: "推奨なし", include: (r: AdvisorRecommendation) => r.direction === "NoRecommendation" || r.direction === "KeepCurrent" }
 ];
 
+const GROUP_TITLE_STYLE = { whiteSpace: "nowrap", margin: "0 0 3rem", fontSize: "13rem" } as const;
+
 function categoryLabel(value: string): string {
   switch (value) {
     case "RenderingGpu": return "描画/GPU";
@@ -160,20 +162,20 @@ export function PerformanceAdvisorTab({ advisor = EMPTY_ADVISOR, captures = [], 
             {group.id === "none"
               ? <Button as="button" variant="flat" aria-label="推奨なしを表示" aria-expanded={open}
                   onSelect={() => setShowNoRecommendation(!showNoRecommendation)}>{group.label} ({entries.length})</Button>
-              : <h3 className={styles.advisorGroupTitle}>{group.label} ({entries.length})</h3>}
+              : <h3 style={GROUP_TITLE_STYLE}>{group.label} ({entries.length})</h3>}
             {open && entries.map(entry => <RecommendationCard key={entry.settingId} recommendation={entry} onApply={onApply} />)}
           </section>
         );
       })}
       {!!advisor.changes?.length && <section className={styles.advisorGroup}>
-        <h3 className={styles.advisorGroupTitle}>このセッションの変更 ({advisor.changes.length})</h3>
+        <h3 style={GROUP_TITLE_STYLE}>このセッションの変更 ({advisor.changes.length})</h3>
         {advisor.changes.map((change, index) => <ChangeCard key={`${change.settingId}-${index}`} change={change}
           onUndo={onUndo} onResolveConflict={onResolveConflict} />)}
         {onUndoSession && advisor.changes.some(change => change.status === "Applied") &&
           <Button as="button" variant="flat" onSelect={onUndoSession}>セッションの変更を元に戻す</Button>}
       </section>}
       {advisor.comparison && <section className={styles.advisorGroup}>
-        <h3 className={styles.advisorGroupTitle}>診断の前後比較</h3>
+        <h3 style={GROUP_TITLE_STYLE}>診断の前後比較</h3>
         {advisor.comparison.multipleChanges &&
           <p>複数の設定を変更しています。以下は測定差分であり、個別設定の効果を断定しません。</p>}
         {advisor.comparison.metrics.map(metric => (

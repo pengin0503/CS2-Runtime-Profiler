@@ -12,7 +12,7 @@ const recommendation = (id: string, direction: string, priority: string): Adviso
 });
 
 describe("Performance Advisor explicit settings actions", () => {
-  it("offers individual Apply and Undo plus session Undo, without bulk Apply", () => {
+  it("offers individual apply and undo plus session undo, without bulk apply", () => {
     const advisor = { ...EMPTY_ADVISOR, selectedCaptureId: "capture", available: true,
       recommendations: [{ ...recommendation("shadow", "LowerRecommended", "High"), applyCapability: "Available" }],
       changes: [{ settingId: "texture", originalValue: "High", appliedValue: "Medium",
@@ -20,8 +20,8 @@ describe("Performance Advisor explicit settings actions", () => {
     const onApply = () => { throw new Error("render must not write a setting"); };
     const html = text(TestRenderer.create(<PerformanceAdvisorTab advisor={advisor} captures={[]}
       onApply={onApply} onUndo={() => {}} onUndoSession={() => {}} />).toJSON());
-    expect(html).toContain("Apply");
-    expect(html).toContain("Undo");
+    expect(html).toContain("適用");
+    expect(html).toContain("元に戻す");
     expect(html).toContain("セッションの変更を元に戻す");
     expect(html).not.toContain("Apply All");
     expect(html).not.toContain("すべて適用");
@@ -93,8 +93,8 @@ describe("Performance Advisor read-only tab", () => {
       recommendations: [recommendation("shadow", "LowerRecommended", "High")] };
     const html = text(TestRenderer.create(<PerformanceAdvisorTab advisor={advisor} captures={[]} />).toJSON());
     expect(html).toContain("ゲームの標準設定画面で変更");
-    expect(html).not.toContain("Apply");
-    expect(html).not.toContain("Undo");
+    expect(html).not.toContain("適用");
+    expect(html).not.toContain("元に戻す");
     expect(html).not.toContain("すべて適用");
   });
 });

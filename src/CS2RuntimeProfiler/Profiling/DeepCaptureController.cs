@@ -8,7 +8,9 @@ namespace CS2RuntimeProfiler.Profiling
     public sealed class DeepCaptureController : IDisposable
     {
         private const int ConsecutiveOverheadBreachesBeforeDegrade = 3;
-        private const double ProfilerMemoryGrowthThresholdBytes = 128d * 1024d * 1024d;
+        private const int MaxDegradationActionsBeforeAbort = 4;
+        private const double ProfilerMemoryGrowthStepBytes = 128d * 1024d * 1024d;
+        private const double ProfilerMemoryHardStopBytes = 512d * 1024d * 1024d;
         private const string ProfilerUsedMemoryRecorderId = "Memory\u001fProfiler Used Memory";
 
         private readonly RecorderManager _recorders;
@@ -25,8 +27,9 @@ namespace CS2RuntimeProfiler.Profiling
         private int _sampleStride = 1;
         private int _sampleCounter;
         private int _consecutiveOverheadBreaches;
+        private int _degradationActions;
+        private int _profilerMemoryDegradeLevel;
         private double _batchStartedAt;
-        private bool _profilerMemoryGrowthHandled;
         private CaptureState _lastState;
         private MarkerBatchPlan _plan;
 
@@ -103,6 +106,11 @@ namespace CS2RuntimeProfiler.Profiling
                 {
                     CurrentSession.AddGlobalSample(global);
                     ObserveProfilerMemory(global);
+                    if (CurrentSession == null)
+                    {
+                        _lastState = _stateMachine.State;
+                        return;
+                    }
                 }
                 CaptureDeepSample(nowSeconds);
             }
@@ -122,7 +130,8 @@ namespace CS2RuntimeProfiler.Profiling
             _currentBatchIndex = -1;
             _sampleCounter = 0;
             _consecutiveOverheadBreaches = 0;
-            _profilerMemoryGrowthHandled = false;
+            _degradationActions = 0;
+            _profilerMemoryDegradeLevel = 0;
             _lastState = _stateMachine.State;
         }
 
@@ -133,9 +142,20 @@ namespace CS2RuntimeProfiler.Profiling
             _consecutiveOverheadBreaches++;
             if (_consecutiveOverheadBreaches < ConsecutiveOverheadBreachesBeforeDegrade) return;
             _consecutiveOverheadBreaches = 0;
+
+            if (_degradationActions >= MaxDegradationActionsBeforeAbort)
+            {
+                InterruptActiveCapture(
+                    $"Measured capture-controller overhead remained above {_overheadCeiling:P0} after repeated load reductions; the capture was finalized early. "
+                    + "This overhead metric does not include managed SystemBase timing instrumentation cost.");
+                return;
+            }
+
             DegradeCaptureLoad(
-                $"Profiler overhead exceeded {_overheadCeiling:P0} repeatedly; marker batching reduced to {{0}} concurrent recorders.",
-                "Profiler overhead remains high; sampling stride increased to {0}.");
+                $"Measured capture-controller overhead exceeded {_overheadCeiling:P0} repeatedly; marker batching reduced to {{0}} concurrent recorders. "
+                    + "This overhead metric does not include managed SystemBase timing instrumentation cost.",
+                "Measured capture-controller overhead remains high; sampling stride increased to {0}. "
+                    + "This overhead metric does not include managed SystemBase timing instrumentation cost.");
         }
 
         public void Dispose() => _recorders.Dispose();
@@ -149,7 +169,8 @@ namespace CS2RuntimeProfiler.Profiling
             _maxConcurrent = _configuredMaxConcurrent;
             _sampleStride = 1;
             _consecutiveOverheadBreaches = 0;
-            _profilerMemoryGrowthHandled = false;
+            _degradationActions = 0;
+            _profilerMemoryDegradeLevel = 0;
             _plan = MarkerBatchPlanner.Create(_recorders.Descriptors.Select(d => d.Id), _maxConcurrent);
             CurrentSession = new CaptureSession($"capture-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}", _stateMachine.LastTrigger ?? new CaptureTrigger(CaptureTriggerKind.Manual, nowSeconds, null), 4096);
             CurrentSession.SetTriggerSnapshot(triggerSample);
@@ -174,19 +195,31 @@ namespace CS2RuntimeProfiler.Profiling
 
             CurrentSession.ObserveProfilerMemory(reading.Value);
             var delta = CurrentSession.ProfilerMemoryDeltaBytes;
-            if (_profilerMemoryGrowthHandled || !delta.HasValue || delta.Value < ProfilerMemoryGrowthThresholdBytes)
+            if (!delta.HasValue || delta.Value < ProfilerMemoryGrowthStepBytes)
                 return;
 
-            _profilerMemoryGrowthHandled = true;
             var deltaMiB = delta.Value / (1024d * 1024d);
-            DegradeCaptureLoad(
-                $"Profiler memory grew by {deltaMiB:0.#} MiB during this capture; marker batching reduced to {{0}} concurrent recorders.",
-                $"Profiler memory grew by {deltaMiB:0.#} MiB during this capture; sampling stride increased to {{0}}.");
+            if (delta.Value >= ProfilerMemoryHardStopBytes)
+            {
+                InterruptActiveCapture(
+                    $"Profiler memory grew by {deltaMiB:0.#} MiB during this capture, exceeding the 512 MiB safety limit; the capture was finalized early.");
+                return;
+            }
+
+            var targetLevel = (int)Math.Floor(delta.Value / ProfilerMemoryGrowthStepBytes);
+            while (CurrentSession != null && _profilerMemoryDegradeLevel < targetLevel)
+            {
+                _profilerMemoryDegradeLevel++;
+                DegradeCaptureLoad(
+                    $"Profiler memory grew by {deltaMiB:0.#} MiB during this capture; marker batching reduced to {{0}} concurrent recorders.",
+                    $"Profiler memory grew by {deltaMiB:0.#} MiB during this capture; sampling stride increased to {{0}}.");
+            }
         }
 
         private void DegradeCaptureLoad(string batchWarningFormat, string strideWarningFormat)
         {
             if (CurrentSession == null) return;
+            _degradationActions++;
             if (_maxConcurrent > 1)
             {
                 _maxConcurrent = Math.Max(1, _maxConcurrent / 2);
@@ -210,7 +243,7 @@ namespace CS2RuntimeProfiler.Profiling
 
         private void CaptureDeepSample(double nowSeconds)
         {
-            if (_plan == null || _plan.Batches.Count == 0) return;
+            if (_plan == null || _plan.Batches.Count == 0 || CurrentSession == null) return;
             if (nowSeconds - _batchStartedAt >= 1d) ActivateNextBatch(nowSeconds);
             _sampleCounter++;
             if (_sampleCounter % _sampleStride != 0) return;
@@ -226,7 +259,7 @@ namespace CS2RuntimeProfiler.Profiling
         private void ActivateNextBatch(double nowSeconds)
         {
             _recorders.DeactivateAll();
-            if (_plan == null || _plan.Batches.Count == 0) return;
+            if (_plan == null || _plan.Batches.Count == 0 || CurrentSession == null) return;
             _currentBatchIndex = (_currentBatchIndex + 1) % _plan.Batches.Count;
             foreach (var id in _plan.Batches[_currentBatchIndex])
             {
@@ -252,7 +285,8 @@ namespace CS2RuntimeProfiler.Profiling
             while (_completed.Count > _maxCompletedSessions) _completed.RemoveAt(0);
             CurrentSession = null;
             _consecutiveOverheadBreaches = 0;
-            _profilerMemoryGrowthHandled = false;
+            _degradationActions = 0;
+            _profilerMemoryDegradeLevel = 0;
             CaptureCompleted?.Invoke(completed);
         }
     }

@@ -21,6 +21,21 @@ public class Issue15To22RegressionTests
         => Assert.That(AutomaticCapturePolicy.IsAllowed(loading, paused), Is.EqualTo(expected));
 
     [Test]
+    public void Runtime_pause_reader_accepts_the_pause_members_present_in_the_game_runtime()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(RuntimePauseStateReader.TryRead(new PauseMethodRuntime(true), out var methodPaused), Is.True);
+            Assert.That(methodPaused, Is.True);
+            Assert.That(RuntimePauseStateReader.TryRead(new PauseFieldRuntime(true), out var fieldPaused), Is.True);
+            Assert.That(fieldPaused, Is.True);
+            Assert.That(RuntimePauseStateReader.TryRead(new PausePropertyRuntime(false), out var propertyPaused), Is.True);
+            Assert.That(propertyPaused, Is.False);
+            Assert.That(RuntimePauseStateReader.TryRead(new object(), out _), Is.False);
+        });
+    }
+
+    [Test]
     public void Persistent_overhead_breaches_eventually_finalize_the_capture_instead_of_degrading_forever()
     {
         using var controller = CreateController();
@@ -162,6 +177,25 @@ public class Issue15To22RegressionTests
 
     private static GlobalMetricsSnapshot GlobalEfficiency(double timestamp, double efficiency)
         => new(timestamp, 4d, 4d * efficiency, new Dictionary<string, RecorderReading>());
+
+    private sealed class PauseMethodRuntime
+    {
+        private readonly bool _paused;
+        public PauseMethodRuntime(bool paused) => _paused = paused;
+        public bool IsPaused() => _paused;
+    }
+
+    private sealed class PauseFieldRuntime
+    {
+        private readonly bool m_Paused;
+        public PauseFieldRuntime(bool paused) => m_Paused = paused;
+    }
+
+    private sealed class PausePropertyRuntime
+    {
+        public PausePropertyRuntime(bool paused) => this.paused = paused;
+        public bool paused { get; }
+    }
 
     private sealed class Backend : IRecorderBackend
     {

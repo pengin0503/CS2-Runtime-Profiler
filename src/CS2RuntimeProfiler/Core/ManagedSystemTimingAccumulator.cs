@@ -8,18 +8,21 @@ namespace CS2RuntimeProfiler.Core
     {
         private sealed class SystemState
         {
+            private readonly double[] _distributionSamples;
+            private int _distributionStart;
+            private int _distributionCount;
+
             public SystemState(int capacity)
             {
-                DistributionSamples = new Queue<double>(capacity);
+                _distributionSamples = new double[capacity];
             }
 
-            public Queue<double> DistributionSamples { get; }
             public long CallCount { get; private set; }
             public double TotalMilliseconds { get; private set; }
             public double CurrentMilliseconds { get; private set; }
             public double MaxMilliseconds { get; private set; }
 
-            public void Record(double milliseconds, int capacity)
+            public void Record(double milliseconds)
             {
                 CallCount++;
                 TotalMilliseconds += milliseconds;
@@ -27,9 +30,28 @@ namespace CS2RuntimeProfiler.Core
                 if (CallCount == 1 || milliseconds > MaxMilliseconds)
                     MaxMilliseconds = milliseconds;
 
-                while (DistributionSamples.Count >= capacity)
-                    DistributionSamples.Dequeue();
-                DistributionSamples.Enqueue(milliseconds);
+                if (_distributionCount < _distributionSamples.Length)
+                {
+                    var index = (_distributionStart + _distributionCount) % _distributionSamples.Length;
+                    _distributionSamples[index] = milliseconds;
+                    _distributionCount++;
+                    return;
+                }
+
+                _distributionSamples[_distributionStart] = milliseconds;
+                _distributionStart = (_distributionStart + 1) % _distributionSamples.Length;
+            }
+
+            public double[] GetDistributionSamples()
+            {
+                var samples = new double[_distributionCount];
+                for (var i = 0; i < _distributionCount; i++)
+                {
+                    var index = (_distributionStart + i) % _distributionSamples.Length;
+                    samples[i] = _distributionSamples[index];
+                }
+
+                return samples;
             }
         }
 
@@ -62,7 +84,7 @@ namespace CS2RuntimeProfiler.Core
                 _systems[systemId] = state;
             }
 
-            state.Record(milliseconds, _maxSamplesPerSystem);
+            state.Record(milliseconds);
         }
 
         public void Clear() => _systems.Clear();
@@ -78,7 +100,7 @@ namespace CS2RuntimeProfiler.Core
             foreach (var pair in _systems.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {
                 var state = pair.Value;
-                var values = state.DistributionSamples.ToArray();
+                var values = state.GetDistributionSamples();
                 if (state.CallCount <= 0 || values.Length == 0)
                     continue;
 

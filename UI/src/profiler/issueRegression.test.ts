@@ -28,14 +28,21 @@ describe("repository issue regressions", () => {
     expect(captureSource).not.toContain("var now = latest?.TimestampSeconds");
   });
 
-  it("closes the profiler panel when Escape is pressed and unregisters the listener", () => {
+  it("closes the profiler panel through the game's Back input action instead of a DOM keydown listener", () => {
     const source = readFileSync(new URL("./ProfilerRoot.tsx", import.meta.url), "utf8");
+    const bindings = readFileSync(new URL("./bindings.ts", import.meta.url), "utf8");
+    const system = readFileSync(path.resolve(process.cwd(), "../src/CS2RuntimeProfiler/UI/ProfilerUISystem.cs"), "utf8");
 
-    expect(source).toContain("useEffect");
-    expect(source).toContain('event.key === "Escape"');
-    expect(source).toContain('addEventListener("keydown"');
-    expect(source).toContain('removeEventListener("keydown"');
-    expect(source).toContain("togglePanel();");
+    // Escape arrives through the game's input system as the "Back" action; the vanilla pause menu
+    // consumed it before any DOM listener ran, so a keydown listener never closed the panel.
+    expect(source).toContain('from "cs2/input"');
+    expect(source).toMatch(/<InputActionConsumer actions=\{BACK_ACTIONS\} ignoreFocusState>/);
+    expect(source).toContain("Back: closePanel");
+    expect(source).not.toContain('addEventListener("keydown"');
+    // Close must be idempotent so a repeated Back delivery can never toggle the panel open again.
+    expect(bindings).toContain('trigger(GROUP, "setPanelVisible", false)');
+    expect(system).toContain('new TriggerBinding<bool>(Group, "setPanelVisible", SetPanelVisible)');
+    expect(system).toMatch(/if \(_panelVisible == visible\)\s*return;/);
   });
 
   it("keeps review hardening wiring and export documentation aligned", () => {

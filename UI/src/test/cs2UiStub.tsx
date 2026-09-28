@@ -12,3 +12,7 @@ export function Button({ onSelect, children, src, variant, selected, as: _as, to
 export function Tooltip({ tooltip, children }: any) {
   return <span title={typeof tooltip === "string" ? tooltip : undefined}>{children}</span>;
 }
+
+export function Scrollable({ children, className, vertical, trackVisibility }: any) {
+  return <div className={className} data-scrollable={vertical ? "vertical" : "none"} data-track={trackVisibility}>{children}</div>;
+}

@@ -40,4 +40,40 @@ declare module "cs2/ui" {
   }
 
   export const Tooltip: (props: TooltipProps) => JSX.Element;
+
+  // Mirrors the official toolchain declaration of the vanilla scroll container, which draws a
+  // draggable scrollbar track (Gameface renders no native scrollbars for overflow containers).
+  export interface ScrollableProps {
+    horizontal?: boolean;
+    vertical?: boolean;
+    trackVisibility?: "always" | "scrollable";
+    smooth?: boolean;
+    className?: string;
+    style?: import("react").CSSProperties;
+    onScroll?: () => void;
+  }
+
+  export const Scrollable: (props: PropsWithChildren<ScrollableProps>) => JSX.Element | null;
+}
+
+declare module "cs2/input" {
+  import type { NamedExoticComponent, PropsWithChildren } from "react";
+
+  // Subset of the official toolchain declaration. Keyboard Escape / gamepad B arrive as the
+  // "Back" UI input action through the game's input system, not as DOM keydown events.
+  export type Action = () => void | boolean;
+  export interface InputActionsDefinition {
+    Back: Action;
+  }
+  export type InputAction = keyof InputActionsDefinition;
+  export type InputActions = {
+    [K in InputAction]?: InputActionsDefinition[K] | { actionContext?: string; onAction: InputActionsDefinition[K] | null } | null;
+  };
+  export interface InputActionConsumerProps {
+    actions: InputActions | null;
+    actionContext?: string;
+    disabled?: boolean;
+    ignoreFocusState?: boolean;
+  }
+  export const InputActionConsumer: NamedExoticComponent<PropsWithChildren<InputActionConsumerProps>>;
 }

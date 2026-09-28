@@ -31,3 +31,39 @@ describe("Gameface runtime compatibility", () => {
     }
   });
 });
+
+// Every in-game UI defect so far came from browser features the Coherent Gameface runtime lacks:
+// CSS grid/min()/shorthands (above), <table> layout (every cell rendered on its own line),
+// <input type="checkbox"> (rendered as an editable text field), native overflow scrollbars (none drawn),
+// inline data: URI icons (blank) and DOM keydown for Escape (the game consumes it as an input action).
+// Guard the markup the same way the stylesheet is guarded.
+describe("Gameface markup compatibility", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const sources = (function collect(dir: string): Array<[string, string]> {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return entry.name === "test" ? [] : collect(full);
+      return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [[full, fs.readFileSync(full, "utf8")] as [string, string]] : [];
+    });
+  })(sourceRoot);
+
+  it("scans the UI sources", () => {
+    expect(sources.length).toBeGreaterThan(5);
+  });
+
+  it("uses only elements and APIs that render correctly in Gameface", () => {
+    const rejected: Array<[string, RegExp]> = [
+      ["<table> layout", /<(table|thead|tbody|tr|td|th)[\s>]/],
+      ["<details>/<summary>", /<(details|summary)[\s>]/],
+      ["native form controls", /<(input|select|textarea|label)[\s>]/],
+      ["inline data: URI images", /data:image\//],
+      ["DOM keydown handling (use a cs2/input consumer)", /addEventListener\(\s*["']key(down|up|press)["']/]
+    ];
+
+    for (const [file, source] of sources) {
+      for (const [name, pattern] of rejected) {
+        expect(source, `${name} in ${path.relative(sourceRoot, file)}`).not.toMatch(pattern);
+      }
+    }
+  });
+});

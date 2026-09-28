@@ -18,7 +18,10 @@ const snapshot: any = {
   timeline: [
     { timestampSeconds: 9, metric: "actualSpeed", value: 4, confidence: "Full" },
     { timestampSeconds: 10, metric: "actualSpeed", value: 2, confidence: "Full" },
-    { timestampSeconds: 10, metric: "recorder:CPU\u001fMain Thread", value: 20, confidence: "Full" }
+    { timestampSeconds: 9, metric: "recorder:CPU\u001fMain Thread", value: 44_673_900, unitType: "TimeNanoseconds", confidence: "Full" },
+    { timestampSeconds: 10, metric: "recorder:CPU\u001fMain Thread", value: 20_000_000, unitType: "TimeNanoseconds", confidence: "Full" },
+    { timestampSeconds: 10, metric: "marker:Render\u001fBatches Count", value: 6449, confidence: "Full" },
+    { timestampSeconds: 10, metric: "system:Game.Simulation.SimulationSystem", value: 10.3, unitType: "Milliseconds", confidence: "Managed" }
   ],
   captures: [
     {
@@ -46,7 +49,7 @@ describe("Task 12 profiler tabs", () => {
   it("pathfinding localizes known unavailable reasons instead of exposing English runtime prose", () => {
     const html = renderToStaticMarkup(<PathfindingTab metrics={snapshot.pathfinding.metrics} />);
     expect(html).toContain("pendingPathfindActions");
-    expect(html).toContain("42.00");
+    expect(html).toContain(">42<");
     expect(html).toContain("このゲーム環境では検証済みの要求カウンターを取得できません。");
     expect(html).not.toContain("No verified runtime request counter");
   });
@@ -56,6 +59,18 @@ describe("Task 12 profiler tabs", () => {
     expect(html).toContain("<svg");
     expect(html).toContain("actualSpeed");
     expect(html).toContain("Main Thread");
+  });
+
+  it("timeline toggles are buttons, not Gameface text-field checkboxes, and skip single-sample series", () => {
+    const html = renderToStaticMarkup(<TimelineTab points={snapshot.timeline} />);
+    expect(html).not.toContain("<input");
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).not.toContain("Batches Count");
+    expect(html).not.toContain("SimulationSystem");
+    expect(html).toContain("1点しかない値（1 件）");
+    // Raw nanoseconds are shown with their unit in point tooltips.
+    expect(html).toContain("44.67 ms");
+    expect(html).not.toContain("44673900");
   });
 
   it("timeline point hit targets follow the same normalized Y coordinates as their line", () => {

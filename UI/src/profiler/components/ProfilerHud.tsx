@@ -3,7 +3,7 @@ import { Button, Tooltip } from "cs2/ui";
 import type { UiHudSnapshot } from "../bindings";
 import { formatSpeed } from "../format";
 import { captureStateLabel } from "../text";
-import styles from "../profiler.module.scss";
+import profilerIcon from "../../images/profiler-icon.svg";
 
 interface ProfilerHudProps {
   snapshot: UiHudSnapshot;
@@ -11,22 +11,23 @@ interface ProfilerHudProps {
   onToggle: () => void;
 }
 
-const PROFILER_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='white' d='M5 25h4V14H5v11Zm9 0h4V7h-4v18Zm9 0h4V11h-4v14Z'/%3E%3Cpath fill='none' stroke='white' stroke-width='2' d='M4 27h24'/%3E%3C/svg%3E";
-
+// The icon ships as a real file (coui://ui-mods/...), the way other UI mods ship theirs; the
+// inline data: URI SVG used before rendered no image in game. The button has no wrapper element so the
+// GameTopLeft row aligns it like the other floating launchers; the previous vertically centering
+// flex wrapper most likely stretched to the row height (badges on other launchers) and pushed it down.
 export function ProfilerHud({ snapshot, panelVisible, onToggle }: ProfilerHudProps) {
   const tooltip = `CS2 ランタイムプロファイラーを開く\n指定速度 ${formatSpeed(snapshot.selectedSpeed)} / 実効速度 ${formatSpeed(snapshot.actualSpeed)} / ${captureStateLabel(snapshot.state, snapshot.isDeepCapture)}`;
   return (
-    <div className={styles.hudAnchor}>
-      <Tooltip tooltip={tooltip}>
-        <Button
-          as="button"
-          variant="floating"
-          src={PROFILER_ICON}
-          onSelect={onToggle}
-          aria-pressed={panelVisible}
-          aria-label="CS2 ランタイムプロファイラー"
-        />
-      </Tooltip>
-    </div>
+    <Tooltip tooltip={tooltip}>
+      <Button
+        as="button"
+        variant="floating"
+        src={profilerIcon}
+        selected={panelVisible}
+        onSelect={onToggle}
+        aria-pressed={panelVisible}
+        aria-label="CS2 ランタイムプロファイラー"
+      />
+    </Tooltip>
   );
 }

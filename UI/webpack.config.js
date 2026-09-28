@@ -39,6 +39,14 @@ module.exports = {
           { loader: "css-loader", options: { modules: { auto: true, namedExport: false, exportLocalsConvention: "camelCase" } } },
           "sass-loader"
         ]
+      },
+      {
+        // Shipped as real files (an inline data: URI icon rendered blank in game). The folder name is
+        // mod-specific because every UI mod shares the coui://ui-mods/ namespace.
+        test: /\.(png|jpe?g|gif|svg)$/i,
+        include: path.join(__dirname, "src", "images"),
+        type: "asset/resource",
+        generator: { filename: "cs2-runtime-profiler-images/[name][ext]" }
       }
     ]
   },

@@ -113,6 +113,12 @@ export function captureWarningLabel(warning: string): string {
   match = warning.match(/^Profiler memory grew by ([^ ]+) MiB during this capture, exceeding the 512 MiB safety limit; the capture was finalized early\.$/);
   if (match) return `詳細キャプチャ中のプロファイラーメモリが ${match[1]} MiB 増加して安全上限の 512 MiB を超えたため、キャプチャを早期終了しました。`;
 
+  match = warning.match(/^Profiler memory baseline increased across four consecutive captures by ([^ ]+) MiB; this is a retention pressure signal, not proof of a memory leak\.$/);
+  if (match) return `プロファイラーメモリの基準値が4回連続のキャプチャで ${match[1]} MiB 増加しました。保持圧力の兆候ですが、メモリリークを示す証拠ではありません。`;
+
+  match = warning.match(/^System timing mixes native ECS marker timing \((\d+) systems\) with managed synchronous SystemBase fallback \((\d+) systems\)\. Managed rows exclude Job\/Burst worker time, so Systems\/Mods totals do not represent total CPU cost\.$/);
+  if (match) return `システム時間はネイティブ ECS マーカー ${match[1]} 件と管理コード同期フォールバック ${match[2]} 件の混在です。管理コード行には Job/Burst ワーカー時間が含まれないため、システム/Mod 合計は CPU 総コストではありません。`;
+
   if (warning === "System timing projection failed for this capture; per-system timing is unavailable.") {
     return "このキャプチャのシステム時間集計に失敗したため、システム別時間は利用できません。";
   }

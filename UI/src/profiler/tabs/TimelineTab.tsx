@@ -59,6 +59,15 @@ interface Series {
 }
 
 const SERIES_COLORS = ["#63b5ff", "#f2b84b", "#6fd08c", "#e07bd8", "#ff7a6b", "#9ea7ff", "#4fd1c5", "#d7e36b"];
+const SERIES_DASHES = ["", "10 5", "3 4", "10 4 2 4"];
+
+export function seriesVisualIdentity(index: number): { color: string; dash: string } {
+  const safeIndex = Math.max(0, Math.floor(index));
+  return {
+    color: SERIES_COLORS[safeIndex % SERIES_COLORS.length],
+    dash: SERIES_DASHES[Math.floor(safeIndex / SERIES_COLORS.length) % SERIES_DASHES.length]
+  };
+}
 
 function geometry(points: TimelinePoint[], minTime: number, maxTime: number): GeometryPoint[] {
   if (!points.length) return [];
@@ -119,7 +128,7 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
   const allPoints = series.flatMap(item => item.points);
   const minTime = Math.min(...allPoints.map(point => point.timestampSeconds));
   const maxTime = Math.max(...allPoints.map(point => point.timestampSeconds));
-  const colorOf = (metric: string) => SERIES_COLORS[series.findIndex(item => item.metric === metric) % SERIES_COLORS.length];
+  const visualOf = (metric: string) => seriesVisualIdentity(series.findIndex(item => item.metric === metric));
   const labelOf = (metric: string) => labels.get(metric) ?? metricIdentity(metric).shortName;
   const visible = series.filter(item => !hidden.has(item.metric));
   const selected = selectedTime == null
@@ -133,6 +142,7 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
       <div className={styles.seriesControls}>
         {series.map(item => {
           const shown = !hidden.has(item.metric);
+          const visual = visualOf(item.metric);
           return (
             <Button
               as="button"
@@ -143,7 +153,10 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
               onSelect={() => toggle(item.metric)}
               aria-pressed={shown}
             >
-              <span className={styles.seriesSwatch} style={{ backgroundColor: shown ? colorOf(item.metric) : "transparent", borderColor: colorOf(item.metric) }} />
+              <svg className={styles.seriesSwatch} viewBox="0 0 18 10" aria-hidden="true">
+                <line x1="1" y1="5" x2="17" y2="5" stroke={visual.color} strokeWidth="3"
+                  strokeDasharray={visual.dash || undefined} opacity={shown ? 1 : 0.45} />
+              </svg>
               <span>{labelOf(item.metric)}</span>
             </Button>
           );
@@ -156,12 +169,13 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
           <line x1="28" y1="28" x2="28" y2="232" className={styles.chartAxis} />
           {visible.map(item => {
             const coords = geometry(item.points, minTime, maxTime);
-            const color = colorOf(item.metric);
+            const visual = visualOf(item.metric);
             return (
               <g key={item.metric} data-series={item.metric}>
-                <polyline points={coords.map(coord => `${coord.x.toFixed(1)},${coord.y.toFixed(1)}`).join(" ")} fill="none" stroke={color} className={styles.chartLine} />
+                <polyline points={coords.map(coord => `${coord.x.toFixed(1)},${coord.y.toFixed(1)}`).join(" ")}
+                  fill="none" stroke={visual.color} strokeDasharray={visual.dash || undefined} className={styles.chartLine} />
                 {coords.map(({ point, x, y }, index) => (
-                  <circle key={`${point.timestampSeconds}-${index}`} cx={x} cy={y} r="5" fill={color} className={styles.chartPoint} onClick={() => setSelectedTime(point.timestampSeconds)}>
+                  <circle key={`${point.timestampSeconds}-${index}`} cx={x} cy={y} r="5" fill={visual.color} className={styles.chartPoint} onClick={() => setSelectedTime(point.timestampSeconds)}>
                     <title>{`${labelOf(item.metric)} / ${point.timestampSeconds.toFixed(2)}秒 = ${formatByUnit(point.value, item.unitType)}（${confidenceLabel(point.confidence)}）`}</title>
                   </circle>
                 ))}
@@ -171,7 +185,7 @@ export function TimelineTab({ points }: { points: TimelinePoint[] }) {
         </svg>
       </div>
       <p className={styles.chartNote}>
-        形状比較のため各系列は観測範囲ごとに正規化しています。生の値はポイントのホバー／選択で確認できます。
+        形状比較のため各系列は観測範囲ごとに正規化しています。生の値はポイントのホバー／選択で確認できます。色が再利用される場合は線種も変わります。
         {singleSampleCount > 0 ? ` 1点しかない値（${singleSampleCount} 件）は線にならないため表示していません。` : ""}
       </p>
       {selectedTime != null && (

@@ -124,7 +124,10 @@ public class ProfilerReportBuilderTests
         Assert.That(report.ModAttribution.Any(x => x.Name == "Example.Mod"), Is.True);
         Assert.That(report.Pathfinding.Single().Name, Is.EqualTo("pendingPathfindActions"));
         Assert.That(report.DomainMetrics.Single().Name, Is.EqualTo("citizens"));
-        Assert.That(report.ProfilerOverhead.Any(x => x.Name == "captureOverheadShare" && x.Value == 0.025), Is.True);
+        var captureOverhead = report.ProfilerOverhead.Single(x => x.Name == "captureOverheadShare");
+        Assert.That(captureOverhead.Value, Is.EqualTo(0.025));
+        Assert.That(captureOverhead.Note, Does.Contain("managed SystemBase timing instrumentation"));
+        Assert.That(captureOverhead.Note, Does.Contain("not total profiler overhead"));
     }
 
     [Test]

@@ -53,6 +53,17 @@ namespace CS2RuntimeProfiler.Core
                         + " No uniquely matching TimeNanoseconds ECS system marker produced a usable sample, and no managed synchronous fallback sample was available.");
                 }
             }
+            else
+            {
+                var managedRows = timing.Systems.Count(x => x.Confidence == MetricConfidence.Managed);
+                if (managedRows > 0)
+                {
+                    var nativeRows = timing.Systems.Count(x => x.Confidence == MetricConfidence.Full);
+                    capture.AddWarning(
+                        $"System timing mixes native ECS marker timing ({nativeRows} systems) with managed synchronous SystemBase fallback ({managedRows} systems). "
+                        + "Managed rows exclude Job/Burst worker time, so Systems/Mods totals do not represent total CPU cost.");
+                }
+            }
 
             return timing;
         }

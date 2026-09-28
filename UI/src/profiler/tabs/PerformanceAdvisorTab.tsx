@@ -59,6 +59,23 @@ function applyBehaviorLabel(value: string): string {
   }
 }
 
+function advisorReasonLabel(value?: string | null): string {
+  if (!value) return "";
+
+  let match = value.match(/^Standard Options catalog unavailable(?:: (.+))?$/);
+  if (match) return match[1]
+    ? `標準設定カタログを取得できません: ${match[1]}`
+    : "標準設定カタログを取得できません。";
+
+  match = value.match(/^Advisor diagnosis unavailable(?:: (.+))?$/);
+  if (match) return match[1]
+    ? `Advisor の診断を実行できません: ${match[1]}`
+    : "Advisor の診断を実行できません。";
+
+  if (value === "Advisor export unavailable") return "Advisor のエクスポート情報を取得できません。";
+  return value;
+}
+
 function RecommendationCard({ recommendation, onApply }: {
   recommendation: AdvisorRecommendation;
   onApply?: (id: string, value: string, confirmed: boolean) => void;
@@ -143,7 +160,7 @@ export function PerformanceAdvisorTab({ advisor = EMPTY_ADVISOR, captures = [], 
           </div>
         ))}
       </div>
-      {advisor.unavailableReason && <p className={styles.empty}>Advisor: {advisor.unavailableReason}</p>}
+      {advisor.unavailableReason && <p className={styles.empty}>Advisor: {advisorReasonLabel(advisor.unavailableReason)}</p>}
       {advisor.selectedCaptureId
         ? <p>診断対象: {advisor.selectedCaptureId}{advisor.baselineCaptureId ? `・基準: ${advisor.baselineCaptureId}` : ""}</p>
         : <p>完了した詳細キャプチャを選んで診断してください。</p>}

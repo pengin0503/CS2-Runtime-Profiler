@@ -18,10 +18,25 @@ namespace CS2RuntimeProfiler.Core.Advisor
             metrics.Add(gpu.Count == 0 ? NamedMetricValue.Unavailable("gpu.frame.ms", "GPU timer unavailable")
                 : NamedMetricValue.Available("gpu.frame.ms", MetricStatistics.From(gpu).P95, MetricConfidence.Full, "Milliseconds"));
 
-            var latest = samples.LastOrDefault();
-            metrics.Add(latest != null && latest.SelectedSpeed > 0 && !double.IsNaN(latest.Efficiency)
-                ? NamedMetricValue.Available("simulation.efficiency", latest.Efficiency, MetricConfidence.Full)
-                : NamedMetricValue.Unavailable("simulation.efficiency", "Simulation efficiency unavailable"));
+            var simulationWindow = samples
+                .Where(sample => sample != null
+                    && sample.TimestampSeconds >= capture.Trigger.TimestampSeconds
+                    && sample.SelectedSpeed > 0d
+                    && !double.IsNaN(sample.Efficiency)
+                    && !double.IsInfinity(sample.Efficiency))
+                .Select(sample => sample.Efficiency)
+                .ToArray();
+            metrics.Add(simulationWindow.Length > 0
+                ? NamedMetricValue.Available("simulation.efficiency", MetricStatistics.From(simulationWindow).Median, MetricConfidence.Full)
+                : NamedMetricValue.Unavailable("simulation.efficiency", "Simulation efficiency unavailable in the post-trigger capture window"));
+
+            var triggerEfficiency = capture.TriggerEfficiency ?? capture.Trigger.Efficiency;
+            metrics.Add(triggerEfficiency.HasValue
+                    && !double.IsNaN(triggerEfficiency.Value)
+                    && !double.IsInfinity(triggerEfficiency.Value)
+                ? NamedMetricValue.Available("simulation.trigger.efficiency", triggerEfficiency.Value, MetricConfidence.Full)
+                : NamedMetricValue.Unavailable("simulation.trigger.efficiency", "Trigger simulation efficiency unavailable"));
+
             metrics.Add(capture.MaxProfilerOverheadShare > 0
                 ? NamedMetricValue.Available("profiler.overhead.share", capture.MaxProfilerOverheadShare, MetricConfidence.Full)
                 : NamedMetricValue.Unavailable("profiler.overhead.share", "Profiler overhead not sampled"));

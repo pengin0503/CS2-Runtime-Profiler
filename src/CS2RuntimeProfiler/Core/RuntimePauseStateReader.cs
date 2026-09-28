@@ -24,25 +24,28 @@ namespace CS2RuntimeProfiler.Core
                 var type = instance.GetType();
 
                 var method = type.GetMethod("IsPaused", InstanceFlags, null, Type.EmptyTypes, null);
-                if (method != null && method.ReturnType == typeof(bool))
+                if (method != null && method.ReturnType == typeof(bool)
+                    && method.Invoke(instance, null) is bool methodValue)
                 {
-                    paused = (bool)method.Invoke(instance, null);
+                    paused = methodValue;
                     return true;
                 }
 
                 var field = type.GetField("m_Paused", InstanceFlags);
-                if (field != null && field.FieldType == typeof(bool))
+                if (field != null && field.FieldType == typeof(bool)
+                    && field.GetValue(instance) is bool fieldValue)
                 {
-                    paused = (bool)field.GetValue(instance);
+                    paused = fieldValue;
                     return true;
                 }
 
                 var property = type.GetProperty("paused", InstanceFlags);
                 if (property != null
                     && property.PropertyType == typeof(bool)
-                    && property.GetIndexParameters().Length == 0)
+                    && property.GetIndexParameters().Length == 0
+                    && property.GetValue(instance, null) is bool propertyValue)
                 {
-                    paused = (bool)property.GetValue(instance, null);
+                    paused = propertyValue;
                     return true;
                 }
             }

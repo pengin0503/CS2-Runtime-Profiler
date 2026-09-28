@@ -78,6 +78,43 @@ public class CaptureSystemTimingFinalizerTests
     }
 
     [Test]
+    public void Apply_warns_when_native_marker_rows_and_managed_fallback_rows_are_mixed()
+    {
+        var capture = new CaptureSession(
+            "mixed-timing",
+            new CaptureTrigger(CaptureTriggerKind.Manual, 0d, null),
+            maxSamplesPerSeries: 16);
+        capture.SetMarkerCoverage(100, 100, 100, 1, true);
+        capture.AddMarkerSample("native-system", new MetricSample(1d, 2_000_000d, MetricConfidence.Full, 1));
+
+        var systems = new[]
+        {
+            new SystemDescriptor("Game.NativeSystem", "Game", SystemSourceKind.Vanilla, null,
+                MetricConfidence.Unavailable, profilerMarkerName: "Native System Marker", allowLegacyProfilerMarkerMatching: false),
+            new SystemDescriptor("Game.ManagedOnlySystem", "Game", SystemSourceKind.Vanilla, null,
+                MetricConfidence.Unavailable, allowLegacyProfilerMarkerMatching: false)
+        };
+        var recorders = new[]
+        {
+            new RecorderDescriptor("native-system", "Scripts", "Native System Marker", "TimeNanoseconds", "Int64")
+        };
+        var managed = new SystemTimingSnapshot();
+        managed.AddSystem("Game.NativeSystem", 9d, MetricConfidence.Managed, "Game", sourceKind: SystemSourceKind.Vanilla);
+        managed.AddSystem("Game.ManagedOnlySystem", 3d, MetricConfidence.Managed, "Game", sourceKind: SystemSourceKind.Vanilla);
+
+        var timing = CaptureSystemTimingFinalizer.Apply(capture, systems, recorders, managed);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(timing.Systems.Count, Is.EqualTo(2));
+            Assert.That(timing.Systems.Single(x => x.SystemId == "Game.NativeSystem").Confidence, Is.EqualTo(MetricConfidence.Full));
+            Assert.That(timing.Systems.Single(x => x.SystemId == "Game.ManagedOnlySystem").Confidence, Is.EqualTo(MetricConfidence.Managed));
+            Assert.That(capture.Warnings, Has.Some.Contains("Job/Burst"));
+            Assert.That(capture.Warnings, Has.Some.Contains("total CPU"));
+        });
+    }
+
+    [Test]
     public void Apply_explains_projection_stages_when_no_ecs_system_marker_can_be_projected()
     {
         var capture = new CaptureSession(

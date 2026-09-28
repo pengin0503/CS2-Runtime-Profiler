@@ -1,6 +1,7 @@
 using Colossal.IO.AssetDatabase;
 using Colossal.Logging;
 using CS2RuntimeProfiler.Collectors;
+using CS2RuntimeProfiler.Advisor;
 using CS2RuntimeProfiler.Export;
 using CS2RuntimeProfiler.Localization;
 using CS2RuntimeProfiler.Profiling;
@@ -41,6 +42,7 @@ namespace CS2RuntimeProfiler
             updateSystem.UpdateAt<GlobalMetricsCollector>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<DomainMetricsSystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<CaptureRuntimeSystem>(SystemUpdatePhase.UIUpdate);
+            updateSystem.UpdateAt<AdvisorSystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<ProfilerUISystem>(SystemUpdatePhase.UIUpdate);
         }
 

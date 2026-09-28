@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CS2RuntimeProfiler.Core;
+using CS2RuntimeProfiler.Core.Advisor;
 
 namespace CS2RuntimeProfiler.UI
 {
@@ -153,6 +154,7 @@ namespace CS2RuntimeProfiler.UI
         public IReadOnlyList<TimelinePoint> Timeline { get; set; } = Array.Empty<TimelinePoint>();
         public IReadOnlyList<CaptureSummaryUi> Captures { get; set; } = Array.Empty<CaptureSummaryUi>();
         public DiagnosticsUi Diagnostics { get; set; } = new DiagnosticsUi();
+        public AdvisorState Advisor { get; set; } = new AdvisorState(null, null, null, "Select a completed capture for Advisor diagnosis.");
     }
 
     public sealed class UiSnapshotInput
@@ -180,5 +182,6 @@ namespace CS2RuntimeProfiler.UI
         public int MarkerBatchSize { get; set; }
         public int SamplingStride { get; set; } = 1;
         public string PatchMapState { get; set; } = string.Empty;
+        public AdvisorState Advisor { get; set; }
     }
 }

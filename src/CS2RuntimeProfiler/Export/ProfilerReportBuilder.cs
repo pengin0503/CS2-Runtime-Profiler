@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using CS2RuntimeProfiler.Core;
+using CS2RuntimeProfiler.Core.Advisor;
 using CS2RuntimeProfiler.UI;
 
 namespace CS2RuntimeProfiler.Export
@@ -88,7 +89,70 @@ namespace CS2RuntimeProfiler.Export
             report.Capabilities.Add(new ReportNamedValue("systemTiming", report.Systems.Count > 0 ? "available" : "unavailable"));
             report.Capabilities.Add(new ReportNamedValue("pathfinding", HasAvailableMetric(report.Pathfinding) ? "available" : "unavailable"));
             report.Capabilities.Add(new ReportNamedValue("domainMetrics", HasAvailableMetric(report.DomainMetrics) ? "available" : "unavailable"));
+            try { AddAdvisor(report, snapshot.Advisor); }
+            catch (Exception) { report.Advisor = new ReportAdvisor { UnavailableReason = "Advisor export unavailable" }; }
+            report.Capabilities.Add(new ReportNamedValue("advisor", report.Advisor != null && report.Advisor.UnavailableReason == null ? "available" : "unavailable"));
             return report;
+        }
+
+        private static void AddAdvisor(PerformanceReport report, AdvisorState state)
+        {
+            if (state == null) return;
+            var catalog = (state.Catalog ?? Array.Empty<GameSettingDescriptor>())
+                .Where(x => x != null && x.IsUserFacing).ToArray();
+            var publicIds = new HashSet<string>(catalog.Select(x => x.SettingId), StringComparer.Ordinal);
+            report.Advisor = new ReportAdvisor
+            {
+                SelectedCaptureId = state.SelectedCaptureId,
+                BaselineCaptureId = state.BaselineCaptureId,
+                UnavailableReason = state.UnavailableReason,
+                Evidence = (state.Evidence?.Metrics ?? Array.Empty<NamedMetricValue>())
+                    .Where(x => x != null).Select(x => new ReportMetric
+                    {
+                        Name = x.Id, Value = x.Value, Unit = x.UnitType, Confidence = x.Confidence.ToString(),
+                        Availability = x.Availability.ToString(), Note = x.Reason
+                    }).ToList(),
+                Diagnosis = (state.Observations ?? Array.Empty<BottleneckObservation>())
+                    .Where(x => x != null).Select(x => new ReportAdvisorObservation
+                    {
+                        Category = x.Category.ToString(), Severity = x.Severity.ToString(),
+                        Confidence = x.Confidence.ToString(), EvidenceIds = x.EvidenceIds.ToList(), Rationale = x.Rationale
+                    }).ToList(),
+                Recommendations = (state.Recommendations ?? Array.Empty<SettingRecommendation>())
+                    .Where(x => x != null && publicIds.Contains(x.SettingId))
+                    .Select(x => new ReportAdvisorRecommendation
+                    {
+                        SettingId = x.SettingId, CurrentValue = x.CurrentValue, RecommendedValue = x.RecommendedValue,
+                        Direction = x.Direction.ToString(), Priority = x.Priority.ToString(), Confidence = x.Confidence.ToString(),
+                        EvidenceIds = x.EvidenceIds.ToList(), Rationale = x.Rationale,
+                        Capability = x.ApplyCapability.ToString(), ApplyBehavior = x.ApplyBehavior.ToString()
+                    }).ToList(),
+                Catalog = catalog.Select(x => new ReportAdvisorSetting
+                {
+                    SettingId = x.SettingId, Category = x.Category, CurrentValue = x.CurrentValue,
+                    ValueKind = x.ValueKind.ToString(), Capability = x.CapabilityState.ToString(),
+                    ApplyBehavior = x.ApplyBehavior.ToString(), Writable = x.IsWritable,
+                    CurrentlyVisible = x.IsCurrentlyVisible, CurrentlyEnabled = x.IsCurrentlyEnabled
+                }).ToList(),
+                Changes = (state.Changes ?? Array.Empty<SettingChange>())
+                    .Where(x => x != null && publicIds.Contains(x.SettingId))
+                    .Select(x => new ReportAdvisorChange
+                    {
+                        SettingId = x.SettingId, OriginalValue = x.OriginalValue, AppliedValue = x.AppliedValue,
+                        CurrentObservedValue = x.CurrentObservedValue, Status = x.Status.ToString(),
+                        AppliedAtUtc = x.AppliedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)
+                    }).ToList(),
+                Comparison = state.Comparison == null ? null : new ReportAdvisorComparison
+                {
+                    MultipleChanges = state.Comparison.MultipleChanges,
+                    ChangedSettingIds = state.Comparison.ChangedSettingIds.Where(publicIds.Contains).ToList(),
+                    Metrics = state.Comparison.Metrics.Select(x => new ReportAdvisorMetricComparison
+                    {
+                        Id = x.Id, BaselineValue = x.BaselineValue, FollowUpValue = x.FollowUpValue,
+                        State = x.State.ToString(), Reason = x.Reason
+                    }).ToList()
+                }
+            };
         }
 
         private static bool HasAvailableMetric(IEnumerable<ReportMetric> metrics) => (metrics ?? Array.Empty<ReportMetric>()).Any(metric => metric != null && string.Equals(metric.Availability, "Available", StringComparison.Ordinal));

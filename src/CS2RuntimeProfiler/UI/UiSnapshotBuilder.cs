@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CS2RuntimeProfiler.Core;
+using CS2RuntimeProfiler.Core.Advisor;
 
 namespace CS2RuntimeProfiler.UI
 {
@@ -51,7 +52,8 @@ namespace CS2RuntimeProfiler.UI
                     DiscoveredMarkerCount = Math.Max(0, detailCapture?.MarkerCoverage.Discovered ?? input.DiscoveredMarkerCount), CapturedMarkerCount = Math.Max(0, input.CapturedMarkerCount),
                     SystemCount = systems.Count, MarkerBatchSize = Math.Max(0, input.MarkerBatchSize), SamplingStride = Math.Max(1, input.SamplingStride),
                     PatchMapState = input.PatchMapState ?? string.Empty
-                }
+                },
+                Advisor = input.Advisor ?? new AdvisorState(null, null, null, "Select a completed capture for Advisor diagnosis.")
             };
         }
 

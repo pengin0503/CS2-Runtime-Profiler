@@ -131,3 +131,10 @@
   .changeRow > span:first-child { width: 47%; flex-basis: auto; }
   .changeRow > span:nth-child(2) { width: 47%; }
 }
+.advisorTab { display: flex; flex-direction: column; gap: 8rem; min-width: 0; }
+.advisorActions { display: flex; flex-direction: column; gap: 5rem; }
+.advisorCapture { display: flex; align-items: center; gap: 6rem; flex-wrap: wrap; padding: 5rem 7rem; border-radius: 4rem; background-color: rgba(255,255,255,.06); }
+.advisorGroup { display: flex; flex-direction: column; gap: 5rem; padding-top: 5rem; border-top-width: 1rem; border-top-style: solid; border-top-color: rgba(255,255,255,.15); }
+.advisorCard { display: flex; flex-direction: column; gap: 4rem; min-width: 0; padding: 7rem; border-radius: 4rem; background-color: rgba(255,255,255,.06); overflow-wrap: break-word; }
+.advisorDetails { display: flex; flex-direction: column; gap: 3rem; }
+.advisorObservation { display: flex; flex-direction: column; gap: 3rem; padding: 7rem; border-radius: 4rem; background-color: rgba(86,166,255,.1); }
